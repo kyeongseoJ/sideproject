@@ -57,6 +57,18 @@
 	</dependencies>
 
 	<build>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+			</resource>
+			<resource>
+				<directory>../front/app/assets/config</directory>
+				<includes>
+					<include>nickname_banned_words.txt</include>
+				</includes>
+				<targetPath>config</targetPath>
+			</resource>
+		</resources>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
