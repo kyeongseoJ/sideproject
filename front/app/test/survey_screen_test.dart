@@ -3,8 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novelty_app/api/survey_api.dart';
-import 'package:novelty_app/main.dart';
+import 'package:novelty_app/novelty_theme.dart';
 import 'package:novelty_app/survey/survey_models.dart';
+import 'package:novelty_app/survey/survey_screen.dart';
 
 void main() {
   test('serializes answers with the backend contract codes', () {
@@ -27,7 +28,7 @@ void main() {
   testWidgets('requires an answer before moving to the next question', (
     tester,
   ) async {
-    await tester.pumpWidget(const NoveltyApp());
+    await _pumpLegacySurvey(tester);
     await tester.tap(find.byKey(const Key('start-button')));
     await tester.pumpAndSettle();
 
@@ -44,7 +45,7 @@ void main() {
   });
 
   testWidgets('keeps answers while moving backward', (tester) async {
-    await tester.pumpWidget(const NoveltyApp());
+    await _pumpLegacySurvey(tester);
     await tester.tap(find.byKey(const Key('start-button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('option-INDOOR')));
@@ -141,7 +142,7 @@ void main() {
 }
 
 Future<void> _moveToInterestQuestion(WidgetTester tester) async {
-  await tester.pumpWidget(const NoveltyApp());
+  await _pumpLegacySurvey(tester);
   await tester.tap(find.byKey(const Key('start-button')));
   await tester.pumpAndSettle();
   await _selectAndContinue(tester, 'INDOOR');
@@ -157,7 +158,7 @@ Future<void> _selectAndContinue(WidgetTester tester, String code) async {
 }
 
 Future<void> _fillSurvey(WidgetTester tester, SurveySubmitter submitter) async {
-  await tester.pumpWidget(NoveltyApp(surveySubmitter: submitter));
+  await _pumpLegacySurvey(tester, submitter: submitter);
   await tester.tap(find.byKey(const Key('start-button')));
   await tester.pumpAndSettle();
   await _selectAndContinue(tester, 'INDOOR');
@@ -166,6 +167,18 @@ Future<void> _fillSurvey(WidgetTester tester, SurveySubmitter submitter) async {
   await _selectAndContinue(tester, 'CREATIVE');
   await tester.tap(find.byKey(const Key('option-HIGH')));
   await tester.pump();
+}
+
+Future<void> _pumpLegacySurvey(
+  WidgetTester tester, {
+  SurveySubmitter? submitter,
+}) {
+  return tester.pumpWidget(
+    MaterialApp(
+      theme: buildNoveltyTheme(),
+      home: SurveyScreen(submitter: submitter),
+    ),
+  );
 }
 
 class _FakeSurveySubmitter implements SurveySubmitter {
