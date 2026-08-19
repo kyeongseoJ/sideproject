@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: novelty-back
+  datasource:
+    url: jdbc:oracle:thin:@localhost:1521:XE
+    username: C##LG_DB
+    password: 12345
+    driver-class-name: oracle.jdbc.OracleDriver
