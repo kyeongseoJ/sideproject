@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:novelty_app/api/mission_api.dart';
 import 'package:novelty_app/api/personality_api.dart';
 import 'package:novelty_app/novelty_theme.dart';
 import 'package:novelty_app/personality/personality_bootstrap.dart';
@@ -9,9 +10,15 @@ void main() {
 }
 
 class NoveltyApp extends StatelessWidget {
-  const NoveltyApp({super.key, this.personalityGateway, this.userKeyStore});
+  const NoveltyApp({
+    super.key,
+    this.personalityGateway,
+    this.missionGateway,
+    this.userKeyStore,
+  });
 
   final PersonalityGateway? personalityGateway;
+  final MissionGateway? missionGateway;
   final UserKeyStore? userKeyStore;
 
   @override
@@ -22,6 +29,7 @@ class NoveltyApp extends StatelessWidget {
       theme: buildNoveltyTheme(),
       home: PersonalityBootstrapScreen(
         gateway: personalityGateway,
+        missionGateway: missionGateway,
         userKeyStore: userKeyStore,
       ),
     );

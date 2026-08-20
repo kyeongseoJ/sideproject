@@ -7,10 +7,12 @@ class PersonalityProfileScreen extends StatelessWidget {
     super.key,
     required this.user,
     required this.onReanalyze,
+    this.onOpenMissions,
   }) : assert(user.personalityCompleted && user.personality != null);
 
   final UserProfile user;
   final VoidCallback onReanalyze;
+  final VoidCallback? onOpenMissions;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +43,7 @@ class PersonalityProfileScreen extends StatelessWidget {
                         nickname: user.nickname,
                         profile: profile,
                         onReanalyze: onReanalyze,
+                        onOpenMissions: onOpenMissions,
                       ),
                     ),
                   ),
@@ -59,11 +62,13 @@ class _ProfileContent extends StatelessWidget {
     required this.nickname,
     required this.profile,
     required this.onReanalyze,
+    this.onOpenMissions,
   });
 
   final String nickname;
   final PersonalityProfile profile;
   final VoidCallback onReanalyze;
+  final VoidCallback? onOpenMissions;
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +160,15 @@ class _ProfileContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        FilledButton(
+        if (onOpenMissions != null) ...[
+          FilledButton(
+            key: const Key('open-missions-button'),
+            onPressed: onOpenMissions,
+            child: const Text('오늘의 미션 보기'),
+          ),
+          const SizedBox(height: 12),
+        ],
+        OutlinedButton(
           key: const Key('personality-reanalyze-button'),
           onPressed: onReanalyze,
           child: const Text('성향 분석 다시하기'),

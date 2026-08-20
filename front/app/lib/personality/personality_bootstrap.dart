@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:novelty_app/api/mission_api.dart';
 import 'package:novelty_app/api/personality_api.dart';
 import 'package:novelty_app/personality/personality_experience_screen.dart';
 import 'package:novelty_app/personality/personality_models.dart';
@@ -103,10 +104,12 @@ class PersonalityBootstrapScreen extends StatefulWidget {
   const PersonalityBootstrapScreen({
     super.key,
     this.gateway,
+    this.missionGateway,
     this.userKeyStore,
   });
 
   final PersonalityGateway? gateway;
+  final MissionGateway? missionGateway;
   final UserKeyStore? userKeyStore;
 
   @override
@@ -117,6 +120,7 @@ class PersonalityBootstrapScreen extends StatefulWidget {
 class _PersonalityBootstrapScreenState
     extends State<PersonalityBootstrapScreen> {
   PersonalityApi? _ownedApi;
+  MissionApi? _ownedMissionApi;
   late final PersonalityBootstrapService _service;
   PersonalityBootstrapResult? _result;
   PersonalityBootstrapException? _error;
@@ -125,6 +129,7 @@ class _PersonalityBootstrapScreenState
   void initState() {
     super.initState();
     final gateway = widget.gateway ?? (_ownedApi = PersonalityApi());
+    _ownedMissionApi = widget.missionGateway == null ? MissionApi() : null;
     _service = PersonalityBootstrapService(
       gateway: gateway,
       userKeyStore: widget.userKeyStore ?? SharedPreferencesUserKeyStore(),
@@ -135,6 +140,7 @@ class _PersonalityBootstrapScreenState
   @override
   void dispose() {
     _ownedApi?.close();
+    _ownedMissionApi?.close();
     super.dispose();
   }
 
@@ -184,6 +190,7 @@ class _PersonalityBootstrapScreenState
             : 'personality-form-entry',
       ),
       gateway: widget.gateway ?? _ownedApi!,
+      missionGateway: widget.missionGateway ?? _ownedMissionApi,
       userKey: result.userKey,
       initialUser: result.user,
     );

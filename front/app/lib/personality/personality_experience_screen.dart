@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:novelty_app/api/mission_api.dart';
+import 'package:novelty_app/mission/mission_experience_screen.dart';
 import 'package:novelty_app/api/personality_api.dart';
 import 'package:novelty_app/personality/personality_form_screen.dart';
 import 'package:novelty_app/personality/personality_models.dart';
@@ -11,12 +13,14 @@ class PersonalityExperienceScreen extends StatefulWidget {
     required this.gateway,
     required this.userKey,
     required this.initialUser,
+    this.missionGateway,
     this.submissionSession,
   });
 
   final PersonalityGateway gateway;
   final String userKey;
   final UserProfile initialUser;
+  final MissionGateway? missionGateway;
   final PersonalitySubmissionSession? submissionSession;
 
   @override
@@ -29,6 +33,7 @@ class _PersonalityExperienceScreenState
   late UserProfile _user;
   late bool _showingForm;
   AnalysisMode _analysisMode = AnalysisMode.initial;
+  bool _showingMissions = false;
 
   @override
   void initState() {
@@ -39,6 +44,13 @@ class _PersonalityExperienceScreenState
 
   @override
   Widget build(BuildContext context) {
+    if (_showingMissions && widget.missionGateway != null) {
+      return MissionExperienceScreen(
+        gateway: widget.missionGateway!,
+        userKey: widget.userKey,
+        onBackToProfile: _returnFromMissions,
+      );
+    }
     if (_showingForm) {
       return PersonalityFormScreen(
         key: ValueKey<String>('personality-form-${_analysisMode.code}'),
@@ -57,7 +69,23 @@ class _PersonalityExperienceScreenState
     return PersonalityProfileScreen(
       user: _user,
       onReanalyze: _confirmReanalysis,
+      onOpenMissions: widget.missionGateway == null
+          ? null
+          : () => setState(() => _showingMissions = true),
     );
+  }
+
+  Future<void> _returnFromMissions() async {
+    try {
+      final refreshed = await widget.gateway.getCurrentUser(widget.userKey);
+      if (!mounted) return;
+      setState(() {
+        _user = refreshed;
+        _showingMissions = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _showingMissions = false);
+    }
   }
 
   Future<void> _confirmReanalysis() async {
