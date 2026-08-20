@@ -4,6 +4,10 @@ import java.util.List;
 
 import org.springframework.stereotype.Component;
 
+import com.novelty.personality.IndoorOutdoor;
+import com.novelty.personality.PersonalityType;
+import com.novelty.personality.SocialLevel;
+
 @Component
 public class MissionProfileUpdater {
 
@@ -27,10 +31,13 @@ public class MissionProfileUpdater {
                     current.noveltyLevel(),
                     completedCount);
             missionRepository.updateUserVector(userId, counted);
-            return new CompletionUpdate(counted, false, 0);
+            return new CompletionUpdate(counted, false, 0, null);
         }
 
         List<Mission> recent = missionRepository.findRecentCompleted(userId, UPDATE_INTERVAL);
+        if (recent.size() != UPDATE_INTERVAL) {
+            throw new IllegalStateException("Recent completed mission history is inconsistent.");
+        }
         UserMissionVector updated = new UserMissionVector(
                 blend(current.indoorOutdoor(), average(recent, Axis.INDOOR_OUTDOOR), -1, 1),
                 blend(current.socialLevel(), average(recent, Axis.SOCIAL), -1, 1),
@@ -38,7 +45,10 @@ public class MissionProfileUpdater {
                 blend(current.noveltyLevel(), average(recent, Axis.NOVELTY), 0, 2),
                 completedCount);
         missionRepository.updateUserVector(userId, updated);
-        return new CompletionUpdate(updated, true, completedCount);
+        String personalityCode = personalityType(updated).name();
+        missionRepository.updatePersonalityClassification(
+                userId, personalityCode, completedCount);
+        return new CompletionUpdate(updated, true, completedCount, personalityCode);
     }
 
     private double average(List<Mission> missions, Axis axis) {
@@ -47,6 +57,22 @@ public class MissionProfileUpdater {
 
     private int blend(int current, double observedAverage, int minimum, int maximum) {
         return Math.max(minimum, Math.min(maximum, (int) Math.round((current + observedAverage) / 2.0)));
+    }
+
+    private PersonalityType personalityType(UserMissionVector vector) {
+        IndoorOutdoor indoorOutdoor = switch (vector.indoorOutdoor()) {
+            case -1 -> IndoorOutdoor.INDOOR;
+            case 0 -> IndoorOutdoor.MIXED;
+            case 1 -> IndoorOutdoor.OUTDOOR;
+            default -> throw new IllegalArgumentException("Invalid indoor/outdoor score.");
+        };
+        SocialLevel socialLevel = switch (vector.socialLevel()) {
+            case -1 -> SocialLevel.LOW;
+            case 0 -> SocialLevel.MEDIUM;
+            case 1 -> SocialLevel.HIGH;
+            default -> throw new IllegalArgumentException("Invalid social score.");
+        };
+        return PersonalityType.from(indoorOutdoor, socialLevel);
     }
 
     private enum Axis {
@@ -66,6 +92,10 @@ public class MissionProfileUpdater {
         abstract int value(Mission mission);
     }
 
-    record CompletionUpdate(UserMissionVector vector, boolean personalityUpdated, int milestone) {
+    record CompletionUpdate(
+            UserMissionVector vector,
+            boolean personalityUpdated,
+            int milestone,
+            String personalityCode) {
     }
 }

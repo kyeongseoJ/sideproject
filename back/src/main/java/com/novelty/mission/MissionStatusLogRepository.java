@@ -13,17 +13,6 @@ public class MissionStatusLogRepository {
     private static final String NEXT_LOG_ID_SQL =
             "SELECT MISSION_STATUS_LOG_SEQ.NEXTVAL FROM DUAL";
 
-    private static final String INSERT_LOG_SQL = """
-            INSERT INTO MISSION_STATUS_LOG (
-                STATUS_LOG_ID,
-                USER_ID,
-                MISSION_ID,
-                CATEGORY,
-                STATUS,
-                OCCURRED_AT
-            ) VALUES (?, ?, ?, ?, ?, ?)
-            """;
-
     private static final String FIND_HISTORY_SQL = """
             SELECT MISSION_ID, CATEGORY, STATUS, OCCURRED_AT
             FROM MISSION_STATUS_LOG
@@ -44,18 +33,37 @@ public class MissionStatusLogRepository {
             String category,
             MissionStatus status,
             OffsetDateTime occurredAt) {
+        return append(userId, missionId, null, category, null, status, null, occurredAt);
+    }
+
+    public long append(
+            long userId,
+            long missionId,
+            Long userMissionId,
+            String category,
+            MissionStatus previousStatus,
+            MissionStatus status,
+            String changeReason,
+            OffsetDateTime occurredAt) {
         Long logId = jdbcTemplate.queryForObject(NEXT_LOG_ID_SQL, Long.class);
         if (logId == null) {
             throw new IllegalStateException("Oracle did not return a mission status log ID.");
         }
 
-        jdbcTemplate.update(
-                INSERT_LOG_SQL,
+        jdbcTemplate.update("""
+                INSERT INTO MISSION_STATUS_LOG (
+                    STATUS_LOG_ID, USER_ID, MISSION_ID, USER_MISSION_ID,
+                    CATEGORY, PREVIOUS_STATUS, STATUS, CHANGE_REASON, OCCURRED_AT
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
                 logId,
                 userId,
                 missionId,
+                userMissionId,
                 category,
+                previousStatus == null ? null : previousStatus.name(),
                 status.name(),
+                changeReason,
                 occurredAt);
         return logId;
     }

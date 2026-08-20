@@ -24,6 +24,14 @@ public class MissionLlmGenerationService {
     }
 
     public String generateAtMilestone(long userId, int milestone, UserMissionVector userVector) {
+        try {
+            return generate(userId, milestone, userVector);
+        } catch (RuntimeException exception) {
+            return "FAILED";
+        }
+    }
+
+    private String generate(long userId, int milestone, UserMissionVector userVector) {
         if (milestone < 5 || milestone % 5 != 0) {
             return "NOT_DUE";
         }

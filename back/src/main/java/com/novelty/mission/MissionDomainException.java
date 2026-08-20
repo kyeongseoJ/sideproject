@@ -26,9 +26,33 @@ final class PersonalityRequiredException extends MissionDomainException {
     }
 }
 
+final class MissionSettingsRequiredException extends MissionDomainException {
+    MissionSettingsRequiredException() {
+        super("MISSION_SETTINGS_REQUIRED", "미션을 받기 전에 사용 가능 시간과 하루 한도를 설정해 주세요.");
+    }
+}
+
 final class MissionNotFoundException extends MissionDomainException {
     MissionNotFoundException() {
         super("MISSION_NOT_FOUND", "미션을 찾을 수 없습니다.");
+    }
+}
+
+final class UserMissionNotFoundException extends MissionDomainException {
+    UserMissionNotFoundException() {
+        super("USER_MISSION_NOT_FOUND", "사용자 미션을 찾을 수 없습니다.");
+    }
+}
+
+final class DailyLimitReachedException extends MissionDomainException {
+    DailyLimitReachedException() {
+        super("DAILY_LIMIT_REACHED", "오늘 수행할 수 있는 미션 수를 모두 사용했습니다.");
+    }
+}
+
+final class ReplacementNotAvailableException extends MissionDomainException {
+    ReplacementNotAvailableException() {
+        super("REPLACEMENT_NOT_AVAILABLE", "오늘 교체할 수 있는 추천 후보가 아닙니다.");
     }
 }
 

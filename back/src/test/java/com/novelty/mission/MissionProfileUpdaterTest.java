@@ -1,7 +1,9 @@
 package com.novelty.mission;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -33,6 +35,8 @@ class MissionProfileUpdaterTest {
         ArgumentCaptor<UserMissionVector> vector = ArgumentCaptor.forClass(UserMissionVector.class);
         verify(repository).updateUserVector(org.mockito.ArgumentMatchers.eq(7L), vector.capture());
         assertThat(vector.getValue()).isEqualTo(new UserMissionVector(0, 0, 1, 1, 5));
+        verify(repository).updatePersonalityClassification(
+                7L, "BALANCED_COORDINATOR", 5);
     }
 
     @Test
@@ -46,6 +50,29 @@ class MissionProfileUpdaterTest {
 
         assertThat(result.personalityUpdated()).isFalse();
         assertThat(result.vector()).isEqualTo(new UserMissionVector(1, 0, 2, 1, 6));
+        verify(repository, never()).updatePersonalityClassification(
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    void rejectsMilestoneWhenRecentCompletionHistoryIsIncomplete() {
+        MissionRepository repository = mock(MissionRepository.class);
+        when(repository.findUserVector(7L))
+                .thenReturn(Optional.of(new UserMissionVector(-1, -1, 0, 0, 4)));
+        when(repository.findRecentCompleted(7L, 5)).thenReturn(List.of(
+                mission(1, 1, 2, 2),
+                mission(1, 1, 2, 2),
+                mission(1, 1, 2, 2),
+                mission(1, 1, 2, 2)));
+
+        assertThatThrownBy(() -> new MissionProfileUpdater(repository).recordCompletion(7L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("inconsistent");
+        verify(repository, never()).updateUserVector(
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.any());
     }
 
     private Mission mission(int indoorOutdoor, int social, int activity, int novelty) {

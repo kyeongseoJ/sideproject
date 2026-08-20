@@ -84,7 +84,7 @@ public class MissionRepository {
     }
 
     public void updateUserVector(long userId, UserMissionVector vector) {
-        jdbcTemplate.update("""
+        requireSingleUpdate(jdbcTemplate.update("""
                 UPDATE USER_PERSONALITY_PROFILE
                    SET ACTIVITY_SCORE = ?,
                        SOCIAL_SCORE = ?,
@@ -99,7 +99,20 @@ public class MissionRepository {
                 vector.activityLevel(),
                 vector.noveltyLevel(),
                 vector.completedMissionCount(),
-                userId);
+                userId));
+    }
+
+    public void updatePersonalityClassification(
+            long userId,
+            String personalityCode,
+            int adaptedCompletionCount) {
+        requireSingleUpdate(jdbcTemplate.update("""
+                UPDATE USER_PERSONALITY_PROFILE
+                   SET PERSONALITY_CODE = ?,
+                       LAST_MISSION_ADAPTED_COUNT = ?,
+                       UPDATED_AT = CURRENT_TIMESTAMP
+                 WHERE USER_ID = ?
+                """, personalityCode, adaptedCompletionCount, userId));
     }
 
     public long insertGenerated(GeneratedMission generated) {
@@ -140,14 +153,6 @@ public class MissionRepository {
                 userId,
                 milestone);
         if (!statuses.isEmpty()) {
-            if ("FAILED".equals(statuses.getFirst())) {
-                return jdbcTemplate.update("""
-                        UPDATE MISSION_LLM_GENERATION
-                           SET STATUS = 'PENDING', MODEL_NAME = ?, ERROR_CODE = NULL,
-                               UPDATED_AT = CURRENT_TIMESTAMP
-                         WHERE USER_ID = ? AND COMPLETION_MILESTONE = ? AND STATUS = 'FAILED'
-                        """, modelName, userId, milestone) == 1;
-            }
             return false;
         }
 
@@ -205,6 +210,12 @@ public class MissionRepository {
             return HexFormat.of().formatHex(digest);
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is not available.", exception);
+        }
+    }
+
+    private void requireSingleUpdate(int updatedRows) {
+        if (updatedRows != 1) {
+            throw new IllegalStateException("Unexpected personality profile update count.");
         }
     }
 }

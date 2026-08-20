@@ -124,12 +124,27 @@ public class PersonalityRepository {
                    p.EXECUTION_STYLE,
                    p.ANALYSIS_VERSION,
                    p.ANALYZED_AT,
-                   s.ACTIVITY_LEVEL,
-                   s.SOCIAL_ACTIVITY,
-                   s.PHYSICAL_ACTIVITY_LEVEL,
-                   s.NOVELTY_TOLERANCE
+                   CASE p.ACTIVITY_SCORE
+                       WHEN -1 THEN 'INDOOR'
+                       WHEN 0 THEN 'MIXED'
+                       ELSE 'OUTDOOR'
+                   END ACTIVITY_LEVEL,
+                   CASE p.SOCIAL_SCORE
+                       WHEN -1 THEN 'LOW'
+                       WHEN 0 THEN 'MEDIUM'
+                       ELSE 'HIGH'
+                   END SOCIAL_ACTIVITY,
+                   CASE p.PHYSICAL_ACTIVITY_SCORE
+                       WHEN 0 THEN 'LOW'
+                       WHEN 1 THEN 'MEDIUM'
+                       ELSE 'HIGH'
+                   END PHYSICAL_ACTIVITY_LEVEL,
+                   CASE p.NOVELTY_SCORE
+                       WHEN 0 THEN 'LOW'
+                       WHEN 1 THEN 'MEDIUM'
+                       ELSE 'HIGH'
+                   END NOVELTY_TOLERANCE
               FROM USER_PERSONALITY_PROFILE p
-              JOIN SURVEY_RESPONSE s ON s.SURVEY_ID = p.SOURCE_SURVEY_ID
              WHERE p.USER_ID = ?
             """;
 

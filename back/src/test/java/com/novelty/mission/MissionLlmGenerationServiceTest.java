@@ -56,4 +56,84 @@ class MissionLlmGenerationServiceTest {
         verify(repository).failGeneration(1L, 5, "TOO_SIMILAR");
         verify(repository, never()).insertGenerated(org.mockito.ArgumentMatchers.any());
     }
+
+    @Test
+    void createsValidatedDistantMissionOnceAtMilestone() {
+        MissionRepository repository = mock(MissionRepository.class);
+        MissionContentGenerator generator = mock(MissionContentGenerator.class);
+        GeneratedMission generated = new GeneratedMission(
+                "새로운 야외 활동", "익숙하지 않은 야외 활동을 짧게 시도해 보세요",
+                MissionCategory.OUTDOOR, 2, 15, 1, 1, 2, 2);
+        when(generator.isAvailable()).thenReturn(true);
+        when(generator.modelName()).thenReturn("test-model");
+        when(repository.claimGeneration(1L, 5, "test-model")).thenReturn(true);
+        when(repository.findAllEnabled()).thenReturn(List.of());
+        when(generator.generate(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(generated);
+        when(repository.insertGenerated(generated)).thenReturn(77L);
+
+        String status = new MissionLlmGenerationService(
+                repository, generator, new MissionSimilarityPolicy())
+                .generateAtMilestone(1L, 5, new UserMissionVector(-1, -1, 0, 0, 5));
+
+        assertThat(status).isEqualTo("CREATED");
+        verify(repository).completeGeneration(1L, 5, 77L);
+    }
+
+    @Test
+    void doesNotGenerateWhenMilestoneWasAlreadyClaimed() {
+        MissionRepository repository = mock(MissionRepository.class);
+        MissionContentGenerator generator = mock(MissionContentGenerator.class);
+        when(generator.isAvailable()).thenReturn(true);
+        when(generator.modelName()).thenReturn("test-model");
+        when(repository.claimGeneration(1L, 5, "test-model")).thenReturn(false);
+
+        String status = new MissionLlmGenerationService(
+                repository, generator, new MissionSimilarityPolicy())
+                .generateAtMilestone(1L, 5, new UserMissionVector(-1, -1, 0, 0, 5));
+
+        assertThat(status).isEqualTo("ALREADY_PROCESSED");
+        verify(generator, never()).generate(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void rejectsMissionThatIsTooCloseToPersonality() {
+        MissionRepository repository = mock(MissionRepository.class);
+        MissionContentGenerator generator = mock(MissionContentGenerator.class);
+        GeneratedMission generated = new GeneratedMission(
+                "익숙한 실내 활동", "조용한 실내에서 가볍게 정리해 보세요",
+                MissionCategory.ORGANIZING, 1, 5, -1, -1, 0, 0);
+        when(generator.isAvailable()).thenReturn(true);
+        when(generator.modelName()).thenReturn("test-model");
+        when(repository.claimGeneration(1L, 5, "test-model")).thenReturn(true);
+        when(repository.findAllEnabled()).thenReturn(List.of());
+        when(generator.generate(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(generated);
+
+        String status = new MissionLlmGenerationService(
+                repository, generator, new MissionSimilarityPolicy())
+                .generateAtMilestone(1L, 5, new UserMissionVector(-1, -1, 0, 0, 5));
+
+        assertThat(status).isEqualTo("REJECTED_TOO_CLOSE");
+        verify(repository).failGeneration(1L, 5, "TOO_CLOSE_TO_PERSONALITY");
+        verify(repository, never()).insertGenerated(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void repositoryOrGeneratorFailureIsReturnedAsFailed() {
+        MissionRepository repository = mock(MissionRepository.class);
+        MissionContentGenerator generator = mock(MissionContentGenerator.class);
+        when(generator.isAvailable()).thenReturn(true);
+        when(generator.modelName()).thenReturn("test-model");
+        when(repository.claimGeneration(1L, 5, "test-model"))
+                .thenThrow(new IllegalStateException("database unavailable"));
+
+        String status = new MissionLlmGenerationService(
+                repository, generator, new MissionSimilarityPolicy())
+                .generateAtMilestone(1L, 5, new UserMissionVector(-1, -1, 0, 0, 5));
+
+        assertThat(status).isEqualTo("FAILED");
+    }
 }

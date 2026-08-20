@@ -33,6 +33,11 @@
 --   - Expanded USER_PERSONALITY_PROFILE.ANALYSIS_VERSION to 24 characters
 --   - Per-user submission-key uniqueness and V2 conditional required-field checks
 --   - Verified idempotent re-run, 4 existing V1 responses preserved, and 0 existing profiles
+-- 2026-08-19: Added and applied the Mission V1 Phase 1 non-destructive migration.
+--   - USER_MISSION assignment metadata, score, service-date, state-slot constraints and indexes
+--   - USER_MISSION_SETTING / USER_MISSION_CATEGORY_STAT
+--   - MISSION_STATUS_LOG aggregate link and USER_PERSONALITY_PROFILE adaptation checkpoint
+--   - Verified idempotent re-run, active-slot uniqueness, normal inserts, failure constraints and rollback
 --
 -- Future database changes
 -- Add every future CREATE, ALTER, index, constraint, and required reference-data
@@ -1345,3 +1350,431 @@ BEGIN
     END IF;
 END;
 /
+
+-- MISSION_V1_PHASE1_START
+
+DECLARE
+    object_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+      INTO object_count
+      FROM user_sequences
+     WHERE sequence_name = 'USER_MISSION_SEQ';
+
+    IF object_count = 0 THEN
+        EXECUTE IMMEDIATE '
+            CREATE SEQUENCE USER_MISSION_SEQ
+                START WITH 1
+                INCREMENT BY 1
+                NOCACHE
+                NOCYCLE';
+    END IF;
+
+    SELECT COUNT(*)
+      INTO object_count
+      FROM user_tables
+     WHERE table_name = 'USER_MISSION';
+
+    IF object_count = 0 THEN
+        EXECUTE IMMEDIATE '
+            CREATE TABLE USER_MISSION (
+                USER_MISSION_ID NUMBER(19)                NOT NULL,
+                USER_ID         NUMBER(19)                NOT NULL,
+                MISSION_ID      NUMBER(19)                NOT NULL,
+                STATUS          VARCHAR2(12 CHAR)         NOT NULL,
+                AVAILABLE_TIME  VARCHAR2(10 CHAR)         NOT NULL,
+                SERVICE_DATE    DATE                      NOT NULL,
+                SELECTED_AT     TIMESTAMP WITH TIME ZONE,
+                CANCELLED_AT    TIMESTAMP WITH TIME ZONE,
+                COMPLETED_AT    TIMESTAMP WITH TIME ZONE,
+                CREATED_AT      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                UPDATED_AT      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                CONSTRAINT PK_USER_MISSION PRIMARY KEY (USER_MISSION_ID),
+                CONSTRAINT UQ_USER_MISSION_DAILY_OFFER
+                    UNIQUE (USER_ID, MISSION_ID, SERVICE_DATE),
+                CONSTRAINT FK_USER_MISSION_USER
+                    FOREIGN KEY (USER_ID) REFERENCES NOVELTY_USER (USER_ID) ON DELETE CASCADE,
+                CONSTRAINT FK_USER_MISSION_MISSION
+                    FOREIGN KEY (MISSION_ID) REFERENCES MISSION (MISSION_ID),
+                CONSTRAINT CK_USER_MISSION_STATUS CHECK (STATUS IN (
+                    ''GENERATED'', ''SHOWN'', ''SELECTED'', ''CANCELLED'', ''COMPLETED''
+                )),
+                CONSTRAINT CK_USER_MISSION_AVAILABLE_TIME CHECK (AVAILABLE_TIME IN (
+                    ''QUICK'', ''SHORT'', ''MEDIUM'', ''LONG''
+                ))
+            )';
+    END IF;
+
+    SELECT COUNT(*)
+      INTO object_count
+      FROM user_indexes
+     WHERE index_name = 'IX_USER_MISSION_USER_DATE';
+
+    IF object_count = 0 THEN
+        EXECUTE IMMEDIATE '
+            CREATE INDEX IX_USER_MISSION_USER_DATE
+                ON USER_MISSION (USER_ID, SERVICE_DATE DESC)';
+    END IF;
+END;
+/
+
+DECLARE
+    column_count NUMBER;
+    PROCEDURE add_column_if_missing(column_name_value VARCHAR2, definition_value VARCHAR2) IS
+    BEGIN
+        SELECT COUNT(*)
+          INTO column_count
+          FROM user_tab_columns
+         WHERE table_name = 'USER_MISSION'
+           AND column_name = column_name_value;
+
+        IF column_count = 0 THEN
+            EXECUTE IMMEDIATE 'ALTER TABLE USER_MISSION ADD (' || definition_value || ')';
+        END IF;
+    END;
+BEGIN
+    add_column_if_missing('OFFER_BATCH_ID', 'OFFER_BATCH_ID VARCHAR2(64 CHAR)');
+    add_column_if_missing('PERSONALITY_DISTANCE', 'PERSONALITY_DISTANCE NUMBER(8,7)');
+    add_column_if_missing('RECOMMENDATION_SCORE', 'RECOMMENDATION_SCORE NUMBER(8,7)');
+    add_column_if_missing('DAILY_SLOT_NO', 'DAILY_SLOT_NO NUMBER(1)');
+    add_column_if_missing('SHOWN_AT', 'SHOWN_AT TIMESTAMP WITH TIME ZONE');
+END;
+/
+
+DECLARE
+    invalid_group_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+      INTO invalid_group_count
+      FROM (
+          SELECT USER_ID, SERVICE_DATE
+            FROM USER_MISSION
+           WHERE STATUS IN ('SELECTED', 'COMPLETED')
+           GROUP BY USER_ID, SERVICE_DATE
+          HAVING COUNT(*) > 3
+      );
+
+    IF invalid_group_count > 0 THEN
+        RAISE_APPLICATION_ERROR(
+            -20031,
+            'USER_MISSION has more than three active or completed missions for a service date.'
+        );
+    END IF;
+
+    UPDATE USER_MISSION
+       SET OFFER_BATCH_ID = 'LEGACY-' || TO_CHAR(USER_MISSION_ID)
+     WHERE OFFER_BATCH_ID IS NULL;
+
+    UPDATE USER_MISSION
+       SET SHOWN_AT = CREATED_AT
+     WHERE SHOWN_AT IS NULL
+       AND STATUS IN ('SHOWN', 'SELECTED', 'CANCELLED', 'COMPLETED');
+
+    MERGE INTO USER_MISSION target
+    USING (
+        SELECT USER_MISSION_ID,
+               ROW_NUMBER() OVER (
+                   PARTITION BY USER_ID, SERVICE_DATE
+                   ORDER BY NVL(SELECTED_AT, CREATED_AT), USER_MISSION_ID
+               ) AS SLOT_NO
+          FROM USER_MISSION
+         WHERE STATUS IN ('SELECTED', 'COMPLETED')
+           AND DAILY_SLOT_NO IS NULL
+    ) source
+       ON (target.USER_MISSION_ID = source.USER_MISSION_ID)
+     WHEN MATCHED THEN
+       UPDATE SET target.DAILY_SLOT_NO = source.SLOT_NO;
+END;
+/
+
+DECLARE
+    nullable_value VARCHAR2(1);
+BEGIN
+    SELECT nullable
+      INTO nullable_value
+      FROM user_tab_columns
+     WHERE table_name = 'USER_MISSION'
+       AND column_name = 'OFFER_BATCH_ID';
+
+    IF nullable_value = 'Y' THEN
+        EXECUTE IMMEDIATE '
+            ALTER TABLE USER_MISSION
+            MODIFY (OFFER_BATCH_ID VARCHAR2(64 CHAR) NOT NULL)';
+    END IF;
+END;
+/
+
+DECLARE
+    constraint_count NUMBER;
+    PROCEDURE add_constraint_if_missing(name_value VARCHAR2, definition_value VARCHAR2) IS
+    BEGIN
+        SELECT COUNT(*)
+          INTO constraint_count
+          FROM user_constraints
+         WHERE constraint_name = name_value;
+
+        IF constraint_count = 0 THEN
+            EXECUTE IMMEDIATE 'ALTER TABLE USER_MISSION ADD CONSTRAINT '
+                    || name_value || ' ' || definition_value;
+        END IF;
+    END;
+BEGIN
+    add_constraint_if_missing(
+        'CK_USER_MISSION_SERVICE_DATE',
+        'CHECK (SERVICE_DATE = TRUNC(SERVICE_DATE))'
+    );
+    add_constraint_if_missing(
+        'CK_USER_MISSION_DISTANCE',
+        'CHECK (PERSONALITY_DISTANCE IS NULL OR PERSONALITY_DISTANCE BETWEEN 0 AND 1)'
+    );
+    add_constraint_if_missing(
+        'CK_USER_MISSION_SCORE',
+        'CHECK (RECOMMENDATION_SCORE IS NULL OR RECOMMENDATION_SCORE BETWEEN 0 AND 1)'
+    );
+    add_constraint_if_missing(
+        'CK_USER_MISSION_SLOT',
+        'CHECK (DAILY_SLOT_NO IS NULL OR DAILY_SLOT_NO BETWEEN 1 AND 3)'
+    );
+    add_constraint_if_missing(
+        'CK_USER_MISSION_STATUS_SLOT',
+        'CHECK ((STATUS IN (''SELECTED'', ''COMPLETED'') AND DAILY_SLOT_NO IS NOT NULL) '
+        || 'OR (STATUS IN (''GENERATED'', ''SHOWN'', ''CANCELLED'') AND DAILY_SLOT_NO IS NULL))'
+    );
+END;
+/
+
+DECLARE
+    object_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+      INTO object_count
+      FROM user_constraints
+     WHERE constraint_name = 'UQ_USER_MISSION_DAILY_SLOT';
+
+    IF object_count > 0 THEN
+        EXECUTE IMMEDIATE '
+            ALTER TABLE USER_MISSION
+            DROP CONSTRAINT UQ_USER_MISSION_DAILY_SLOT';
+    END IF;
+
+    SELECT COUNT(*)
+      INTO object_count
+      FROM user_indexes
+     WHERE index_name = 'UX_USER_MISSION_ACTIVE_SLOT';
+
+    IF object_count = 0 THEN
+        EXECUTE IMMEDIATE '
+            CREATE UNIQUE INDEX UX_USER_MISSION_ACTIVE_SLOT
+                ON USER_MISSION (
+                    CASE WHEN STATUS IN (''SELECTED'', ''COMPLETED'') THEN USER_ID END,
+                    CASE WHEN STATUS IN (''SELECTED'', ''COMPLETED'') THEN SERVICE_DATE END,
+                    CASE WHEN STATUS IN (''SELECTED'', ''COMPLETED'') THEN DAILY_SLOT_NO END
+                )';
+    END IF;
+END;
+/
+
+DECLARE
+    index_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+      INTO index_count
+      FROM user_indexes
+     WHERE index_name = 'IX_USER_MISSION_OFFER_BATCH';
+
+    IF index_count = 0 THEN
+        EXECUTE IMMEDIATE '
+            CREATE INDEX IX_USER_MISSION_OFFER_BATCH
+                ON USER_MISSION (USER_ID, SERVICE_DATE, OFFER_BATCH_ID)';
+    END IF;
+END;
+/
+
+DECLARE
+    table_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+      INTO table_count
+      FROM user_tables
+     WHERE table_name = 'USER_MISSION_SETTING';
+
+    IF table_count = 0 THEN
+        EXECUTE IMMEDIATE '
+            CREATE TABLE USER_MISSION_SETTING (
+                USER_ID             NUMBER(19)                NOT NULL,
+                AVAILABLE_TIME      VARCHAR2(10 CHAR)         NOT NULL,
+                DAILY_MISSION_LIMIT NUMBER(1) DEFAULT 1       NOT NULL,
+                CREATED_AT          TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                UPDATED_AT          TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                CONSTRAINT PK_USER_MISSION_SETTING PRIMARY KEY (USER_ID),
+                CONSTRAINT FK_USER_MISSION_SETTING_USER
+                    FOREIGN KEY (USER_ID)
+                    REFERENCES NOVELTY_USER (USER_ID)
+                    ON DELETE CASCADE,
+                CONSTRAINT CK_USER_MISSION_SETTING_TIME
+                    CHECK (AVAILABLE_TIME IN (''QUICK'', ''SHORT'', ''MEDIUM'', ''LONG'')),
+                CONSTRAINT CK_USER_MISSION_SETTING_LIMIT
+                    CHECK (DAILY_MISSION_LIMIT BETWEEN 1 AND 3)
+            )';
+    END IF;
+END;
+/
+
+DECLARE
+    table_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+      INTO table_count
+      FROM user_tables
+     WHERE table_name = 'USER_MISSION_CATEGORY_STAT';
+
+    IF table_count = 0 THEN
+        EXECUTE IMMEDIATE '
+            CREATE TABLE USER_MISSION_CATEGORY_STAT (
+                USER_ID           NUMBER(19)                NOT NULL,
+                CATEGORY          VARCHAR2(20 CHAR)         NOT NULL,
+                COMPLETED_COUNT   NUMBER(10) DEFAULT 0      NOT NULL,
+                LAST_COMPLETED_AT TIMESTAMP WITH TIME ZONE,
+                UPDATED_AT        TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                CONSTRAINT PK_USER_MISSION_CATEGORY_STAT PRIMARY KEY (USER_ID, CATEGORY),
+                CONSTRAINT FK_USER_MISSION_CATEGORY_USER
+                    FOREIGN KEY (USER_ID)
+                    REFERENCES NOVELTY_USER (USER_ID)
+                    ON DELETE CASCADE,
+                CONSTRAINT CK_USER_MISSION_CATEGORY
+                    CHECK (CATEGORY IN (
+                        ''MOVEMENT'', ''CREATIVE'', ''FOOD'', ''LEARNING'',
+                        ''SOCIAL'', ''OUTDOOR'', ''ORGANIZING'', ''CULTURE''
+                    )),
+                CONSTRAINT CK_USER_MISSION_CATEGORY_COUNT
+                    CHECK (COMPLETED_COUNT >= 0),
+                CONSTRAINT CK_USER_MISSION_CATEGORY_TIME
+                    CHECK (
+                        (COMPLETED_COUNT = 0 AND LAST_COMPLETED_AT IS NULL)
+                        OR (COMPLETED_COUNT > 0 AND LAST_COMPLETED_AT IS NOT NULL)
+                    )
+            )';
+    END IF;
+END;
+/
+
+DECLARE
+    index_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+      INTO index_count
+      FROM user_indexes
+     WHERE index_name = 'IX_USER_MISSION_CATEGORY_COUNT';
+
+    IF index_count = 0 THEN
+        EXECUTE IMMEDIATE '
+            CREATE INDEX IX_USER_MISSION_CATEGORY_COUNT
+                ON USER_MISSION_CATEGORY_STAT (USER_ID, COMPLETED_COUNT, CATEGORY)';
+    END IF;
+END;
+/
+
+DECLARE
+    column_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+      INTO column_count
+      FROM user_tab_columns
+     WHERE table_name = 'USER_PERSONALITY_PROFILE'
+       AND column_name = 'LAST_MISSION_ADAPTED_COUNT';
+
+    IF column_count = 0 THEN
+        EXECUTE IMMEDIATE '
+            ALTER TABLE USER_PERSONALITY_PROFILE ADD (
+                LAST_MISSION_ADAPTED_COUNT NUMBER(10) DEFAULT 0 NOT NULL
+            )';
+    END IF;
+END;
+/
+
+DECLARE
+    constraint_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+      INTO constraint_count
+      FROM user_constraints
+     WHERE constraint_name = 'CK_USER_LAST_MISSION_ADAPTED';
+
+    IF constraint_count = 0 THEN
+        EXECUTE IMMEDIATE '
+            ALTER TABLE USER_PERSONALITY_PROFILE
+            ADD CONSTRAINT CK_USER_LAST_MISSION_ADAPTED
+            CHECK (
+                LAST_MISSION_ADAPTED_COUNT >= 0
+                AND LAST_MISSION_ADAPTED_COUNT <= COMPLETED_MISSION_COUNT
+                AND MOD(LAST_MISSION_ADAPTED_COUNT, 5) = 0
+            )';
+    END IF;
+END;
+/
+
+DECLARE
+    column_count NUMBER;
+    PROCEDURE add_log_column_if_missing(column_name_value VARCHAR2, definition_value VARCHAR2) IS
+    BEGIN
+        SELECT COUNT(*)
+          INTO column_count
+          FROM user_tab_columns
+         WHERE table_name = 'MISSION_STATUS_LOG'
+           AND column_name = column_name_value;
+
+        IF column_count = 0 THEN
+            EXECUTE IMMEDIATE 'ALTER TABLE MISSION_STATUS_LOG ADD (' || definition_value || ')';
+        END IF;
+    END;
+BEGIN
+    add_log_column_if_missing('USER_MISSION_ID', 'USER_MISSION_ID NUMBER(19)');
+    add_log_column_if_missing('PREVIOUS_STATUS', 'PREVIOUS_STATUS VARCHAR2(12 CHAR)');
+    add_log_column_if_missing('CHANGE_REASON', 'CHANGE_REASON VARCHAR2(32 CHAR)');
+END;
+/
+
+DECLARE
+    constraint_count NUMBER;
+    PROCEDURE add_log_constraint_if_missing(name_value VARCHAR2, definition_value VARCHAR2) IS
+    BEGIN
+        SELECT COUNT(*)
+          INTO constraint_count
+          FROM user_constraints
+         WHERE constraint_name = name_value;
+
+        IF constraint_count = 0 THEN
+            EXECUTE IMMEDIATE 'ALTER TABLE MISSION_STATUS_LOG ADD CONSTRAINT '
+                    || name_value || ' ' || definition_value;
+        END IF;
+    END;
+BEGIN
+    add_log_constraint_if_missing(
+        'FK_MISSION_LOG_USER_MISSION',
+        'FOREIGN KEY (USER_MISSION_ID) REFERENCES USER_MISSION (USER_MISSION_ID)'
+    );
+    add_log_constraint_if_missing(
+        'CK_MISSION_LOG_PREVIOUS_STATUS',
+        'CHECK (PREVIOUS_STATUS IS NULL OR PREVIOUS_STATUS IN '
+        || '(''GENERATED'', ''SHOWN'', ''SELECTED'', ''CANCELLED'', ''COMPLETED''))'
+    );
+END;
+/
+
+DECLARE
+    index_count NUMBER;
+BEGIN
+    SELECT COUNT(*)
+      INTO index_count
+      FROM user_indexes
+     WHERE index_name = 'IX_MISSION_LOG_USER_MISSION_ID';
+
+    IF index_count = 0 THEN
+        EXECUTE IMMEDIATE '
+            CREATE INDEX IX_MISSION_LOG_USER_MISSION_ID
+                ON MISSION_STATUS_LOG (USER_MISSION_ID, OCCURRED_AT)';
+    END IF;
+END;
+/
+
+-- MISSION_V1_PHASE1_END

@@ -4,12 +4,17 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.transaction.TransactionException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.novelty.user.UserAuthenticationException;
 
-@RestControllerAdvice(assignableTypes = MissionController.class)
+@RestControllerAdvice(assignableTypes = {
+        MissionController.class,
+        UserMissionController.class,
+        MissionSummaryController.class
+})
 public class MissionExceptionHandler {
 
     @ExceptionHandler(UserAuthenticationException.class)
@@ -26,6 +31,9 @@ public class MissionExceptionHandler {
 
     @ExceptionHandler({
             PersonalityRequiredException.class,
+            MissionSettingsRequiredException.class,
+            DailyLimitReachedException.class,
+            ReplacementNotAvailableException.class,
             NoMissionAvailableException.class,
             InvalidMissionTransitionException.class
     })
@@ -34,7 +42,7 @@ public class MissionExceptionHandler {
                 .body(new MissionErrorResponse(exception.code(), exception.getMessage()));
     }
 
-    @ExceptionHandler(MissionNotFoundException.class)
+    @ExceptionHandler({MissionNotFoundException.class, UserMissionNotFoundException.class})
     public ResponseEntity<MissionErrorResponse> handleNotFound(MissionDomainException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new MissionErrorResponse(exception.code(), exception.getMessage()));
@@ -46,7 +54,11 @@ public class MissionExceptionHandler {
                 .body(new MissionErrorResponse("INVALID_MISSION_REQUEST", "미션 요청 형식이 올바르지 않습니다."));
     }
 
-    @ExceptionHandler(DataAccessException.class)
+    @ExceptionHandler({
+            DataAccessException.class,
+            TransactionException.class,
+            IllegalStateException.class
+    })
     public ResponseEntity<MissionErrorResponse> handleDatabaseFailure() {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new MissionErrorResponse(
