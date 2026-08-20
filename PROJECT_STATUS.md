@@ -1,6 +1,6 @@
 # Novelty 프로젝트 진행 상태
 
-최종 갱신일: 2026-08-19
+최종 갱신일: 2026-08-20
 
 ## 문서 목적
 
@@ -23,7 +23,7 @@
 |---|---|---|---|
 | 1. 선택지 폼 | 검증 완료 | V2 Phase 5~7 완료 | 여섯 문항·검증·제출 재시도와 실제 Oracle E2E 완료 |
 | 2. 사용자 성향 분석 | 검증 완료 | V2 Phase 0~7 완료 | Backend 계약과 Flutter 최초 분기·선택폼·Profile·재분석·Oracle E2E 완료 |
-| 3. 랜덤 미션 생성 | 진행 중 | 정식 기능 SDD 미작성 | Backend 추천 프로토타입은 있으나 Frontend 선택 흐름과 전체 정책 검증이 미완성 |
+| 3. 랜덤 미션 생성 | 검증 완료 | V1 Phase 0~7 검증 완료 | Flutter 설정·추천·선택·변경·취소·완료·통계와 실제 Oracle E2E 완료 |
 | 4. 3D 공간·레벨 | 진행 중 | 정식 기능 SDD 미작성 | Three.js 렌더러 기반 모듈만 있으며 자산·Backend 진행도·화면 통합은 미완성 |
 
 ## SDD Phase 현황표
@@ -34,7 +34,7 @@
 |---|---|---|---|---|---|---|---|---|
 | 선택지 폼(현재 흐름) | 성향 SDD에 포함 | 재정의 | 재정의 | 재정의 | 재정의 | 검증 완료 | 검증 완료 | 검증 완료 |
 | 사용자 성향 분석 V2 | 검증 완료 | 검증 완료 | 검증 완료 | 검증 완료 | 검증 완료 | 검증 완료 | 검증 완료 | 검증 완료 |
-| 랜덤 미션 | SDD 필요 | 미착수 | 미착수 | 미착수 | 미착수 | 미착수 | 미착수 | 미착수 |
+| 랜덤 미션 V1 | 검증 완료 | 검증 완료 | 검증 완료 | 검증 완료 | 검증 완료 | 검증 완료 | 검증 완료 | 검증 완료 |
 | 3D 공간·레벨 | SDD 필요 | 미착수 | 미착수 | 미착수 | 미착수 | 미착수 | 미착수 | 미착수 |
 
 선택지 폼의 기존 Phase 0~7은 과거 계약 기준으로는 완료됐지만 현재 흐름에서는 모두 현재 인수 조건을 다시 확인해야 한다. 이 표는 앞으로 각 Phase 작업이 끝날 때 검증 근거와 함께 갱신한다.
@@ -83,21 +83,36 @@
 
 ## 3. 랜덤 미션 생성·선택·완료
 
-현재 상태: **진행 중(프로토타입)**
+현재 상태: **검증 완료, Phase 0~7 검증 완료**
 
-- 정식 Phase 0 SDD 문서가 아직 없다.
+- 활성 기준 문서: `docs/mission-sdd-v1.md`
+- Phase 0 검증 기록: `docs/mission-phase0-verification.md`
+- Phase 1 검증 기록: `docs/mission-phase1-verification.md`
+- Phase 2 검증 기록: `docs/mission-phase2-verification.md`
+- Phase 3 검증 기록: `docs/mission-phase3-verification.md`
+- Phase 4 검증 기록: `docs/mission-phase4-verification.md`
+- Phase 5 검증 기록: `docs/mission-phase5-verification.md`
+- Phase 6 검증 기록: `docs/mission-phase6-verification.md`
+- Phase 7 검증 기록: `docs/mission-phase7-verification.md`
+- Phase 0: 정상·실패 계약 정적 검사, Backend 114개와 Flutter 68개 회귀 테스트 완료
+- Phase 1: 실제 Oracle 멱등 Migration, 정상 저장, 19개 실패 Constraint, Rollback과 Backend 115개 회귀 테스트 완료
+- Phase 2: 순수 Java 추천 Domain의 정상·실패 집중 테스트 21개와 실제 Oracle 회귀를 포함한 Backend 전체 129개 테스트 및 Package 완료
+- Phase 3: 설정·오늘 후보 API, 사용자별 통계, Oracle 후보·연결 로그 저장과 재사용을 구현하고 집중 29개·실제 Oracle·전체 140개 테스트 및 Package 완료
+- Phase 4: `userMissionId` 기반 선택·취소·교체·완료 API, 소유권과 서울 날짜 검증, 활성 슬롯, 원자적 교체, 완료 멱등성을 구현하고 집중 32개·실제 Oracle·전체 153개 테스트 및 Package 완료
+- Phase 5: 카테고리 통계, 전체 완료 수, 5회 성향 벡터·유형 갱신, 커밋 이후 LLM 생성과 중복·유사도 차단, 완료 요약 API를 구현하고 집중 25개·실제 Oracle 3개·전체 170개 테스트 및 Package 완료
+- Phase 6: Flutter Model·REST Client·설정·추천·수행 중·변경·취소·완료·통계 화면과 중복 입력 잠금·안전한 오류 처리를 구현하고 집중 12개 테스트 완료
+- Phase 7: Flutter UI → REST → 최신 Spring Boot → 실제 Oracle → 응답 UI 갱신 E2E, 잘못된 사용자 키 실패, Oracle 행·로그·통계 직접 조회와 테스트 데이터 정리 완료
+- 하루 후보 5개, 하루 수행 기본 1개·설정 1~3개, 서울 달력 날짜 기준 재추천 제한을 확정했다.
+- 취소·변경 횟수는 제한하지 않고 오늘 저장된 후보 안에서만 변경하도록 확정했다.
+- 성향 거리 70%, 카테고리 탐색 20%, 난이도 적합 10%의 추천 점수와 상위 10개 중 최대 5개 가중 무복원 추출을 구현했다.
+- REST, Oracle 논리 구조, 상태 전이, 동시성, 멱등성과 정상·실패 인수 조건을 정의했다.
 - Backend에는 미션 속성, 성향 거리 기반 추천, 상태 로그, 완료 횟수 기반 LLM 생성 코드와 테스트가 일부 존재한다.
-- 초기 기본 미션 데이터와 관련 Oracle DDL이 준비되어 있다.
-- Flutter에는 추천 목록, 선택, 취소, 완료를 연결한 핵심 화면 흐름이 없다.
-- 최근 완료 3일, 최근 노출 2일, 동일 카테고리 연속 제한, 하루 수행 제한, 유사 미션 차단, 완료 5회 단위 LLM 생성 정책은 현재 코드와 DB에서 전부 검증 완료되지 않았다.
+- 초기 기본 미션과 사용자 미션·설정·카테고리 통계·상태 로그 관련 Oracle DDL을 실제 적용했다.
+- Flutter 프로필에서 오늘의 미션으로 진입하며 설정이 없으면 시간·하루 한도를 먼저 저장하고, 수행 중 미션을 상단에 표시한다.
+- 최근 완료 3일, 최근 노출 2일, LLM 후보 자격과 동일 카테고리 연속 제한은 추천 Domain에서 검증했다. 유사 미션 차단과 완료 5회 단위 LLM Catalog 저장도 Phase 5에서 실제 Oracle과 함께 검증했다.
 - 신규 사용자에게 성향 프로필이 생성되지 않으면 정상 추천 흐름에 진입할 수 없다.
 
-다음 완료 조건:
-
-1. 미션 기능 Phase 0 SDD와 REST 계약을 먼저 작성한다.
-2. 추천 후보 수, 하루 제한, 취소·교체 정책 등 미확정 항목을 확정한다.
-3. Oracle 적용, 동시성, 재노출 제한과 상태 전이를 검증한다.
-4. Flutter까지 연결한 E2E를 수행한다.
+현재 SDD V1의 Phase 0~7 완료 조건을 충족했다. 다음 단계는 World SDD에서 미션 카테고리 통계와 3D 오브젝트 성장을 연결하는 것이다.
 
 ## 4. 3D 공간·레벨 시스템
 
@@ -122,19 +137,18 @@
 |---|---|---|
 | 익명 사용자·닉네임 | 진행 중 | Backend·DB와 Flutter 사용자 키 캐시 복원 완료, 닉네임 변경 UI는 미완성 |
 | Oracle Personality V2 Schema | 검증 완료 | 로컬 Oracle에 Phase 1 적용 및 재실행 성공. 기존 V1 설문 4건 보존 |
-| Oracle Mission·World 목표 Schema | 진행 중 | SQL은 준비됐으나 이번 Phase에서 실제 객체 상태를 검증하지 않음 |
+| Oracle Mission·World 목표 Schema | 진행 중 | Mission Phase 1 객체는 실제 적용·검증했으며 World Schema는 별도 검증 필요 |
 | Swagger UI | 검증 완료 | 실제 서버에서 UI 200과 성향 API OpenAPI 경로 확인. 기본 주소 `http://localhost:8080/swagger-ui/index.html` |
 | OpenAI 설정 | 진행 중 | API Key는 `OPENAI_API_KEY` 환경 변수로만 주입; 실제 연동 성공 검증 필요 |
-| Backend 자동 테스트 | 검증 완료 | Phase 1·3 실제 Oracle 통합 Test를 포함한 전체 114개 실행, 실패 0, 오류 0, 조건부 Phase 7 검증 1개 제외 |
+| Backend 자동 테스트 | 검증 완료 | 전체 171개 실행, 실패 0, 오류 0, 환경 조건부 10개 제외; Phase 7 Oracle 검증 1개 별도 통과 |
 | Three.js Build | 검증 완료 | 최근 Build 성공, 번들 크기 500KB 초과 경고 존재 |
-| Flutter 자동 테스트 | 검증 완료 | Phase 6 집중 테스트 26개, Flutter 전체 테스트 68개 통과 |
+| Flutter 자동 테스트 | 검증 완료 | Mission Phase 6 집중 테스트 12개, Flutter 전체 테스트 80개 통과 |
 | Flutter 성향 분석 흐름 | 검증 완료 | 최초 분석·복원·멱등 재시도·재분석과 Oracle 직접 조회 E2E 완료 |
-| Flutter 전체 사용자 흐름 | 진행 중 | 성향 분석 이후 시간 질문·미션 생성·World 연결 E2E 미완성 |
+| Flutter 전체 사용자 흐름 | 진행 중 | 성향 분석→시간 설정→미션 완료·통계 E2E 완료, World 연결은 미완성 |
 
 ## 권장 진행 순서
 
-1. 미션 기능 Phase 0 SDD를 작성한 뒤 추천·선택·완료를 연결한다.
-2. World 기능 Phase 0 SDD를 작성한 뒤 미션 완료와 공간 성장을 연결한다.
+1. World 기능 Phase 0 SDD를 작성한 뒤 미션 완료 카테고리 통계와 공간 성장을 연결한다.
 
 ## 상태 갱신 규칙
 
@@ -149,6 +163,15 @@
 
 | 날짜 | 변경 내용 |
 |---|---|
+| 2026-08-20 | 랜덤 미션 V1 Phase 6~7 Flutter 전체 흐름, 정상·실패 테스트, 실제 Spring Boot·Oracle E2E와 Oracle 직접 검증 완료 |
+| 2026-08-20 | 랜덤 미션 V1 Phase 5 완료 통계·5회 성향 갱신·LLM Catalog·요약 API, 실제 Oracle 3개와 Backend 전체 170개 검증 완료 |
+| 2026-08-20 | 랜덤 미션 V1 Phase 4 선택·취소·교체·완료 API, Oracle 상태·로그·Rollback, OpenAPI와 Backend 전체 153개 검증 완료 |
+| 2026-08-20 | 랜덤 미션 V1 Phase 3 설정·오늘 후보 API, Oracle 저장·재사용·Rollback, OpenAPI와 Backend 전체 140개 검증 완료 |
+| 2026-08-20 | 랜덤 미션 V1 Phase 2 집중 테스트 21개, 실제 Oracle 포함 Backend 전체 129개와 Package 재검증 완료 |
+| 2026-08-19 | 랜덤 미션 V1 Phase 2 순수 Java 추천 Domain, 정상·주요 실패 시나리오, 실제 Oracle 회귀와 Backend Package 검증 완료 |
+| 2026-08-19 | 랜덤 미션 V1 Phase 1 실제 Oracle 멱등 Migration, 정상·19개 실패 Constraint, Rollback과 Backend 전체 회귀 검증 완료 |
+| 2026-08-19 | 랜덤 미션 V1 Phase 0 정상·실패 계약 정적 검사, Backend 114개·Flutter 68개 회귀 테스트 완료 |
+| 2026-08-19 | 랜덤 미션 V1 Phase 0 SDD 작성, 후보·하루 한도·추천 점수·상태·REST·Oracle 계약 확정 및 검증 시작 |
 | 2026-08-19 | 사용자 성향 분석 V2 Phase 7 실제 Flutter·Spring Boot·Oracle E2E, 실패 시나리오, Oracle 직접 조회와 전체 회귀 검증 완료 |
 | 2026-08-19 | 사용자 성향 분석 V2 Phase 6 전체 Profile·재접속 복원·재분석 성공/실패와 정상·실패 시나리오 검증 완료 |
 | 2026-08-19 | 사용자 성향 분석 V2 Phase 5 여섯 문항 UI·Validation·제출 잠금·동일 키 재시도와 정상·실패 시나리오 검증 완료 |
