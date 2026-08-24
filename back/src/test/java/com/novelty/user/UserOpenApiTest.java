@@ -22,7 +22,7 @@ class UserOpenApiTest {
     private MockMvc mockMvc;
 
     @Test
-    void exposesAccountEndpointsAndHidesLegacyAnonymousCreation() throws Exception {
+    void exposesOnlyOfficialAccountEndpoints() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paths['/api/users/register'].post").exists())

@@ -26,7 +26,6 @@ void main() {
       ),
     );
     expect(store.value, isNull);
-    expect(gateway.createCalls, 0);
   });
 
   test('restores cached user and branches to form when not analyzed', () async {
@@ -41,7 +40,6 @@ void main() {
     expect(result.entry, PersonalityEntry.form);
     expect(result.userKey, 'cached-user-key');
     expect(gateway.receivedUserKey, 'cached-user-key');
-    expect(gateway.createCalls, 0);
   });
 
   test('restores cached user and branches to profile when analyzed', () async {
@@ -88,7 +86,6 @@ void main() {
       );
       expect(store.value, 'expired-user-key');
       expect(store.clearCalls, 0);
-      expect(gateway.createCalls, 0);
     },
   );
 
@@ -279,15 +276,8 @@ class _FakePersonalityGateway implements PersonalityGateway {
 
   UserProfile? currentUser;
   Object? getError;
-  int createCalls = 0;
   int getCalls = 0;
   String? receivedUserKey;
-
-  @override
-  Future<AnonymousUser> createAnonymousUser() async {
-    createCalls++;
-    return _anonymousUser();
-  }
 
   @override
   Future<AnonymousUser> register(String loginId, String password) async =>

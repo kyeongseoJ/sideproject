@@ -36,33 +36,6 @@ void main() {
     api.close();
   });
 
-  test('creates an anonymous user through the V2 user endpoint', () async {
-    final client = MockClient((request) async {
-      expect(request.method, 'POST');
-      expect(
-        request.url.toString(),
-        'http://localhost:8080/api/users/anonymous',
-      );
-      expect(request.headers.containsKey('X-User-Key'), isFalse);
-      return _jsonResponse({
-        'userId': 7,
-        'userKey': 'user-key-value',
-        'nickname': '노벨티07QK',
-        'personalityCompleted': false,
-      }, 201);
-    });
-    final api = PersonalityApi(
-      client: client,
-      baseUrl: 'http://localhost:8080/',
-    );
-
-    final user = await api.createAnonymousUser();
-
-    expect(user.userId, 7);
-    expect(user.userKey, 'user-key-value');
-    api.close();
-  });
-
   test(
     'restores the current user with X-User-Key and never calls V1',
     () async {

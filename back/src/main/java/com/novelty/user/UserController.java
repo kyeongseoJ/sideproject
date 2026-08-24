@@ -18,7 +18,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.Hidden;
 
 @RestController
 @RequestMapping("/api/users")
@@ -54,27 +53,6 @@ public class UserController {
         return userService.login(request);
     }
 
-    @PostMapping("/anonymous")
-    @Hidden
-    @Operation(
-            summary = "익명 사용자 생성",
-            description = "사용자 키와 중복되지 않는 초기 랜덤 닉네임을 생성합니다. "
-                    + "사용자 키 원문은 이 응답에서만 전달됩니다.")
-    @ApiResponses({
-            @ApiResponse(
-                    responseCode = "201",
-                    description = "생성 성공",
-                    content = @Content(schema = @Schema(implementation = AnonymousUserResponse.class))),
-            @ApiResponse(
-                    responseCode = "500",
-                    description = "사용자 또는 닉네임 생성 실패",
-                    content = @Content(schema = @Schema(implementation = UserErrorResponse.class)))
-    })
-    public ResponseEntity<AnonymousUserResponse> createAnonymousUser() {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(userService.createAnonymousUser());
-    }
-
     @GetMapping("/me")
     @Operation(summary = "현재 사용자 조회", description = "캐시된 사용자 키로 현재 프로필을 조회합니다.")
     @ApiResponses({
@@ -88,7 +66,7 @@ public class UserController {
                     content = @Content(schema = @Schema(implementation = UserErrorResponse.class)))
     })
     public UserProfileResponse getCurrentUser(
-            @Parameter(description = "익명 사용자 생성 응답에서 받은 사용자 키", required = true)
+            @Parameter(description = "회원가입 또는 로그인 응답에서 받은 사용자 키", required = true)
             @RequestHeader(value = "X-User-Key", required = false) String userKey) {
         return userService.getCurrentUser(userKey);
     }
@@ -114,7 +92,7 @@ public class UserController {
                     content = @Content(schema = @Schema(implementation = UserErrorResponse.class)))
     })
     public NicknameResponse updateNickname(
-            @Parameter(description = "익명 사용자 생성 응답에서 받은 사용자 키", required = true)
+            @Parameter(description = "회원가입 또는 로그인 응답에서 받은 사용자 키", required = true)
             @RequestHeader(value = "X-User-Key", required = false) String userKey,
             @RequestBody NicknameUpdateRequest request) {
         return userService.updateNickname(userKey, request);

@@ -22,7 +22,10 @@ void main() {
       final api = PersonalityApi(baseUrl: _apiBaseUrl);
       addTearDown(api.close);
 
-      final anonymous = await api.createAnonymousUser();
+      final anonymous = await api.register(
+        'personality_e2e_${DateTime.now().microsecondsSinceEpoch}',
+        'Password1',
+      );
       // 사용자 키는 출력하지 않는다. 이 ID는 후속 Oracle 검증과 정리에만 사용한다.
       // ignore: avoid_print
       print('PHASE7_E2E_USER_ID=${anonymous.userId}');

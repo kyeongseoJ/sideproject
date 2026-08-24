@@ -7,7 +7,6 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -16,7 +15,6 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -41,19 +39,6 @@ class UserControllerTest {
         mockMvc = MockMvcBuilders.standaloneSetup(new UserController(userService))
                 .setControllerAdvice(new UserExceptionHandler())
                 .build();
-    }
-
-    @Test
-    void createsAnonymousUser() throws Exception {
-        when(userService.createAnonymousUser())
-                .thenReturn(new AnonymousUserResponse(7L, USER_KEY, "노벨티07QK", false));
-
-        mockMvc.perform(post("/api/users/anonymous"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.userId").value(7))
-                .andExpect(jsonPath("$.userKey").value(USER_KEY))
-                .andExpect(jsonPath("$.nickname").value("노벨티07QK"))
-                .andExpect(jsonPath("$.personalityCompleted").value(false));
     }
 
     @Test
@@ -194,16 +179,4 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     }
 
-    @Test
-    void allowsLocalFrontendOrigin() throws Exception {
-        when(userService.createAnonymousUser())
-                .thenReturn(new AnonymousUserResponse(7L, USER_KEY, "노벨티07QK", false));
-
-        mockMvc.perform(post("/api/users/anonymous")
-                        .header(HttpHeaders.ORIGIN, "http://localhost:3000"))
-                .andExpect(status().isCreated())
-                .andExpect(header().string(
-                        HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN,
-                        "http://localhost:3000"));
-    }
 }

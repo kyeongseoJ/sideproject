@@ -61,7 +61,7 @@ public class PersonalityController {
                     content = @Content(schema = @Schema(implementation = PersonalityErrorResponse.class)))
     })
     public ResponseEntity<PersonalityAnalysisResponse> analyze(
-            @Parameter(description = "익명 사용자 생성 응답에서 받은 사용자 키", required = true)
+            @Parameter(description = "회원가입 또는 로그인 응답에서 받은 사용자 키", required = true)
             @RequestHeader(value = "X-User-Key", required = false) String userKey,
             @RequestBody PersonalityAnalysisRequest request) {
         PersonalitySubmissionResult result = personalityService.analyze(userKey, request);

@@ -6,8 +6,6 @@ import 'package:novelty_app/api/api_base_url.dart';
 import 'package:novelty_app/personality/personality_models.dart';
 
 abstract interface class PersonalityGateway {
-  Future<AnonymousUser> createAnonymousUser();
-
   Future<AnonymousUser> register(String loginId, String password);
 
   Future<AnonymousUser> login(String loginId, String password);
@@ -88,17 +86,6 @@ class PersonalityApi implements PersonalityGateway {
   final http.Client _client;
   final String _baseUrl;
   final Duration _timeout;
-
-  @override
-  Future<AnonymousUser> createAnonymousUser() async {
-    final response = await _send(
-      () => _client.post(_uri('/api/users/anonymous')),
-    );
-    if (response.statusCode != 201) {
-      throw _apiError(response);
-    }
-    return _parse(() => AnonymousUser.fromJson(_readJsonObject(response)));
-  }
 
   @override
   Future<AnonymousUser> register(String loginId, String password) async {
