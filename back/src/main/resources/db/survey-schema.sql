@@ -38,6 +38,12 @@
 --   - USER_MISSION_SETTING / USER_MISSION_CATEGORY_STAT
 --   - MISSION_STATUS_LOG aggregate link and USER_PERSONALITY_PROFILE adaptation checkpoint
 --   - Verified idempotent re-run, active-slot uniqueness, normal inserts, failure constraints and rollback
+-- 2026-08-20: Removed duplicate USER_MISSION sequence, table, FK, and index script blocks.
+--   - Logical schema is unchanged; current Oracle re-application was not performed in this maintenance task.
+-- 2026-08-24: Added mission experience-diversity metadata and constraints.
+--   - ACTION_TYPE / CREATIVITY_LEVEL / UNPREDICTABILITY_LEVEL
+--   - COMFORT_ZONE_DISTANCE / COST_LEVEL / TAGS
+--   - Existing base missions receive explicit metadata; local Oracle idempotent application completed.
 --
 -- Future database changes
 -- Add every future CREATE, ALTER, index, constraint, and required reference-data
@@ -59,77 +65,6 @@ BEGIN
                 INCREMENT BY 1
                 NOCACHE
                 NOCYCLE';
-    END IF;
-END;
-/
-
-DECLARE
-    object_count NUMBER;
-BEGIN
-    SELECT COUNT(*)
-      INTO object_count
-      FROM user_sequences
-     WHERE sequence_name = 'USER_MISSION_SEQ';
-
-    IF object_count = 0 THEN
-        EXECUTE IMMEDIATE '
-            CREATE SEQUENCE USER_MISSION_SEQ
-                START WITH 1
-                INCREMENT BY 1
-                NOCACHE
-                NOCYCLE';
-    END IF;
-END;
-/
-
-DECLARE
-    object_count NUMBER;
-BEGIN
-    SELECT COUNT(*)
-      INTO object_count
-      FROM user_tables
-     WHERE table_name = 'USER_MISSION';
-
-    IF object_count = 0 THEN
-        EXECUTE IMMEDIATE '
-            CREATE TABLE USER_MISSION (
-                USER_MISSION_ID NUMBER(19)                NOT NULL,
-                USER_ID         NUMBER(19)                NOT NULL,
-                MISSION_ID      NUMBER(19)                NOT NULL,
-                STATUS          VARCHAR2(12 CHAR)         NOT NULL,
-                AVAILABLE_TIME  VARCHAR2(10 CHAR)         NOT NULL,
-                SERVICE_DATE    DATE                      NOT NULL,
-                SELECTED_AT     TIMESTAMP WITH TIME ZONE,
-                CANCELLED_AT    TIMESTAMP WITH TIME ZONE,
-                COMPLETED_AT    TIMESTAMP WITH TIME ZONE,
-                CREATED_AT      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                UPDATED_AT      TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                CONSTRAINT PK_USER_MISSION PRIMARY KEY (USER_MISSION_ID),
-                CONSTRAINT UQ_USER_MISSION_DAILY_OFFER
-                    UNIQUE (USER_ID, MISSION_ID, SERVICE_DATE),
-                CONSTRAINT CK_USER_MISSION_STATUS CHECK (STATUS IN (
-                    ''GENERATED'', ''SHOWN'', ''SELECTED'', ''CANCELLED'', ''COMPLETED''
-                )),
-                CONSTRAINT CK_USER_MISSION_AVAILABLE_TIME CHECK (AVAILABLE_TIME IN (
-                    ''QUICK'', ''SHORT'', ''MEDIUM'', ''LONG''
-                ))
-            )';
-    END IF;
-END;
-/
-
-DECLARE
-    object_count NUMBER;
-BEGIN
-    SELECT COUNT(*)
-      INTO object_count
-      FROM user_indexes
-     WHERE index_name = 'IX_USER_MISSION_USER_DATE';
-
-    IF object_count = 0 THEN
-        EXECUTE IMMEDIATE '
-            CREATE INDEX IX_USER_MISSION_USER_DATE
-                ON USER_MISSION (USER_ID, SERVICE_DATE DESC)';
     END IF;
 END;
 /
@@ -244,54 +179,6 @@ BEGIN
                 CONSTRAINT CK_USER_WORLD_OBJECT_EXP CHECK (EXPERIENCE >= 0),
                 CONSTRAINT CK_USER_WORLD_OBJECT_SCALE CHECK (SCALE_VALUE > 0)
             )';
-    END IF;
-END;
-/
-
-DECLARE
-    object_count NUMBER;
-    table_count NUMBER;
-BEGIN
-    SELECT COUNT(*) INTO object_count FROM user_constraints
-     WHERE constraint_name = 'FK_USER_MISSION_USER';
-    SELECT COUNT(*) INTO table_count FROM user_tables
-     WHERE table_name = 'NOVELTY_USER';
-    IF object_count = 0 AND table_count = 1 THEN
-        EXECUTE IMMEDIATE '
-            ALTER TABLE USER_MISSION ADD CONSTRAINT FK_USER_MISSION_USER
-            FOREIGN KEY (USER_ID) REFERENCES NOVELTY_USER (USER_ID) ON DELETE CASCADE';
-    END IF;
-END;
-/
-
-DECLARE
-    object_count NUMBER;
-    table_count NUMBER;
-BEGIN
-    SELECT COUNT(*) INTO object_count FROM user_constraints
-     WHERE constraint_name = 'FK_USER_MISSION_MISSION';
-    SELECT COUNT(*) INTO table_count FROM user_tables
-     WHERE table_name = 'MISSION';
-    IF object_count = 0 AND table_count = 1 THEN
-        EXECUTE IMMEDIATE '
-            ALTER TABLE USER_MISSION ADD CONSTRAINT FK_USER_MISSION_MISSION
-            FOREIGN KEY (MISSION_ID) REFERENCES MISSION (MISSION_ID)';
-    END IF;
-END;
-/
-
-DECLARE
-    object_count NUMBER;
-    table_count NUMBER;
-BEGIN
-    SELECT COUNT(*) INTO object_count FROM user_constraints
-     WHERE constraint_name = 'FK_USER_WORLD_OBJECT_USER';
-    SELECT COUNT(*) INTO table_count FROM user_tables
-     WHERE table_name = 'NOVELTY_USER';
-    IF object_count = 0 AND table_count = 1 THEN
-        EXECUTE IMMEDIATE '
-            ALTER TABLE USER_WORLD_OBJECT ADD CONSTRAINT FK_USER_WORLD_OBJECT_USER
-            FOREIGN KEY (USER_ID) REFERENCES NOVELTY_USER (USER_ID) ON DELETE CASCADE';
     END IF;
 END;
 /
@@ -429,6 +316,12 @@ BEGIN
                 SOCIAL_LEVEL        NUMBER(1)          NOT NULL,
                 ACTIVITY_LEVEL      NUMBER(1)          NOT NULL,
                 NOVELTY_LEVEL       NUMBER(1)          NOT NULL,
+                ACTION_TYPE         VARCHAR2(24 CHAR)  NOT NULL,
+                CREATIVITY_LEVEL    NUMBER(1)          NOT NULL,
+                UNPREDICTABILITY_LEVEL NUMBER(1)       NOT NULL,
+                COMFORT_ZONE_DISTANCE NUMBER(1)        NOT NULL,
+                COST_LEVEL          NUMBER(1)          NOT NULL,
+                TAGS                VARCHAR2(400 CHAR) NOT NULL,
                 ENABLED             CHAR(1) DEFAULT ''Y'' NOT NULL,
                 SOURCE_TYPE         VARCHAR2(8 CHAR) DEFAULT ''BASE'' NOT NULL,
                 CONTENT_FINGERPRINT VARCHAR2(64 CHAR) NOT NULL,
@@ -446,6 +339,19 @@ BEGIN
                 CONSTRAINT CK_MISSION_SOCIAL_LEVEL CHECK (SOCIAL_LEVEL IN (-1, 0, 1)),
                 CONSTRAINT CK_MISSION_ACTIVITY_LEVEL CHECK (ACTIVITY_LEVEL IN (0, 1, 2)),
                 CONSTRAINT CK_MISSION_NOVELTY_LEVEL CHECK (NOVELTY_LEVEL IN (0, 1, 2)),
+                CONSTRAINT CK_MISSION_ACTION_TYPE CHECK (ACTION_TYPE IN (
+                    ''EXPLORE'', ''OBSERVE'', ''CREATE'', ''CONNECT'', ''ORGANIZE'',
+                    ''EXERCISE'', ''ASK'', ''PRACTICE'', ''TASTE'', ''LISTEN''
+                )),
+                CONSTRAINT CK_MISSION_CREATIVITY CHECK (CREATIVITY_LEVEL IN (0, 1, 2)),
+                CONSTRAINT CK_MISSION_UNPREDICTABILITY CHECK (UNPREDICTABILITY_LEVEL IN (0, 1, 2)),
+                CONSTRAINT CK_MISSION_COMFORT_DISTANCE CHECK (COMFORT_ZONE_DISTANCE IN (0, 1, 2)),
+                CONSTRAINT CK_MISSION_COST_LEVEL CHECK (COST_LEVEL IN (0, 1, 2)),
+                CONSTRAINT CK_MISSION_TAGS CHECK (REGEXP_LIKE(TAGS, ''^[A-Z0-9_]+(,[A-Z0-9_]+)*$'')),
+                CONSTRAINT CK_MISSION_TAG_COUNT CHECK (REGEXP_COUNT(TAGS, '','') <= 9),
+                CONSTRAINT CK_MISSION_TAG_LENGTH CHECK (
+                    NOT REGEXP_LIKE(TAGS, ''(^|,)[A-Z0-9_]{31}'')
+                ),
                 CONSTRAINT CK_MISSION_ENABLED CHECK (ENABLED IN (''Y'', ''N'')),
                 CONSTRAINT CK_MISSION_SOURCE_TYPE CHECK (SOURCE_TYPE IN (''BASE'', ''LLM''))
             )';
@@ -453,32 +359,109 @@ BEGIN
 END;
 /
 
+DECLARE
+    column_count NUMBER;
+    PROCEDURE add_mission_column_if_missing(
+        column_name_value VARCHAR2,
+        definition_value VARCHAR2
+    ) IS
+    BEGIN
+        SELECT COUNT(*) INTO column_count
+          FROM user_tab_columns
+         WHERE table_name = 'MISSION' AND column_name = column_name_value;
+        IF column_count = 0 THEN
+            EXECUTE IMMEDIATE 'ALTER TABLE MISSION ADD (' || definition_value || ')';
+        END IF;
+    END;
+BEGIN
+    add_mission_column_if_missing('ACTION_TYPE',
+        'ACTION_TYPE VARCHAR2(24 CHAR) DEFAULT ''EXPLORE'' NOT NULL');
+    add_mission_column_if_missing('CREATIVITY_LEVEL',
+        'CREATIVITY_LEVEL NUMBER(1) DEFAULT 0 NOT NULL');
+    add_mission_column_if_missing('UNPREDICTABILITY_LEVEL',
+        'UNPREDICTABILITY_LEVEL NUMBER(1) DEFAULT 0 NOT NULL');
+    add_mission_column_if_missing('COMFORT_ZONE_DISTANCE',
+        'COMFORT_ZONE_DISTANCE NUMBER(1) DEFAULT 1 NOT NULL');
+    add_mission_column_if_missing('COST_LEVEL',
+        'COST_LEVEL NUMBER(1) DEFAULT 0 NOT NULL');
+    add_mission_column_if_missing('TAGS',
+        'TAGS VARCHAR2(400 CHAR) DEFAULT ''GENERAL'' NOT NULL');
+END;
+/
+
+DECLARE
+    constraint_count NUMBER;
+    PROCEDURE add_mission_constraint_if_missing(
+        name_value VARCHAR2,
+        definition_value VARCHAR2
+    ) IS
+    BEGIN
+        SELECT COUNT(*) INTO constraint_count
+          FROM user_constraints
+         WHERE constraint_name = name_value;
+        IF constraint_count = 0 THEN
+            EXECUTE IMMEDIATE 'ALTER TABLE MISSION ADD CONSTRAINT '
+                    || name_value || ' ' || definition_value;
+        END IF;
+    END;
+BEGIN
+    add_mission_constraint_if_missing('CK_MISSION_ACTION_TYPE',
+        'CHECK (ACTION_TYPE IN (''EXPLORE'', ''OBSERVE'', ''CREATE'', ''CONNECT'', '
+        || '''ORGANIZE'', ''EXERCISE'', ''ASK'', ''PRACTICE'', ''TASTE'', ''LISTEN''))');
+    add_mission_constraint_if_missing('CK_MISSION_CREATIVITY',
+        'CHECK (CREATIVITY_LEVEL IN (0, 1, 2))');
+    add_mission_constraint_if_missing('CK_MISSION_UNPREDICTABILITY',
+        'CHECK (UNPREDICTABILITY_LEVEL IN (0, 1, 2))');
+    add_mission_constraint_if_missing('CK_MISSION_COMFORT_DISTANCE',
+        'CHECK (COMFORT_ZONE_DISTANCE IN (0, 1, 2))');
+    add_mission_constraint_if_missing('CK_MISSION_COST_LEVEL',
+        'CHECK (COST_LEVEL IN (0, 1, 2))');
+    add_mission_constraint_if_missing('CK_MISSION_TAGS',
+        'CHECK (REGEXP_LIKE(TAGS, ''^[A-Z0-9_]+(,[A-Z0-9_]+)*$''))');
+    add_mission_constraint_if_missing('CK_MISSION_TAG_COUNT',
+        'CHECK (REGEXP_COUNT(TAGS, '','') <= 9)');
+    add_mission_constraint_if_missing('CK_MISSION_TAG_LENGTH',
+        'CHECK (NOT REGEXP_LIKE(TAGS, ''(^|,)[A-Z0-9_]{31}''))');
+END;
+/
+
 MERGE INTO MISSION target
 USING (
-    SELECT '동네에서 처음 보는 골목 한 바퀴 걷기' title, '동네의 익숙하지 않은 골목을 골라 10분 동안 천천히 걸어 보세요.' description, 'OUTDOOR' category, 1 difficulty, 10 estimated_minutes, 1 indoor_outdoor, -1 social_level, 1 activity_level, 1 novelty_level FROM dual UNION ALL
-    SELECT '서점에서 평소 안 보던 분야 책 펼쳐보기', '서점이나 도서관에서 평소 고르지 않던 분야의 책을 찾아 다섯 쪽 읽어 보세요.', 'LEARNING', 1, 15, 1, -1, 0, 2 FROM dual UNION ALL
-    SELECT '처음 보는 재료로 간단한 간식 만들기', '사용해 본 적 없는 재료 하나를 골라 간단한 간식이나 음료를 만들어 보세요.', 'FOOD', 2, 30, -1, -1, 1, 2 FROM dual UNION ALL
-    SELECT '주변 사람에게 짧은 안부 보내기', '최근 대화하지 않은 지인 한 명에게 부담 없는 한 문장 안부를 보내 보세요.', 'SOCIAL', 1, 5, 0, 1, 0, 1 FROM dual UNION ALL
-    SELECT '좋아하지 않던 색으로 작은 그림 그리기', '평소 잘 쓰지 않는 색 세 가지를 골라 작은 추상 그림을 완성해 보세요.', 'CREATIVE', 1, 15, -1, -1, 0, 2 FROM dual UNION ALL
-    SELECT '책상 위 물건 다섯 개 자리 바꾸기', '책상 위 물건 다섯 개를 골라 더 편리하거나 새로운 배치로 바꿔 보세요.', 'ORGANIZING', 1, 10, -1, -1, 1, 1 FROM dual UNION ALL
-    SELECT '낯선 음악 한 곡 끝까지 듣기', '평소 듣지 않는 장르를 골라 한 곡을 검색하고 중간에 넘기지 말고 들어 보세요.', 'CULTURE', 1, 5, -1, -1, 0, 1 FROM dual UNION ALL
-    SELECT '공원에서 나무 세 종류 관찰하기', '가까운 공원이나 길가에서 모양이 다른 나무 세 종류를 찾아 특징을 기록해 보세요.', 'OUTDOOR', 1, 20, 1, -1, 1, 1 FROM dual UNION ALL
-    SELECT '계단을 이용해 짧게 몸 움직이기', '안전한 계단을 골라 자신의 속도로 5분 동안 오르내리고 호흡을 정리해 보세요.', 'MOVEMENT', 2, 10, 0, -1, 2, 1 FROM dual UNION ALL
-    SELECT '직원에게 오늘의 추천 하나 묻기', '카페나 가게에서 직원에게 오늘 추천하는 메뉴나 물건 하나를 정중하게 물어보세요.', 'SOCIAL', 2, 10, 1, 1, 0, 2 FROM dual UNION ALL
-    SELECT '한 번도 안 해본 정리 기준 적용하기', '서랍 하나를 색상, 사용 빈도 또는 크기 중 평소와 다른 기준으로 정리해 보세요.', 'ORGANIZING', 1, 20, -1, -1, 1, 2 FROM dual UNION ALL
-    SELECT '짧은 외국어 표현 실제로 사용하기', '새로운 외국어 인사말 하나를 익힌 뒤 혼잣말이나 대화에서 한 번 사용해 보세요.', 'LEARNING', 1, 10, 0, 0, 0, 2 FROM dual
+    SELECT '동네에서 처음 보는 골목 한 바퀴 걷기' title, '동네의 익숙하지 않은 골목을 골라 10분 동안 천천히 걸어 보세요.' description, 'OUTDOOR' category, 1 difficulty, 10 estimated_minutes, 1 indoor_outdoor, -1 social_level, 1 activity_level, 1 novelty_level, 'EXPLORE' action_type, 0 creativity_level, 2 unpredictability_level, 2 comfort_zone_distance, 0 cost_level, 'EXPLORE,WALK,LOCAL' tags FROM dual UNION ALL
+    SELECT '서점에서 평소 안 보던 분야 책 펼쳐보기', '서점이나 도서관에서 평소 고르지 않던 분야의 책을 찾아 다섯 쪽 읽어 보세요.', 'LEARNING', 1, 15, 1, -1, 0, 2, 'EXPLORE', 0, 2, 1, 0, 'BOOK,READ,DISCOVER' FROM dual UNION ALL
+    SELECT '처음 보는 재료로 간단한 간식 만들기', '사용해 본 적 없는 재료 하나를 골라 간단한 간식이나 음료를 만들어 보세요.', 'FOOD', 2, 30, -1, -1, 1, 2, 'CREATE', 2, 1, 2, 1, 'COOK,INGREDIENT,TASTE' FROM dual UNION ALL
+    SELECT '주변 사람에게 짧은 안부 보내기', '최근 대화하지 않은 지인 한 명에게 부담 없는 한 문장 안부를 보내 보세요.', 'SOCIAL', 1, 5, 0, 1, 0, 1, 'CONNECT', 0, 1, 1, 0, 'MESSAGE,CONTACT,RELATIONSHIP' FROM dual UNION ALL
+    SELECT '좋아하지 않던 색으로 작은 그림 그리기', '평소 잘 쓰지 않는 색 세 가지를 골라 작은 추상 그림을 완성해 보세요.', 'CREATIVE', 1, 15, -1, -1, 0, 2, 'CREATE', 2, 2, 1, 0, 'DRAW,COLOR,ART' FROM dual UNION ALL
+    SELECT '책상 위 물건 다섯 개 자리 바꾸기', '책상 위 물건 다섯 개를 골라 더 편리하거나 새로운 배치로 바꿔 보세요.', 'ORGANIZING', 1, 10, -1, -1, 1, 1, 'ORGANIZE', 1, 1, 1, 0, 'DESK,REARRANGE,ORGANIZE' FROM dual UNION ALL
+    SELECT '낯선 음악 한 곡 끝까지 듣기', '평소 듣지 않는 장르를 골라 한 곡을 검색하고 중간에 넘기지 말고 들어 보세요.', 'CULTURE', 1, 5, -1, -1, 0, 1, 'LISTEN', 0, 1, 1, 0, 'MUSIC,LISTEN,GENRE' FROM dual UNION ALL
+    SELECT '공원에서 나무 세 종류 관찰하기', '가까운 공원이나 길가에서 모양이 다른 나무 세 종류를 찾아 특징을 기록해 보세요.', 'OUTDOOR', 1, 20, 1, -1, 1, 1, 'OBSERVE', 1, 1, 1, 0, 'NATURE,OBSERVE,RECORD' FROM dual UNION ALL
+    SELECT '계단을 이용해 짧게 몸 움직이기', '안전한 계단을 골라 자신의 속도로 5분 동안 오르내리고 호흡을 정리해 보세요.', 'MOVEMENT', 2, 10, 0, -1, 2, 1, 'EXERCISE', 0, 0, 1, 0, 'STAIRS,EXERCISE,BREATH' FROM dual UNION ALL
+    SELECT '직원에게 오늘의 추천 하나 묻기', '카페나 가게에서 직원에게 오늘 추천하는 메뉴나 물건 하나를 정중하게 물어보세요.', 'SOCIAL', 2, 10, 1, 1, 0, 2, 'ASK', 0, 2, 2, 1, 'ASK,RECOMMENDATION,SHOP' FROM dual UNION ALL
+    SELECT '한 번도 안 해본 정리 기준 적용하기', '서랍 하나를 색상, 사용 빈도 또는 크기 중 평소와 다른 기준으로 정리해 보세요.', 'ORGANIZING', 1, 20, -1, -1, 1, 2, 'ORGANIZE', 1, 1, 1, 0, 'DRAWER,SORT,ORGANIZE' FROM dual UNION ALL
+    SELECT '짧은 외국어 표현 실제로 사용하기', '새로운 외국어 인사말 하나를 익힌 뒤 혼잣말이나 대화에서 한 번 사용해 보세요.', 'LEARNING', 1, 10, 0, 0, 0, 2, 'PRACTICE', 1, 1, 2, 0, 'LANGUAGE,PRACTICE,SPEAK' FROM dual
 ) source
 ON (target.TITLE_NORMALIZED = UPPER(REPLACE(source.title, ' ', '')))
+WHEN MATCHED THEN UPDATE SET
+    target.ACTION_TYPE = source.action_type,
+    target.CREATIVITY_LEVEL = source.creativity_level,
+    target.UNPREDICTABILITY_LEVEL = source.unpredictability_level,
+    target.COMFORT_ZONE_DISTANCE = source.comfort_zone_distance,
+    target.COST_LEVEL = source.cost_level,
+    target.TAGS = source.tags
 WHEN NOT MATCHED THEN
     INSERT (
         MISSION_ID, TITLE, TITLE_NORMALIZED, DESCRIPTION, CATEGORY,
         DIFFICULTY, ESTIMATED_MINUTES, INDOOR_OUTDOOR, SOCIAL_LEVEL,
-        ACTIVITY_LEVEL, NOVELTY_LEVEL, ENABLED, SOURCE_TYPE, CONTENT_FINGERPRINT
+        ACTIVITY_LEVEL, NOVELTY_LEVEL, ACTION_TYPE, CREATIVITY_LEVEL,
+        UNPREDICTABILITY_LEVEL, COMFORT_ZONE_DISTANCE, COST_LEVEL, TAGS,
+        ENABLED, SOURCE_TYPE, CONTENT_FINGERPRINT
     ) VALUES (
         MISSION_SEQ.NEXTVAL, source.title, UPPER(REPLACE(source.title, ' ', '')),
         source.description, source.category, source.difficulty, source.estimated_minutes,
         source.indoor_outdoor, source.social_level, source.activity_level,
-        source.novelty_level, 'Y', 'BASE',
+        source.novelty_level, source.action_type, source.creativity_level,
+        source.unpredictability_level, source.comfort_zone_distance,
+        source.cost_level, source.tags, 'Y', 'BASE',
         LOWER(RAWTOHEX(STANDARD_HASH(source.title || '|' || source.description, 'SHA256')))
     );
 
@@ -1316,32 +1299,6 @@ DECLARE
     object_count NUMBER;
 BEGIN
     SELECT COUNT(*) INTO object_count FROM user_constraints
-     WHERE constraint_name = 'FK_USER_MISSION_USER';
-    IF object_count = 0 THEN
-        EXECUTE IMMEDIATE '
-            ALTER TABLE USER_MISSION ADD CONSTRAINT FK_USER_MISSION_USER
-            FOREIGN KEY (USER_ID) REFERENCES NOVELTY_USER (USER_ID) ON DELETE CASCADE';
-    END IF;
-END;
-/
-
-DECLARE
-    object_count NUMBER;
-BEGIN
-    SELECT COUNT(*) INTO object_count FROM user_constraints
-     WHERE constraint_name = 'FK_USER_MISSION_MISSION';
-    IF object_count = 0 THEN
-        EXECUTE IMMEDIATE '
-            ALTER TABLE USER_MISSION ADD CONSTRAINT FK_USER_MISSION_MISSION
-            FOREIGN KEY (MISSION_ID) REFERENCES MISSION (MISSION_ID)';
-    END IF;
-END;
-/
-
-DECLARE
-    object_count NUMBER;
-BEGIN
-    SELECT COUNT(*) INTO object_count FROM user_constraints
      WHERE constraint_name = 'FK_USER_WORLD_OBJECT_USER';
     IF object_count = 0 THEN
         EXECUTE IMMEDIATE '
@@ -1392,10 +1349,6 @@ BEGIN
                 CONSTRAINT PK_USER_MISSION PRIMARY KEY (USER_MISSION_ID),
                 CONSTRAINT UQ_USER_MISSION_DAILY_OFFER
                     UNIQUE (USER_ID, MISSION_ID, SERVICE_DATE),
-                CONSTRAINT FK_USER_MISSION_USER
-                    FOREIGN KEY (USER_ID) REFERENCES NOVELTY_USER (USER_ID) ON DELETE CASCADE,
-                CONSTRAINT FK_USER_MISSION_MISSION
-                    FOREIGN KEY (MISSION_ID) REFERENCES MISSION (MISSION_ID),
                 CONSTRAINT CK_USER_MISSION_STATUS CHECK (STATUS IN (
                     ''GENERATED'', ''SHOWN'', ''SELECTED'', ''CANCELLED'', ''COMPLETED''
                 )),
@@ -1414,6 +1367,32 @@ BEGIN
         EXECUTE IMMEDIATE '
             CREATE INDEX IX_USER_MISSION_USER_DATE
                 ON USER_MISSION (USER_ID, SERVICE_DATE DESC)';
+    END IF;
+END;
+/
+
+DECLARE
+    object_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO object_count FROM user_constraints
+     WHERE constraint_name = 'FK_USER_MISSION_USER';
+    IF object_count = 0 THEN
+        EXECUTE IMMEDIATE '
+            ALTER TABLE USER_MISSION ADD CONSTRAINT FK_USER_MISSION_USER
+            FOREIGN KEY (USER_ID) REFERENCES NOVELTY_USER (USER_ID) ON DELETE CASCADE';
+    END IF;
+END;
+/
+
+DECLARE
+    object_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO object_count FROM user_constraints
+     WHERE constraint_name = 'FK_USER_MISSION_MISSION';
+    IF object_count = 0 THEN
+        EXECUTE IMMEDIATE '
+            ALTER TABLE USER_MISSION ADD CONSTRAINT FK_USER_MISSION_MISSION
+            FOREIGN KEY (MISSION_ID) REFERENCES MISSION (MISSION_ID)';
     END IF;
 END;
 /
@@ -1778,3 +1757,113 @@ END;
 /
 
 -- MISSION_V1_PHASE1_END
+
+-- WORLD_V1_PHASE2_START
+
+DECLARE
+    column_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO column_count
+      FROM user_tab_columns
+     WHERE table_name = 'WORLD_OBJECT' AND column_name = 'MAX_LEVEL';
+    IF column_count = 0 THEN
+        EXECUTE IMMEDIATE 'ALTER TABLE WORLD_OBJECT ADD MAX_LEVEL NUMBER(3) DEFAULT 5 NOT NULL';
+    END IF;
+END;
+/
+
+DECLARE
+    PROCEDURE drop_column_if_exists(table_name_value VARCHAR2, column_name_value VARCHAR2) IS
+        column_count NUMBER;
+    BEGIN
+        SELECT COUNT(*) INTO column_count
+          FROM user_tab_columns
+         WHERE table_name = table_name_value AND column_name = column_name_value;
+        IF column_count > 0 THEN
+            EXECUTE IMMEDIATE 'ALTER TABLE ' || table_name_value || ' DROP COLUMN ' || column_name_value;
+        END IF;
+    END;
+BEGIN
+    drop_column_if_exists('WORLD_OBJECT_LEVEL', 'GLB_ASSET_URI');
+    drop_column_if_exists('WORLD_OBJECT_LEVEL', 'ASSET_LOCATION');
+    drop_column_if_exists('WORLD_OBJECT_LEVEL', 'ANIMATION_NAME');
+    drop_column_if_exists('USER_WORLD_OBJECT', 'PLACEMENT_X');
+    drop_column_if_exists('USER_WORLD_OBJECT', 'PLACEMENT_Y');
+    drop_column_if_exists('USER_WORLD_OBJECT', 'PLACEMENT_Z');
+    drop_column_if_exists('USER_WORLD_OBJECT', 'ROTATION_Y');
+    drop_column_if_exists('USER_WORLD_OBJECT', 'SCALE_VALUE');
+END;
+/
+
+DECLARE
+    constraint_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO constraint_count FROM user_constraints
+     WHERE constraint_name = 'UQ_WORLD_OBJECT_CATEGORY';
+    IF constraint_count = 0 THEN
+        EXECUTE IMMEDIATE 'ALTER TABLE WORLD_OBJECT ADD CONSTRAINT UQ_WORLD_OBJECT_CATEGORY UNIQUE (CATEGORY)';
+    END IF;
+
+    SELECT COUNT(*) INTO constraint_count FROM user_constraints
+     WHERE constraint_name = 'CK_WORLD_OBJECT_MAX_LEVEL';
+    IF constraint_count = 0 THEN
+        EXECUTE IMMEDIATE 'ALTER TABLE WORLD_OBJECT ADD CONSTRAINT CK_WORLD_OBJECT_MAX_LEVEL CHECK (MAX_LEVEL = 5)';
+    END IF;
+END;
+/
+
+MERGE INTO WORLD_OBJECT target
+USING (
+    SELECT 'TRAINING_CORNER' object_code, '운동 코너' display_name, 'MOVEMENT' category FROM dual UNION ALL
+    SELECT 'ART_EASEL', '창작 이젤', 'CREATIVE' FROM dual UNION ALL
+    SELECT 'KITCHEN_TABLE', '요리 테이블', 'FOOD' FROM dual UNION ALL
+    SELECT 'BOOKSHELF', '책장', 'LEARNING' FROM dual UNION ALL
+    SELECT 'MESSAGE_BOARD', '소통 보드', 'SOCIAL' FROM dual UNION ALL
+    SELECT 'INDOOR_GARDEN', '실내 정원', 'OUTDOOR' FROM dual UNION ALL
+    SELECT 'STORAGE_CABINET', '수납장', 'ORGANIZING' FROM dual UNION ALL
+    SELECT 'RECORD_PLAYER', '레코드 플레이어', 'CULTURE' FROM dual
+) source
+ON (target.OBJECT_CODE = source.object_code)
+WHEN MATCHED THEN UPDATE SET
+    target.DISPLAY_NAME = source.display_name,
+    target.CATEGORY = source.category,
+    target.MAX_LEVEL = 5,
+    target.ENABLED = 'Y',
+    target.UPDATED_AT = CURRENT_TIMESTAMP
+WHEN NOT MATCHED THEN INSERT (
+    WORLD_OBJECT_ID, OBJECT_CODE, DISPLAY_NAME, CATEGORY,
+    MAX_LEVEL, ENABLED, CREATED_AT, UPDATED_AT
+) VALUES (
+    WORLD_OBJECT_SEQ.NEXTVAL, source.object_code, source.display_name, source.category,
+    5, 'Y', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+);
+
+MERGE INTO WORLD_OBJECT_LEVEL target
+USING (
+    SELECT object.WORLD_OBJECT_ID, level_source.OBJECT_LEVEL, level_source.REQUIRED_EXPERIENCE
+      FROM WORLD_OBJECT object
+      CROSS JOIN (
+          SELECT 1 OBJECT_LEVEL, 0 REQUIRED_EXPERIENCE FROM dual UNION ALL
+          SELECT 2, 50 FROM dual UNION ALL
+          SELECT 3, 120 FROM dual UNION ALL
+          SELECT 4, 220 FROM dual UNION ALL
+          SELECT 5, 350 FROM dual
+      ) level_source
+     WHERE object.OBJECT_CODE IN (
+         'TRAINING_CORNER', 'ART_EASEL', 'KITCHEN_TABLE', 'BOOKSHELF',
+         'MESSAGE_BOARD', 'INDOOR_GARDEN', 'STORAGE_CABINET', 'RECORD_PLAYER'
+     )
+) source
+ON (target.WORLD_OBJECT_ID = source.WORLD_OBJECT_ID
+    AND target.OBJECT_LEVEL = source.OBJECT_LEVEL)
+WHEN MATCHED THEN UPDATE SET
+    target.REQUIRED_EXPERIENCE = source.REQUIRED_EXPERIENCE
+WHEN NOT MATCHED THEN INSERT (
+    WORLD_OBJECT_ID, OBJECT_LEVEL, REQUIRED_EXPERIENCE, CREATED_AT
+) VALUES (
+    source.WORLD_OBJECT_ID, source.OBJECT_LEVEL, source.REQUIRED_EXPERIENCE, CURRENT_TIMESTAMP
+);
+
+COMMIT;
+
+-- WORLD_V1_PHASE2_END
