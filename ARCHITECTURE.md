@@ -5,19 +5,19 @@
 ```text
 Novelty
 ├─ Frontend
-│  ├─ Flutter
-│  │  ├─ 선택지 폼           front/app/lib/survey
+│  ├─ Flutter (Web / Android 공용 UI)
+│  │  ├─ 선택지 폼           front/app/lib/personality
 │  │  ├─ 성향 분석 UI       front/app/lib/personality
 │  │  ├─ 미션 UI            front/app/lib/mission
 │  │  ├─ 프로필             front/app/lib/profile
-│  │  ├─ 설정               front/app/lib/settings
+│  │  ├─ 미션 설정 UI        front/app/lib/mission
 │  │  └─ 3D World 화면      front/app/lib/world
 │  └─ Three.js Renderer      front/world3d/src/world
 ├─ Backend / Spring Boot
 │  ├─ User                  com.novelty.user
 │  ├─ Personality           com.novelty.personality
 │  ├─ Mission               com.novelty.mission
-│  ├─ Mission Completion    com.novelty.completion
+│  ├─ Mission Completion    com.novelty.mission.UserMissionService
 │  └─ World / Progression   com.novelty.world
 ├─ Database / Oracle
 │  ├─ USER                  NOVELTY_USER
@@ -49,19 +49,24 @@ Novelty
 - LLM 호출은 완료 Transaction 이후 수행한다. 검증된 결과만 공유 `MISSION` Catalog에 `SOURCE_TYPE=LLM`으로 저장하며 사용자·마일스톤 Unique 계약으로 중복 시도를 차단한다.
 - `/api/missions/summary`는 전체 완료 수, 마지막 성향 반영 횟수, 성향 코드와 카테고리별 완료 통계를 제공한다.
 - Flutter `lib/api/mission_api.dart`가 `X-User-Key` 기반 REST 계약과 오류 경계를 담당하고, `lib/mission/mission_experience_screen.dart`가 설정·오늘 후보·수행·완료·통계 화면 상태를 담당한다.
-- 성향 프로필의 `오늘의 미션 보기`가 미션 화면 진입점이며, 미션 완료 후 프로필로 돌아갈 때 현재 사용자 정보를 다시 조회해 5회 성향 갱신 결과를 반영한다.
+- 성향 완료 홈은 `MissionDashboardSection`을 상단에 직접 포함한다. 시간 선택·후보 캐러셀·단일 수행/완료 상태가 같은 화면에서 전환되며 별도 미션 페이지 이동을 요구하지 않는다.
+- 완료 미션의 네 축 벡터는 Flutter의 행동 선호 경험 방향 표시에 사용하고, 저장 성향 그래프는 Backend의 5회 단위 갱신 결과만 반영한다.
 - 수행 슬롯의 중복은 `SELECTED`와 `COMPLETED` 상태에만 적용되는 Oracle 함수 기반 Unique Index로 차단한다.
 - Oracle의 `USER`는 예약 의미와 충돌하므로 물리 테이블 이름은 기존 `NOVELTY_USER`를 유지한다.
-- GLB 경로는 DB에 URI로 저장하며 바이너리 파일 자체는 Oracle에 저장하지 않는다.
+- GLB 경로와 Transform은 Frontend Asset Manifest가 소유하며 DB에는 URI나 바이너리를 저장하지 않는다.
+- `GET /api/world`는 Flutter에 World Snapshot을 제공하고 Three.js는 Backend API를 직접 호출하지 않는다.
+- Mission 완료 Transaction은 `WorldProgressService`를 호출해 Category EXP를 갱신하며 동일 `userMissionId` 재요청에는 보상을 지급하지 않는다.
+- Flutter 성향 프로필은 Three.js Renderer를 인라인으로 포함하며 성향 관심 Category와 완료 EXP가 있는 Object를 표시한다.
+- 인라인 장면 탭은 기존 전체 World 화면으로 이동하고 회전·확대 입력은 Renderer가 그대로 처리한다.
 
 ## 3D Asset 규칙
 
 ```text
 Blender 원본
 → GLB 내보내기
-→ front/app/assets 또는 CDN 배포
-→ WORLD_OBJECT_LEVEL.GLB_ASSET_URI 등록
+→ front/app/assets/world3d 로컬 배포
+→ Frontend world_manifest.js에 경로·Transform 등록
 → Three.js GLB Loader 로드
 ```
 
-레벨별 모델은 같은 `WORLD_OBJECT_ID` 아래 서로 다른 `OBJECT_LEVEL`과 `GLB_ASSET_URI`로 관리한다.
+Oracle의 `WORLD_OBJECT_LEVEL`은 레벨별 누적 요구 EXP만 관리한다. 레벨별 GLB 파일은 `objectCode`와 `level`로 Frontend Manifest에서 찾는다.

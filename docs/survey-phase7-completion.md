@@ -1,5 +1,7 @@
 # 선택지 폼 Phase 7 완료 보고서
 
+> 문서 상태: 과거 V1 검증 기록. 현재 공식 구현은 `docs/personality-sdd-v2.md`이며 이 문서에 기록된 `/api/surveys` 코드와 API는 안정화 Phase 3에서 제거되었다.
+
 - 완료일: 2026-08-19
 - 대상 사양: `docs/survey-phase0-spec.md` 1.0.0
 - 구현 범위: Flutter 5문항 입력부터 Spring Boot와 Oracle 저장 결과 표시까지

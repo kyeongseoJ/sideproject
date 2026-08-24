@@ -6,7 +6,7 @@
 - 핵심 기능: 2. 사용자 성향 분석
 - 사양 버전: `PERSONALITY_V2`
 - 작성일: 2026-08-19
-- 상태: 활성 사양, Phase 0~6 완료
+- 상태: 활성 사양, Phase 0~7 완료
 - 대체 문서: `docs/personality-phase0-spec.md`의 V1 구현 기준선
 
 이 문서는 현재 구현 중 서로 다른 의미로 사용되는 성향 필드를 정리하고, 성향 분석만 독립적으로 완성하기 위한 사양과 Phase 0~7을 정의한다.
@@ -15,11 +15,11 @@
 
 ## 2. 재정의 배경
 
-현재 프로젝트에는 다음 불일치가 있다.
+V2 설계 당시 프로젝트에는 다음 불일치가 있었다. 현재 구현에서는 아래 항목을 해소했다.
 
 1. 기존 `activityLevel`은 `INDOOR`, `MIXED`, `OUTDOOR` 값을 사용하여 실제 의미가 활동 강도가 아니라 실내·실외 선호다.
 2. 향후 사용될 성향 벡터에는 실내·실외와 별개로 신체 활동 강도가 필요하지만 최초 설문에는 해당 입력이 없다.
-3. Flutter와 `POST /api/surveys`는 아직 `energyLevel`을 전송하고, 개정 정책의 `executionStyle`을 사용하지 않는다.
+3. Flutter와 `POST /api/surveys`는 `energyLevel`을 전송했고, 개정 정책의 `executionStyle`을 사용하지 않았다.
 4. 익명 사용자와 성향 Profile용 Oracle 구조는 일부 준비됐지만 설문 저장과 연결되지 않았다.
 5. 사용자 Profile 응답은 현재 성향 객체를 실제로 조회하지 않고 `null`로 반환한다.
 6. 이전 SDD에는 시간 질문과 미션 해석 규칙이 함께 포함되어 성향 분석 자체의 완료 범위가 불명확했다.
@@ -93,6 +93,7 @@ Flutter 성향 선택폼
 - Server는 Header 값을 Hash하여 `USER_KEY_HASH`와 비교한다.
 - 닉네임은 Profile 화면의 표시 정보일 뿐 성향 계산 입력이 아니다.
 - 캐시 로그인과 닉네임의 세부 정책은 `SPEC.md`를 따른다.
+- 같은 브라우저·앱은 `userKey` 캐시로 기존 사용자를 자동 복원한다. 캐시가 없을 때 닉네임만으로 복구하지 않는다.
 
 기존 사용자 API가 완성되지 않은 부분은 성향 분석의 선행 작업으로 보완할 수 있지만 닉네임 규칙을 새로 확장하지 않는다.
 
@@ -344,7 +345,7 @@ Content-Type: application/json
 
 동일 사용자와 동일 `submissionKey`의 같은 요청은 새 행을 만들지 않고 기존 결과와 `200 OK`를 반환한다. 같은 제출 키에 다른 답변이 들어오면 `409 SUBMISSION_KEY_CONFLICT`를 반환한다.
 
-기존 `POST /api/surveys`는 V1 호환 API로 분류한다. V2 UI는 이를 호출하지 않으며 기존 데이터 보존 여부를 확인한 뒤 별도 Phase에서 폐기 여부를 결정한다.
+안정화 Phase 3에서 기존 `POST /api/surveys`와 V1 Frontend·Backend 런타임 코드를 제거했다. 원본 선택지는 `POST /api/personality-analyses`가 `SURVEY_RESPONSE`와 `SURVEY_INTEREST`에 저장하며, 현재 성향은 `USER_PERSONALITY_PROFILE`과 `USER_PROFILE_INTEREST`에서 관리한다.
 
 ## 11. 오류 계약
 
@@ -659,7 +660,7 @@ Phase 0~7 완료에 미션 생성, OpenAI, 시간 질문 또는 3D 기능 구현
 
 완료 기준: AC-01~AC-14가 증거와 함께 모두 충족되고 알려진 오류가 기록됨.
 
-## 18. 예상 변경 파일
+## 18. 최종 구현 파일 범위
 
 ```text
 DB.sql
@@ -676,13 +677,15 @@ front/app/lib/main.dart
 front/app/lib/api/*
 front/app/lib/personality/*
 front/app/lib/profile/*
-front/app/lib/survey/*
 front/app/test/*
 
-docs/personality-phase7-completion.md
+docs/personality-phase0-v2-verification.md ~ docs/personality-phase7-v2-verification.md
 PROJECT_STATUS.md
 SPEC.md
 ```
+
+안정화 Phase에서 구형 `front/app/lib/survey/*`와 `/api/surveys`는 제거됐으며,
+선택지 입력·원본 저장·분석은 Personality 경로로 통합됐다.
 
 이번 SDD 구현 중 `back/src/main/java/com/novelty/mission/*`, `front/app/lib/mission/*`, OpenAI 설정과 World 관련 파일은 변경 대상이 아니다.
 
@@ -762,7 +765,7 @@ Phase 3 검증용 Oracle 업무 데이터 행은 정리했다. Oracle Sequence �
 - `X-User-Key`, UUID v4 제출 키와 멱등 재시도 세션: 검증 완료
 - `SharedPreferencesAsync` 사용자 키 저장·복원: 검증 완료
 - 신규 사용자 생성과 분석 전·완료 사용자 앱 시작 분기: 검증 완료
-- 운영 진입점의 V1 `/api/surveys` 미호출: 검증 완료
+- V1 `/api/surveys` 런타임 제거 및 공식 Personality 경로 단일화: 검증 완료
 - 캐시·401·Timeout·Network·응답 계약·설정 실패 시나리오: 검증 완료
 - Phase 4 전용 Test: 32개 통과
 - Flutter 전체 Test: 49개 통과
@@ -806,6 +809,8 @@ Phase 5 성공 화면은 전체 Profile을 대신하지 않는 최소 완료 경
 - Flutter Analyze와 Web Build: 성공
 
 Phase 6까지 Flutter 사용자 화면 흐름은 완성됐다. Phase 7에서는 실제 Spring Boot와 Oracle을 실행하여 최초 분석, 새로고침 복원, 멱등 재시도, 재분석 성공·실패를 E2E로 검증하고 AC-01~AC-14 완료 여부를 최종 판정한다.
+
+후속 UI 정리에서는 신규 닉네임 화면에 서비스 목적 설명과 동일 Client 자동 복원 안내를 추가했다. 여섯 문항 선택폼은 워드마크·문항 번호·질문 카드 구조를 사용하며 첫 문항에는 이전 버튼을 렌더링하지 않고 두 번째 문항부터 표시한다. API·분석 계약은 변경하지 않았다.
 
 ## 26. Phase 7 검증 기록
 

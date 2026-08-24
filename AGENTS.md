@@ -65,7 +65,10 @@ Flutter 애플리케이션:
 - Flutter
 - Dart
 - Flutter Web
+- Flutter Android(AOS)
 - 위치: `front/app`
+
+Web과 Android는 별도 UI를 복제하지 않고 `front/app/lib`의 동일한 반응형 Flutter UI를 사용한다.
 
 3D 공간:
 
@@ -158,7 +161,6 @@ Backend는 기능 중심 패키지 구조를 사용한다.
 ```text
 back/src/main/java/com/novelty/
 ├─ NoveltyApplication.java
-├─ survey/
 ├─ user/
 ├─ personality/
 ├─ mission/
@@ -168,23 +170,22 @@ back/src/main/java/com/novelty/
 
 각 패키지의 역할은 다음과 같다.
 
-- `survey`: 선택지 폼 답변 접수와 원본 응답 저장
 - `user`: 익명 사용자 식별과 닉네임 관리
-- `personality`: 성향 분석, 프로필 및 분석 이력 관리
-- `mission`: 성향과 거리가 있는 미션 추천 및 미션 Catalog 관리
-- `completion`: 사용자 미션 상태·완료와 성장 반영의 기능 경계
-- `world`: 3D 공간 성장 상태와 레벨 관리
+- `personality`: 선택지 원본 저장, 성향 분석, 프로필 및 분석 이력 관리
+- `mission`: 성향 기반 추천, 사용자 미션 상태, 완료 후처리 및 미션 Catalog 관리
+- `completion`: 별도 완료 경로를 만들지 않기 위한 기능 경계이며 공식 완료 처리는 `mission`의 `UserMissionService`가 담당
+- `world`: 3D 공간 성장 상태, EXP·레벨 계산과 Snapshot 관리
 
 초기에는 구조를 단순하게 유지한다.
 
 예시:
 
 ```text
-survey/
-├─ SurveyController.java
-├─ SurveyService.java
-├─ SurveyRepository.java
-└─ Survey.java
+mission/
+├─ MissionController.java
+├─ MissionService.java
+├─ UserMissionController.java
+└─ UserMissionService.java
 ```
 
 클래스 수가 많아지기 전에는 `controller`, `service`, `repository`, `domain`, `dto` 등의 하위 폴더를 불필요하게 만들지 않는다.
@@ -200,8 +201,9 @@ Controller는 기능별 패키지에 작성한다.
 예시:
 
 ```text
-com.novelty.survey.SurveyController
+com.novelty.personality.PersonalityController
 com.novelty.mission.MissionController
+com.novelty.mission.UserMissionController
 com.novelty.world.WorldController
 ```
 
@@ -210,8 +212,9 @@ API 경로는 리소스 중심으로 작성한다.
 예시:
 
 ```text
-/api/surveys
+/api/personality-analyses
 /api/missions
+/api/user-missions
 /api/world
 ```
 
@@ -223,6 +226,14 @@ HTTP 메서드는 목적에 맞게 사용한다.
 - `DELETE`: 데이터 삭제
 
 Controller에 핵심 비즈니스 로직을 직접 작성하지 않는다. 비즈니스 로직은 Service에서 처리한다.
+
+현재 공식 선택지 제출과 성향 분석은 `POST /api/personality-analyses` 하나를 사용한다. 사용자 미션 선택·취소·교체·완료는 Catalog `missionId`가 아니라 소유권이 확인된 `userMissionId`를 사용한다. World 전체 상태는 `GET /api/world` 하나로 조회한다. `/api/surveys`, `/api/missions/random`, `PATCH /api/missions/{missionId}/status` 같은 폐기 경로를 다시 추가하지 않는다.
+
+최초 미분석 사용자는 닉네임을 확인·수정한 뒤 성향 선택폼을 시작한다. 분석 완료 후에는 프로필의 편집 아이콘으로 닉네임을 변경한다. 성향 프로필 안의 3D World 미리보기와 전체 World 화면은 동일한 Snapshot과 Three.js Renderer를 사용하며 별도 성장 상태를 만들지 않는다.
+
+성향 완료 홈은 오늘의 미션을 상단에 인라인으로 표시한다. Flutter에서는 하루 미션 수 선택을 노출하지 않고 1개로 저장하며 할애 가능 시간만 받는다. 후보는 가로 캐러셀, 수행 중 미션은 단일 대형 카드로 표시한다. 행동 선호 그래프는 Backend 저장 점수를 사용하고 완료 미션 벡터는 별도의 경험 방향으로만 표시한다.
+
+Mission 완료와 World EXP 지급은 같은 Transaction에서 처리한다. 동일 `userMissionId` 완료 재요청에는 상태·통계·성향 후처리·World EXP를 중복 반영하지 않는다. Three.js는 Backend API를 직접 호출하거나 EXP·Level을 계산하지 않는다.
 
 API 요청과 응답 형식이 변경되면 Frontend와 Backend에 미치는 영향을 함께 확인한다.
 
@@ -272,6 +283,10 @@ Secret에 해당하는 값은 다음 방법 중 하나로 관리한다.
 - 로컬 전용 설정 파일
 - 배포 환경의 Secret 관리 기능
 
+로컬 개발은 저장소 루트의 Git 제외 `.env`를 사용한다. Spring Boot는 `spring.config.import`로
+이 파일을 자동으로 읽으며, 공유가 필요한 변수 이름과 예시는 `.env.example`에만 작성한다.
+실제 `.env`를 Git에 추가하거나 `.env.example`에 실제 Secret을 넣지 않는다.
+
 다음 파일에 실제 운영 Secret을 직접 작성하지 않는다.
 
 ```text
@@ -298,6 +313,9 @@ spring:
 DB_USERNAME=your_username
 DB_PASSWORD=your_password
 ```
+
+Flutter의 `API_BASE_URL`은 Secret이 아니다. 미지정 시 Web은 `http://localhost:8080`, Android
+Emulator는 `http://10.0.2.2:8080`을 사용한다. 배포 주소만 `--dart-define=API_BASE_URL=...`로 주입한다.
 
 이미 파일에 직접 작성된 Secret을 발견하면 임의로 외부에 노출하지 않고, 변경이 필요한 사실을 먼저 알린다.
 

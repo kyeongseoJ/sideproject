@@ -1,5 +1,7 @@
 # 랜덤 미션 V1 Phase 2 검증 기록
 
+> 이 문서는 최초 추천 Domain 검증 이력이다. 현재 추천 알고리즘은 2026-08-24 개정된 `docs/mission-sdd-v1.md`의 `MISSION_V1.1`과 최신 테스트를 따른다.
+
 ## 검증 범위
 
 Phase 2에서는 DB나 신규 REST 계약을 확장하지 않고, Spring과 분리해 반복 검증할 수 있는 순수 Java 추천 Domain을 구현했다.

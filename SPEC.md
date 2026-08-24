@@ -31,7 +31,8 @@ Novelty는 사용자가 평소 잘 하지 않던 작은 행동을 제안하여 �
 
 ### Frontend
 
-- Flutter / Dart: 선택지 폼, 성향 분석 UI, 미션 UI, 프로필, 설정, 3D World 화면
+- Flutter / Dart(Web, Android): 선택지 폼, 성향 분석 UI, 미션 UI, 프로필, 설정, 3D World 화면
+- Web과 Android는 동일한 `front/app/lib` UI를 사용하며 플랫폼별 화면을 중복 구현하지 않는다.
 - Three.js / JavaScript / Vite: GLB Load, Camera, Lighting, Object placement, Level model switching, Simple animation
 - Flutter 위치: `front/app`
 - Three.js 위치: `front/world3d`
@@ -65,6 +66,7 @@ Blender 또는 Asset 제작
 ```text
 접속
 → 익명 사용자 생성 및 사용자 키 저장
+→ 최초 설문 전 닉네임 확인·입력
 → 최초 1회 성향 분석 선택폼
 → 성향 결과와 프로필 표시
 → 할애 가능 시간 질문
@@ -79,6 +81,9 @@ Blender 또는 Asset 제작
 - 사용자가 원하면 `성향 분석 다시하기` 버튼으로 다시 진행할 수 있다.
 - 할애 가능 시간은 성향 질문에 포함하지 않고 성향 결과가 나온 뒤 별도로 묻는다.
 - 닉네임은 회원가입 없이 사용할 수 있으며 초기 랜덤값을 제공하고 사용자가 변경할 수 있다.
+- 최초 미분석 사용자는 자동 생성된 닉네임을 확인하거나 수정한 뒤 선택폼을 시작한다.
+- 신규 사용자 시작 화면은 노벨티 효과와 매일 작은 새로운 행동을 돕는 서비스 목적을 설명한다.
+- 분석 완료 후에는 프로필의 편집 아이콘으로 같은 닉네임 정책을 적용해 수정한다.
 
 ## 5. 사용자 식별과 캐시
 
@@ -88,7 +93,9 @@ Blender 또는 Asset 제작
 - Server는 `userKey` 원문 대신 안전한 해시를 저장하는 것을 원칙으로 한다.
 - 이후 사용자 범위 REST 요청은 `X-User-Key` Header를 사용한다.
 - 닉네임은 표시 이름이며 인증 수단으로 사용하지 않는다.
+- 같은 브라우저 또는 앱의 기존 사용자는 캐시에 저장된 `userKey`로 자동 복원하고 완료된 온보딩을 반복하지 않는다.
 - 캐시가 사라진 경우 기존 사용자를 임의 닉네임만으로 복원하지 않고 새 익명 사용자로 시작한다.
+- 다른 브라우저·기기 복구와 계정 동기화는 현재 지원하지 않으며 향후 인증·복구 수단을 별도 SDD로 정의한다.
 - Secret, API Key, Database 비밀번호는 Client cache에 저장하지 않는다.
 
 ## 6. 닉네임 정책
@@ -119,6 +126,8 @@ Blender 또는 Asset 제작
 ### 질문 영역
 
 최초 성향 분석은 성격 전체를 진단하지 않고 사용자의 행동 선호를 수집한다. 상세 계약은 활성 문서인 `docs/personality-sdd-v2.md`를 따른다.
+
+선택폼 UI는 `Novelty` 워드마크, 현재 문항/전체 문항 표시, 흰색 질문 카드와 선택지를 사용한다. 첫 문항에는 이전 버튼을 렌더링하지 않고 두 번째 문항부터 이전 버튼을 표시한다. 답변하지 않은 문항의 다음 버튼은 비활성화한다.
 
 - 실내·실외 선호
 - 혼자·함께하기 선호 또는 사회적 활동 수준
@@ -190,15 +199,19 @@ OpenAI 설정:
 - 모델은 `OPENAI_MODEL` 환경 변수로 변경 가능하게 한다.
 - API Key 원문은 코드, 설정 기본값, 로그, 문서, Git 이력에 기록하지 않는다.
 - 이미 노출된 Key는 폐기·재발급한다.
+- 로컬 Secret은 Git 제외 `.env`에 저장하고 Spring Boot가 자동으로 읽는다.
+- 추적 가능한 `.env.example`에는 변수 이름과 placeholder만 유지한다.
+- Flutter 로컬 API 주소는 플랫폼 기본값을 사용하고, 배포 주소만 `API_BASE_URL` dart-define으로 주입한다.
 
 ### 이력과 재추천 제한
 
 - 서비스 날짜와 기간 계산 기준 Timezone은 `Asia/Seoul`이다.
 - 기간은 서울 달력 날짜로 계산한다.
 - D일 완료한 미션은 D, D+1, D+2에 추천하지 않고 D+3부터 다시 추천할 수 있다.
-- D일 노출한 미션은 D, D+1에 재노출하지 않고 D+2부터 다시 추천할 수 있다.
+- D일 노출한 미션은 D, D+1, D+2에 재노출하지 않고 D+3부터 다시 추천할 수 있다.
 - 제한 때문에 후보가 부족해도 완료·노출 제한을 완화하지 않는다.
-- 최근 `SELECTED` 또는 `COMPLETED` 카테고리를 후순위로 두고 후보 묶음 안의 카테고리를 가능한 한 다양하게 구성한다.
+- 최근 7일·최신 완료 10개의 `category`, `actionType`, 환경, 태그, 사회·신체·창의 특성과 유사할수록 감점하며 최근 이력일수록 더 크게 반영한다.
+- 최근 완료 경험과 유사도 0.82 이상인 문구 변형 미션은 제외한다.
 
 ### 사용자 미션 상태
 
@@ -215,14 +228,16 @@ COMPLETED
 - UI에서는 `SELECTED`를 `수행중`, `COMPLETED`를 `완료`로 표시한다.
 - 상태 전이는 이력으로 보존하며 현재 집계 상태와 로그를 구분한다.
 - 같은 사용자가 같은 미션 완료 요청을 중복 전송해도 완료 횟수와 보상이 중복 반영되지 않아야 한다.
-- 사용자는 하루 5개의 추천 후보 중 수행할 미션을 선택한다. 필터를 통과한 후보가 부족하면 가능한 개수만 반환한다.
-- 하루 수행 미션 수의 초기 기본값은 1개이며 설정에서 1~3개로 변경할 수 있다.
+- 사용자는 서로 다른 경험으로 구성된 하루 최대 3개의 추천 후보 중 수행할 미션을 선택한다. 필터를 통과한 후보가 부족하면 가능한 개수만 반환한다.
+- 현재 Flutter UI의 하루 수행 미션 수는 1개로 고정한다. 사용자는 매일 미션을 시작할 때 할애 가능 시간만 선택한다.
+- 기존 REST/DB의 `dailyMissionLimit` 필드는 호환을 위해 유지하되 Flutter는 항상 `1`을 저장하며 미션 수 선택 UI를 제공하지 않는다.
 - 오늘의 `SELECTED + COMPLETED` 수보다 낮게 하루 한도를 줄일 수 없다.
 - 수행 중인 미션은 목록 상단에 표시한다.
 - 사용자는 수행 중인 미션을 횟수 제한 없이 취소하거나 오늘의 기존 추천 목록에 있는 다른 미션으로 변경할 수 있다.
 - 취소한 후보는 같은 날 다시 선택할 수 있고 완료한 미션은 취소하거나 변경할 수 없다.
 - 변경은 기존 미션 취소와 새 미션 선택을 하나의 Database Transaction으로 처리한다.
 - 상태 변경 API는 Catalog `missionId`가 아닌 사용자에게 노출된 `userMissionId`를 기준으로 호출하며, 응답은 변경된 미션·오늘 상태·멱등 여부를 함께 반환한다.
+- Mission 상태 변경의 유일한 공식 Service 경로는 `UserMissionService`이며, 완료는 `UserMissionService.complete(userMissionId)`에서만 처리한다.
 - 완료 재요청은 성공으로 응답하되 새 상태 로그나 완료 횟수를 만들지 않는다.
 - 완료 상태, 연결 로그, 카테고리 통계와 성향 완료 횟수는 하나의 Transaction으로 저장한다.
 - 완료 횟수가 5의 배수가 되면 최근 완료 미션 5개의 벡터와 현재 성향을 혼합해 네 축과 성향 유형을 갱신하고 마지막 반영 완료 횟수를 기록한다.
@@ -236,21 +251,35 @@ COMPLETED
 ### 미션 추천 점수
 
 - 네 개 성향 축의 정규화 유클리드 거리는 0~1 범위이며 동일 축 가중치를 사용한다.
-- 최종 추천 점수는 `성향 거리 70% + 카테고리 탐색 20% + 난이도 적합 10%`로 계산한다.
+- 양의 점수는 `성향 거리 35% + 새로움 10% + 전체 카테고리 탐색 5% + 최근 다양성 15% + 미경험 탐색 15% + 시간·난이도 조건 적합 20%`로 계산한다.
+- 최근 경험 유사도 25%, 반복 행동 패턴 15%, 반복 skipped/rejected 패턴 10%를 감점하고 최종값을 0~1로 제한한다.
 - 카테고리 탐색 점수는 `1 / (1 + 해당 카테고리 완료 횟수)`로 계산한다.
-- 추천 점수 상위 10개 후보군에서 최대 5개를 점수 기반 가중 무복원 추출한다.
-- 가능한 동안 서로 다른 카테고리를 먼저 선택하고 가장 최근 `SELECTED` 또는 `COMPLETED` 카테고리는 후순위로 둔다.
+- 점수 상위 20개 후보군에서 첫 후보를 가중 추출하고 이후 후보에는 선택지 사이 경험 유사도 35% 패널티를 적용한다.
+- 최종 후보끼리 유사도 0.75 미만을 우선하여 category·actionType·tags가 겹치지 않는 최대 3개를 구성한다.
+- Mission Catalog는 기존 필드를 재사용하고 `actionType`, `creativityLevel`, `unpredictability`, `comfortZoneDistance`, `costLevel`, `tags`를 추가한다. `durationLevel`은 `estimatedMinutes`에서 파생한다.
+- Oracle 21c 구조에서는 pgvector를 추가하지 않으며 현재는 메타데이터+문자 bigram을 사용하고 `MissionSemanticSimilarity` 확장 지점만 유지한다.
 - 상세 공식, 상태 전이, REST와 Oracle 계약은 `docs/mission-sdd-v1.md`를 기준으로 한다.
 
 ## 9. 3D World와 레벨
 
 - 미션 완료는 미션 `category`와 연결된 World object의 경험치 또는 성장값에 반영한다.
 - 사용자별 Object 상태는 `USER_WORLD_OBJECT` 영역에서 관리한다.
-- Object의 레벨별 요구치와 GLB 모델 정보는 `WORLD_OBJECT_LEVEL` 영역에서 관리한다.
+- Object의 레벨별 요구치는 `WORLD_OBJECT_LEVEL` 영역에서 관리한다.
+- GLB 경로와 Position·Rotation·Scale은 Frontend Asset Manifest에서만 관리하고 DB에는 저장하지 않는다.
+- Mission Category와 World Object는 MVP에서 1:1이며 난이도 1/2/3은 각각 10/20/30 EXP를 지급한다.
+- 누적 EXP 0/50/120/220/350을 기준으로 Lv1~Lv5가 된다.
 - Three.js는 렌더링을 담당하고 Flutter는 사용자 화면과 앱 상태를 담당한다.
 - GLB 로드 실패 시 앱 전체가 중단되지 않도록 오류 또는 대체 UI를 제공한다.
 - 레벨 변경은 Backend의 저장 결과를 기준으로 처리하며 Client만의 값으로 확정하지 않는다.
-- 구체적인 경험치 산식, 최대 레벨, 카테고리와 Object 매핑은 World SDD에서 확정한다.
+- 상세 계약은 `docs/world-sdd-v1.md`를 기준으로 한다.
+- 성향 프로필 안에 회전·확대 가능한 World 미리보기를 표시하고 장면 또는 사물을 탭하면 전체 화면으로 이동한다.
+- 초기 World에는 성향 관심 Category의 Lv1 Object를 표시하고, 이후 완료 EXP가 있는 Category Object도 함께 표시한다.
+- 전체 World 공간명은 현재 성향 유형에 맞는 이름을 사용한다.
+- 성향 완료 홈의 순서는 닉네임·성향명, 오늘의 미션, 프로필 요약, 관심 분야, 행동 선호, 3D World, 분석 메타 정보다.
+- 오늘의 미션은 시간 선택 후 후보를 가로 캐러셀로 표시하고, 선택 뒤에는 수행 중 미션 하나만 크게 표시한다.
+- 관심 분야와 행동 선호는 별도 영역으로 표시한다. 행동 선호의 네 축은 저장된 점수를 수치와 막대그래프로 표시한다.
+- 미션 완료 직후에는 완료 미션 벡터와 현재 성향의 차이를 `행동 선호 경험 방향`으로 표시한다. 그래프 자체는 Backend의 5회 단위 성향 갱신 결과만 반영한다.
+- 3D World 조작 설명은 기본적으로 도움말 아이콘으로 접고 사용자가 누르면 펼친다. World 꾸미기 기능은 제공하지 않는다.
 
 ## 10. REST API 공통 규칙
 
@@ -261,6 +290,9 @@ COMPLETED
 - Validation 오류, 중복, 찾을 수 없음, 상태 충돌과 Server 오류를 구분된 HTTP 상태와 오류 Body로 반환한다.
 - API는 springdoc-openapi에 노출하고 Swagger UI의 `Try it out`으로 정상·오류 사례를 시험할 수 있어야 한다.
 - 로컬 Swagger UI 주소는 `http://localhost:8080/swagger-ui.html`이다.
+- 공식 API는 사용자 생성·복원, `POST /api/personality-analyses`, `/api/missions/settings`, `/api/missions/today`, `/api/missions/today/recommendations`, `/api/user-missions/{userMissionId}/select|cancel|replace|complete`, `/api/missions/summary`, `GET /api/world`다.
+- 폐기된 `/api/surveys`, `/api/missions/random`, `PATCH /api/missions/{missionId}/status`는 Runtime과 Swagger에 노출하지 않는다.
+- `userId`는 내부 사용자 식별자, `userKey`는 `X-User-Key` 인증·복원 값, `missionId`는 Catalog 식별자, `userMissionId`는 사용자 상태 변경 대상이다.
 
 ## 11. Database 규칙
 
@@ -308,12 +340,14 @@ COMPLETED
 - 검증 실패, 경고와 외부 환경 차단을 숨기지 않는다.
 - 작업 마지막에는 변경 파일, Library 변경, 실행 명령, 결과와 남은 문제를 설명한다.
 
-## 15. 미확정 결정 목록
+## 15. World 확정 정책
 
-다음 항목은 해당 후속 기능 SDD에서 결정한다.
-
-- World 경험치 산식, 최대 레벨, 카테고리별 Object 매핑
-- GLB 배포를 Flutter bundle과 CDN 중 어떤 방식으로 사용할지
+- 난이도 1/2/3은 각각 10/20/30 EXP를 지급한다.
+- 누적 EXP 0/50/120/220/350은 Lv1~Lv5에 대응한다.
+- 현재 여덟 Mission Category는 여덟 World Object와 1:1로 연결한다.
+- GLB는 MVP에서 Flutter Local Asset으로 배포하고 경로·Transform은 Frontend Manifest만 관리한다.
+- Backend와 Oracle이 EXP·Level의 Source of Truth이며 Flutter와 Three.js는 계산하지 않는다.
+- World 미리보기와 전체 화면은 같은 Snapshot과 Renderer를 사용하며 별도 성장 상태를 만들지 않는다.
 
 ## 16. 사양 변경 관리
 
@@ -327,6 +361,13 @@ COMPLETED
 
 | 날짜 | 변경 내용 |
 |---|---|
+| 2026-08-24 | Mission V1.1 추천 다양성 개정: 행동 메타데이터, 동일 미션 노출 3일 제한, 최근 7일·10개 경험/거부 패널티, 후보 간 유사도 제어와 최대 3개 선택지 적용 |
+| 2026-08-24 | 신규 닉네임 시작 화면에 서비스 설명·기존 사용자 자동 복원 안내를 추가하고 선택폼을 카드형 문항 레이아웃으로 개편, 첫 문항 이전 버튼 미노출 정책 반영 |
+| 2026-08-24 | 성향 완료 홈 재배치: 상단 오늘의 미션, 시간 선택·후보 캐러셀·단일 진행 카드, 분리된 관심/행동 선호와 점수 그래프·완료 경험 방향, 하단 World 접이식 도움말 적용 |
+| 2026-08-20 | 최초 설문 전 닉네임 입력·프로필 편집, 단일 성향 카드, 인라인 World 미리보기·성향 기반 공간명과 기본 사물 정책 반영 |
+| 2026-08-20 | 로컬 `.env` 자동 로드와 `.env.example` 계약 확정, Flutter 플랫폼별 로컬 API 기본값 문서화 |
+| 2026-08-20 | World Phase 0~8 구현: Snapshot API, Mission 완료 EXP Transaction, Flutter 상태, Android WebView·Web iframe Bridge, 8종×5레벨 GLB와 Diorama·Level Up 연결 |
+| 2026-08-20 | 핵심 기능 1~3 안정화: 공식 Personality·UserMission 경로 단일화, 구형 Survey·Mission API 제거, 완료 멱등 경로와 Category Code 계약 고정 |
 | 2026-08-20 | Mission V1 Phase 5 완료 통계·5회 성향 재분류·LLM 커밋 후 처리, 중복/유사도 차단, 요약 API와 Oracle Rollback 검증 |
 | 2026-08-20 | Mission V1 Phase 4 `userMissionId` 기반 선택·취소·교체·완료 API, 소유권·활성 슬롯·원자적 교체·완료 멱등성과 Oracle 연결 로그 검증 |
 | 2026-08-20 | Mission V1 Phase 3 설정·오늘 후보 REST/Service/Oracle 통합, 사용자 잠금, 동일 날짜 후보 재사용과 OpenAPI 검증 |

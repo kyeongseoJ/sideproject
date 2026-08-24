@@ -4,9 +4,9 @@
 
 - 프로젝트: 노벨티(Novelty)
 - 기능: 사용자 성향과 거리가 먼 랜덤 미션 생성·선택·취소·변경·완료
-- 사양 버전: `MISSION_V1`
+- 사양 버전: `MISSION_V1.1`
 - 작성일: 2026-08-19
-- 상태: Phase 5 검증 완료
+- 상태: Phase 0~7 완료 후 추천 다양성 개정 적용
 
 이 문서는 세 번째 핵심 기능의 활성 기준 사양이다. 의료 진단이나 치료를 제공하지 않으며, 안전한 일상 활동을 통해 새로운 행동을 시도하도록 돕는 범위로 한정한다.
 
@@ -33,8 +33,8 @@ Flutter
 
 - 할애 가능 시간과 하루 수행 한도 설정
 - 검수된 기본 미션과 사용 가능한 공유 LLM 미션 조회
-- 성향 거리, 카테고리 탐색, 난이도 적합도를 반영한 후보 생성
-- 하루 후보 5개 저장 및 복원
+- 성향 거리, 최근 행동 다양성, 탐색 보너스와 현재 조건 적합도를 반영한 후보 생성
+- 서로 다른 경험 패턴의 하루 후보 최대 3개 저장 및 복원
 - 선택, 취소, 기존 후보로 변경, 완료
 - 상태 집계와 상태 로그 분리
 - 카테고리별 완료 통계
@@ -70,16 +70,16 @@ World 기능은 `category`와 완료 통계를 후속 입력으로 사용하지�
 | `LONG` | 60분 |
 
 - 하루 수행 한도 기본값은 1개다.
-- 설정 가능한 범위는 1~3개다.
+- V1 Backend/DB 계약의 설정 가능 범위는 1~3개로 유지한다. 2026-08-24 UI 개정부터 Flutter는 미션 수 선택을 노출하지 않고 항상 1개를 저장한다.
 - 오늘의 `SELECTED + COMPLETED` 슬롯 수보다 낮게 한도를 줄일 수 없다.
 - 한도 증가는 저장 성공 후 즉시 적용한다.
 
 ### 4.3 후보 목록
 
-- 하루 추천 후보 수는 5개다.
+- 하루 추천 후보 수는 최대 3개다.
 - 최초 생성 후 같은 서비스 날짜에는 기존 후보를 반환한다.
 - 후보 생성 요청을 반복해도 새 후보나 상태 로그를 중복 생성하지 않는다.
-- 필터를 통과한 미션이 5개 미만이면 가능한 후보만 반환한다.
+- 필터를 통과한 미션이 3개 미만이면 가능한 후보만 반환한다.
 - 후보가 0개면 `NO_MISSION_AVAILABLE`로 실패한다.
 - 완료·노출 제한은 후보 부족을 이유로 완화하지 않는다.
 
@@ -128,32 +128,44 @@ personalityDistance = sqrt((d1² + d2² + d3² + d4²) / 4)
 기간 경계:
 
 - D일 완료: D, D+1, D+2 추천 금지, D+3부터 가능
-- D일 노출: D, D+1 재노출 금지, D+2부터 가능
+- D일 노출: D, D+1, D+2 재노출 금지, D+3부터 가능
+- 최근 7일 또는 최신 10개 이내 완료 이력과 경험 유사도가 `0.82` 이상이면 문구가 달라도 후보에서 제외한다.
 
 오늘 이미 저장된 후보를 다시 조회하는 것은 재노출 생성이 아니므로 동일 후보를 그대로 반환한다.
 
 ### 6.2 점수
 
 ```text
-recommendationScore =
-  personalityDistance × 0.70
-+ categoryExplorationScore × 0.20
-+ difficultyFitScore × 0.10
+positiveScore =
+  personalityDistance × 0.35
++ noveltyScore × 0.10
++ categoryExplorationScore × 0.05
++ recentDiversityScore × 0.15
++ explorationBonus × 0.15
++ contextFitScore × 0.20
+
+recommendationScore = clamp(positiveScore
+  - recentSimilarity × 0.25
+  - repeatedPattern × 0.15
+  - rejectedPattern × 0.10)
 ```
 
 - `categoryExplorationScore = 1 / (1 + categoryCompletedCount)`이다.
 - 카테고리 완료 이력이 없으면 해당 카테고리를 1로 계산한다.
-- `preferredDifficulty`는 완료 5회 미만이면 1, 5회 이상이면 2다.
-- `difficultyFitScore = 1 - abs(difficulty - preferredDifficulty) / 2`다.
+- `recentDiversityScore`와 `explorationBonus`는 최근 완료 이력과의 메타데이터 유사도·패턴 중복의 역수다.
+- 최근성 가중치는 당일 `1.0`에서 하루마다 `0.75`를 곱한다.
+- `contextFitScore`는 난이도 적합도와 선택한 할애 가능 시간 적합도의 평균이다.
+- 최근 `category`, `actionType`, 환경, 태그, 사회·신체·창의 특성의 반복은 감점한다.
+- `SHOWN` 뒤 선택되지 않은 후보와 `CANCELLED` 후보는 skipped/rejected로 해석한다. 반복될수록 같은 패턴의 빈도를 낮추되 하드 제외하지 않고 `comfortZoneDistance`가 큰 후보를 더 감점한다.
 - 최종 점수는 0~1 범위로 제한하고 후보 레코드에 저장한다.
 
 ### 6.3 랜덤성과 카테고리 다양성
 
-- 추천 점수 내림차순 상위 10개를 가중 추출 후보군으로 사용한다.
-- 후보군에서 최대 5개를 점수 기반 가중 무복원 추출한다.
+- 추천 점수 내림차순 상위 20개를 최종 후보군으로 사용한다.
+- 첫 후보는 점수 기반 가중 추출하고, 다음 후보는 이미 선택한 후보와의 경험 유사도 패널티 `0.35`를 반영한다.
+- 최종 후보끼리 유사도 `0.75` 미만인 후보를 우선하며 최대 3개를 반환한다. Catalog가 부족한 경우에만 유사도 조건을 완화한다.
 - 최근 수행 카테고리는 가장 최근의 `SELECTED` 또는 `COMPLETED` 로그로 정한다.
-- 선택 우선순위는 `미선택 카테고리이면서 최근 수행 카테고리가 아님` → `미선택 카테고리` → `최근 수행 카테고리가 아님` → `전체 잔여 후보` 순이다.
-- 따라서 서로 다른 카테고리를 먼저 선택하고, 부족한 경우에만 동일 카테고리나 최근 수행 카테고리를 허용한다.
+- Category뿐 아니라 `actionType`, 태그와 행동 수준이 서로 다른 경험을 우선한다.
 - 테스트에서는 고정 `Clock`과 고정 난수 공급자로 결과를 재현한다.
 
 ## 7. 미션 Catalog와 LLM
@@ -167,6 +179,7 @@ recommendationScore =
 - OpenAI 장애, 잘못된 응답 또는 중복 결과는 기본 추천·완료 Transaction을 실패시키지 않는다.
 - 같은 사용자·완료 마일스톤은 최초 Claim 결과를 보존하며 실패한 마일스톤을 완료 재요청으로 다시 생성하지 않는다.
 - API Key는 `OPENAI_API_KEY`, 모델은 `OPENAI_MODEL` 환경 변수로만 주입한다.
+- 현재 DB는 Oracle 21c이므로 PostgreSQL `pgvector`를 추가하지 않는다. `MissionSemanticSimilarity` 확장 지점은 유지하되 기본 구현은 비활성이고, 현재 추천은 메타데이터와 제목·설명 bigram 유사도를 사용한다.
 
 ## 8. 상태와 불변식
 
@@ -201,7 +214,7 @@ CANCELLED → SELECTED
 
 ### 기존 `MISSION`
 
-Catalog 속성, 출처, fingerprint와 활성 여부를 유지한다.
+기존 `category`, `estimatedMinutes`, `indoorOutdoor`, `socialLevel`, `activityLevel`, `noveltyLevel`을 재사용한다. 다양성 계산을 위해 `ACTION_TYPE`, `CREATIVITY_LEVEL`, `UNPREDICTABILITY_LEVEL`, `COMFORT_ZONE_DISTANCE`, `COST_LEVEL`, 쉼표 구분 정규화 `TAGS`를 추가한다. 각 수준 값은 0~2이고 태그는 대문자 영문·숫자·underscore 조합으로 개별 1~30자, 1~10개만 허용한다. `durationLevel`은 예상 시간으로 파생하므로 별도 Column을 만들지 않는다.
 
 ### 보강할 `USER_MISSION`
 
@@ -225,6 +238,15 @@ Catalog 속성, 출처, fingerprint와 활성 여부를 유지한다.
 - `USER_ID` PK/FK
 - `AVAILABLE_TIME`
 - `DAILY_MISSION_LIMIT` 1~3
+
+### 2026-08-24 Flutter 화면 계약 개정
+
+- 성향 완료 홈 상단에 오늘의 미션을 인라인으로 표시한다.
+- 미션 시작 버튼을 누르면 할애 가능 시간만 선택하며 미션 수 옵션은 표시하지 않는다.
+- 추천 후보는 `PageView` 가로 캐러셀로 표시한다.
+- 선택 후 수행 중 미션 하나를 크게 표시하고 변경·취소·완료를 지원한다.
+- 완료 미션의 네 축 벡터와 현재 성향 점수 차이를 행동 선호 경험 방향으로 표시한다.
+- 저장 성향 그래프는 기존 5회 단위 갱신 정책을 유지하며 Client가 임의로 확정값을 계산하지 않는다.
 - `CREATED_AT`, `UPDATED_AT`
 
 ### 신규 `USER_MISSION_CATEGORY_STAT`
@@ -262,7 +284,7 @@ Phase 1에서 nullable `USER_MISSION_ID`, `PREVIOUS_STATUS`, `CHANGE_REASON`을 
 | POST | `/api/user-missions/{userMissionId}/complete` | 수행 완료 |
 | GET | `/api/missions/summary` | 전체·카테고리별 완료 통계 조회 |
 
-`POST /api/missions/today/recommendations`는 최초 생성 시 `201`, 기존 후보 재사용 시 `200`을 반환한다. 기존 `/api/missions/random`과 범용 `PATCH /api/missions/{missionId}/status`는 기존 호출 호환을 위해 보존하되, 신규 미션 흐름은 소유권·슬롯·상태 전이를 검증하는 `/api/user-missions/**`를 사용한다. 기존 API 제거는 Flutter 전환이 끝난 후 별도 호환성 변경으로 진행한다.
+`POST /api/missions/today/recommendations`는 최초 생성 시 `201`, 기존 후보 재사용 시 `200`을 반환한다. 안정화 Phase 1~7에서 `/api/missions/random`과 범용 `PATCH /api/missions/{missionId}/status`를 제거했다. 추천 후보의 상태 변경과 완료는 소유권·슬롯·상태 전이를 검증하는 `/api/user-missions/**`와 `UserMissionService`만 사용한다.
 
 완료 응답의 `completion`은 전체 완료 수, 마지막 성향 반영 횟수, 현재 성향 코드, 카테고리별 통계, 성향 갱신 여부, 마일스톤과 LLM 처리 상태를 포함한다. 선택·취소·교체 응답에서는 `completion`이 `null`이다. `GET /api/missions/summary`는 같은 누적 통계를 별도로 조회한다.
 
@@ -368,9 +390,10 @@ docs/mission-phase*-verification.md
 
 1. Phase 0: 계약과 수용 기준을 확정하고 정적 검증을 완료했다.
 2. Phase 1: Oracle Schema를 멱등 적용하고 정상·실패 Constraint 및 Rollback을 검증했다.
-3. Phase 2: 순수 Java 추천 정책, 하드 필터, 추천 점수, 상위 10개 가중 무복원 추출과 카테고리 다양성을 구현하고 검증했다.
+3. Phase 2: 순수 Java 추천 정책을 구현한 뒤 V1.1에서 최근 7일 행동 메타데이터, 최근성 가중치, 반복·거부 패널티와 최종 3개 상호 다양성으로 개정하고 검증했다.
 4. Phase 3: 설정과 오늘 후보 REST·Service·Oracle 통합, 사용자 잠금, 후보 재사용과 OpenAPI를 구현하고 검증했다.
 5. Phase 4: `userMissionId` 기반 선택·취소·변경·완료 API, 소유권 검증, 활성 슬롯, 원자적 교체, 완료 멱등성과 연결 로그를 구현하고 검증했다.
 6. Phase 5: 완료 상태·로그·카테고리 통계·완료 횟수를 원자적으로 저장하고, 5회마다 최근 완료 벡터로 성향과 유형을 갱신하며 커밋 이후 LLM 생성·중복/유사도 차단을 연결하고 검증했다.
 7. Phase 6: Flutter 미션 설정·후보·수행·통계 흐름과 안전한 오류·중복 요청 방지를 구현하고 정상·실패 시나리오를 검증했다.
 8. Phase 7: Flutter → REST → Spring Boot → Oracle → Response → Flutter E2E, 잘못된 사용자 키 실패와 Oracle 직접 조회·정리를 검증했다.
+9. 2026-08-24 V1.1: 추천 다양성 개정과 Oracle 메타데이터를 적용하고 집중 22개, 실제 Oracle 1개, Backend 전체 179개와 Flutter 81개 회귀 테스트를 통과했다.
