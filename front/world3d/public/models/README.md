@@ -1,6 +1,8 @@
 # GLB Models
 
-로컬 개발용 GLB 파일을 두는 위치다. 배포 환경에서는 CDN URI를 사용할 수 있다.
+Three.js 개발용 GLB 배포 파일을 두는 위치다. Vite Build가 이 디렉터리를 Flutter의
+`assets/world3d/models`로 복사해 Web과 Android에 함께 번들한다.
 
-모델 파일명과 레벨 매핑은 Oracle `WORLD_OBJECT_LEVEL.GLB_ASSET_URI`를 기준으로 관리한다.
+모델 파일명, 레벨 매핑과 Transform은 `src/world/world_manifest.js`에서 관리한다.
+Oracle에는 GLB 경로나 파일을 저장하지 않는다.
 Blender 원본 파일은 이 디렉터리에 넣지 않는다.
