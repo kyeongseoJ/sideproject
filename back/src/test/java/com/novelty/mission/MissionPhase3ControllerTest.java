@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -114,6 +115,21 @@ class MissionPhase3ControllerTest {
                     .andExpect(jsonPath("$.message").value(
                             "미션 정보를 처리하지 못했습니다. 잠시 후 다시 시도해 주세요."));
         }
+    }
+
+    @Test
+    void legacyMissionEndpointsAreNotMapped() throws Exception {
+        mockMvc.perform(post("/api/missions/random")
+                        .header("X-User-Key", USER_KEY)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"availableTime\":\"SHORT\"}"))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(patch("/api/missions/1/status")
+                        .header("X-User-Key", USER_KEY)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"COMPLETED\"}"))
+                .andExpect(status().isNotFound());
     }
 
     private MissionTodayResponse today() {

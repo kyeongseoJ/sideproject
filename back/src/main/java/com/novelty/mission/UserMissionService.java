@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.novelty.user.UserService;
+import com.novelty.world.WorldGrowthResponse;
+import com.novelty.world.WorldProgressService;
 
 @Service
 public class UserMissionService {
@@ -20,6 +22,7 @@ public class UserMissionService {
     private final MissionCompletionRepository completionRepository;
     private final MissionProfileUpdater profileUpdater;
     private final MissionLlmGenerationService llmGenerationService;
+    private final WorldProgressService worldProgressService;
     private final TransactionTemplate transactionTemplate;
     private final Clock clock;
 
@@ -31,6 +34,7 @@ public class UserMissionService {
             MissionCompletionRepository completionRepository,
             MissionProfileUpdater profileUpdater,
             MissionLlmGenerationService llmGenerationService,
+            WorldProgressService worldProgressService,
             TransactionTemplate transactionTemplate,
             Clock serviceClock) {
         this.userService = userService;
@@ -40,6 +44,7 @@ public class UserMissionService {
         this.completionRepository = completionRepository;
         this.profileUpdater = profileUpdater;
         this.llmGenerationService = llmGenerationService;
+        this.worldProgressService = worldProgressService;
         this.transactionTemplate = transactionTemplate;
         this.clock = serviceClock;
     }
@@ -139,8 +144,10 @@ public class UserMissionService {
             LockedContext context = lockContext(userId);
             UserMissionState target = requireOwned(userId, userMissionId);
             if (target.status() == MissionStatus.COMPLETED) {
+                WorldGrowthResponse worldGrowth = worldProgressService.currentWithoutReward(
+                        userId, target.category());
                 MissionCompletionEffectResponse effect = new MissionCompletionEffectResponse(
-                        completionRepository.findSummary(userId), false, 0, "NOT_DUE");
+                        completionRepository.findSummary(userId), false, 0, "NOT_DUE", worldGrowth);
                 return new CompletionTransactionResult(
                         actionResponse(userId, userMissionId, context, true, effect), null);
             }
@@ -153,11 +160,14 @@ public class UserMissionService {
             appendLog(userId, target, MissionStatus.COMPLETED, "USER_COMPLETED", occurredAt);
             completionRepository.incrementCategory(userId, target.category(), occurredAt);
             MissionProfileUpdater.CompletionUpdate update = profileUpdater.recordCompletion(userId);
+            WorldGrowthResponse worldGrowth = worldProgressService.applyMissionCompletion(
+                    userId, target.category(), target.difficulty());
             MissionCompletionEffectResponse effect = new MissionCompletionEffectResponse(
                     completionRepository.findSummary(userId),
                     update.personalityUpdated(),
                     update.milestone(),
-                    "NOT_DUE");
+                    "NOT_DUE",
+                    worldGrowth);
             return new CompletionTransactionResult(
                     actionResponse(userId, userMissionId, context, false, effect), update);
         }));
@@ -178,7 +188,8 @@ public class UserMissionService {
                 current.summary(),
                 current.personalityUpdated(),
                 current.milestone(),
-                generationStatus);
+                generationStatus,
+                current.worldGrowth());
         return new UserMissionActionResponse(
                 result.response().mission(),
                 result.response().today(),

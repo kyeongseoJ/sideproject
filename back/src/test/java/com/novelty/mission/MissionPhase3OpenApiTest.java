@@ -34,6 +34,9 @@ class MissionPhase3OpenApiTest {
                         .exists())
                 .andExpect(jsonPath(
                         "$.paths['/api/missions/today/recommendations'].post.responses['409']")
-                        .exists());
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/missions/random']").doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/missions/{missionId}/status']").doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/surveys']").doesNotExist());
     }
 }

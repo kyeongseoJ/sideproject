@@ -24,6 +24,8 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.novelty.user.UserService;
+import com.novelty.world.WorldGrowthResponse;
+import com.novelty.world.WorldProgressService;
 
 class MissionPhase5ServiceTest {
 
@@ -41,6 +43,7 @@ class MissionPhase5ServiceTest {
     private MissionCompletionRepository completionRepository;
     private MissionProfileUpdater profileUpdater;
     private MissionLlmGenerationService llmGenerationService;
+    private WorldProgressService worldProgressService;
     private UserMissionService service;
 
     @BeforeEach
@@ -53,6 +56,7 @@ class MissionPhase5ServiceTest {
         completionRepository = mock(MissionCompletionRepository.class);
         profileUpdater = mock(MissionProfileUpdater.class);
         llmGenerationService = mock(MissionLlmGenerationService.class);
+        worldProgressService = mock(WorldProgressService.class);
         TransactionTemplate transactionTemplate = mock(TransactionTemplate.class);
         when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
             TransactionCallback<?> callback = invocation.getArgument(0);
@@ -66,6 +70,10 @@ class MissionPhase5ServiceTest {
         when(userMissionRepository.findOwned(USER_ID, USER_MISSION_ID))
                 .thenReturn(Optional.of(response(MissionStatus.COMPLETED)));
         when(missionService.buildToday(USER_ID, TODAY, SETTINGS)).thenReturn(today());
+        when(worldProgressService.applyMissionCompletion(
+                USER_ID, MissionCategory.MOVEMENT, 1)).thenReturn(growth(true));
+        when(worldProgressService.currentWithoutReward(
+                USER_ID, MissionCategory.MOVEMENT)).thenReturn(growth(false));
         service = new UserMissionService(
                 userService,
                 userMissionRepository,
@@ -74,6 +82,7 @@ class MissionPhase5ServiceTest {
                 completionRepository,
                 profileUpdater,
                 llmGenerationService,
+                worldProgressService,
                 transactionTemplate,
                 Clock.fixed(Instant.parse("2026-08-20T00:00:00Z"), ZoneId.of("Asia/Seoul")));
     }
@@ -92,6 +101,8 @@ class MissionPhase5ServiceTest {
         assertThat(result.completion().llmGenerationStatus()).isEqualTo("NOT_DUE");
         verify(completionRepository).incrementCategory(eq(USER_ID), eq(MissionCategory.MOVEMENT), any());
         verify(profileUpdater).recordCompletion(USER_ID);
+        verify(worldProgressService).applyMissionCompletion(
+                USER_ID, MissionCategory.MOVEMENT, 1);
         verify(llmGenerationService, never()).generateAtMilestone(
                 eq(USER_ID), eq(5), any());
     }
@@ -143,6 +154,8 @@ class MissionPhase5ServiceTest {
         assertThat(result.completion().summary().completedMissionCount()).isEqualTo(5);
         verify(completionRepository, never()).incrementCategory(any(Long.class), any(), any());
         verify(profileUpdater, never()).recordCompletion(USER_ID);
+        verify(worldProgressService, never()).applyMissionCompletion(
+                USER_ID, MissionCategory.MOVEMENT, 1);
         verify(llmGenerationService, never()).generateAtMilestone(eq(USER_ID), eq(5), any());
     }
 
@@ -169,7 +182,7 @@ class MissionPhase5ServiceTest {
     private UserMissionState state(MissionStatus status) {
         return new UserMissionState(
                 USER_MISSION_ID, 1L, MissionCategory.MOVEMENT,
-                status, TODAY, 1);
+                1, status, TODAY, 1);
     }
 
     private UserMissionResponse response(MissionStatus status) {
@@ -192,5 +205,11 @@ class MissionPhase5ServiceTest {
                         MissionCategory.MOVEMENT,
                         completedCount,
                         OffsetDateTime.parse("2026-08-20T09:00:00+09:00"))));
+    }
+
+    private WorldGrowthResponse growth(boolean applied) {
+        return new WorldGrowthResponse(
+                "TRAINING_CORNER", "MOVEMENT", applied ? 10 : 0,
+                1, 1, 10, 50, false, applied);
     }
 }

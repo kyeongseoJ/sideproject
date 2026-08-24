@@ -62,8 +62,6 @@ class MissionPhase3ServiceTest {
                 statusLogRepository,
                 userMissionRepository,
                 recommendationPolicy,
-                mock(MissionProfileUpdater.class),
-                mock(MissionLlmGenerationService.class),
                 transactionTemplate,
                 Clock.fixed(Instant.parse("2026-08-20T00:00:00Z"), ZoneId.of("Asia/Seoul")),
                 new Random(1234));

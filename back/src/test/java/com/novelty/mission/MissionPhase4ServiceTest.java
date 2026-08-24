@@ -26,6 +26,8 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.novelty.user.UserService;
+import com.novelty.world.WorldGrowthResponse;
+import com.novelty.world.WorldProgressService;
 
 class MissionPhase4ServiceTest {
 
@@ -42,6 +44,7 @@ class MissionPhase4ServiceTest {
     private MissionCompletionRepository completionRepository;
     private MissionProfileUpdater profileUpdater;
     private MissionLlmGenerationService llmGenerationService;
+    private WorldProgressService worldProgressService;
     private UserMissionService service;
 
     @BeforeEach
@@ -54,6 +57,7 @@ class MissionPhase4ServiceTest {
         completionRepository = mock(MissionCompletionRepository.class);
         profileUpdater = mock(MissionProfileUpdater.class);
         llmGenerationService = mock(MissionLlmGenerationService.class);
+        worldProgressService = mock(WorldProgressService.class);
         TransactionTemplate transactionTemplate = mock(TransactionTemplate.class);
         when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
             TransactionCallback<?> callback = invocation.getArgument(0);
@@ -70,6 +74,7 @@ class MissionPhase4ServiceTest {
                 completionRepository,
                 profileUpdater,
                 llmGenerationService,
+                worldProgressService,
                 transactionTemplate,
                 Clock.fixed(Instant.parse("2026-08-20T00:00:00Z"), ZoneId.of("Asia/Seoul")));
     }
@@ -162,16 +167,24 @@ class MissionPhase4ServiceTest {
                 new MissionProfileUpdater.CompletionUpdate(
                         new UserMissionVector(-1, -1, 0, 1, 1), false, 0, null));
         when(completionRepository.findSummary(USER_ID)).thenReturn(summary(1));
+        when(worldProgressService.applyMissionCompletion(USER_ID, MissionCategory.MOVEMENT, 1))
+                .thenReturn(growth(true));
+        when(worldProgressService.currentWithoutReward(USER_ID, MissionCategory.MOVEMENT))
+                .thenReturn(growth(false));
 
         UserMissionActionResponse first = service.complete(USER_KEY, 101);
         assertThat(first.idempotent()).isFalse();
+        assertThat(first.completion().worldGrowth().rewardApplied()).isTrue();
         verify(repository).markCompleted(eq(101L), any());
 
         UserMissionState completed = state(101, MissionStatus.COMPLETED, 1);
         when(repository.findOwnedForUpdate(USER_ID, 101)).thenReturn(Optional.of(completed));
         UserMissionActionResponse retry = service.complete(USER_KEY, 101);
         assertThat(retry.idempotent()).isTrue();
+        assertThat(retry.completion().worldGrowth().rewardApplied()).isFalse();
         verify(repository).markCompleted(eq(101L), any());
+        verify(worldProgressService).applyMissionCompletion(
+                USER_ID, MissionCategory.MOVEMENT, 1);
     }
 
     @Test
@@ -187,7 +200,8 @@ class MissionPhase4ServiceTest {
     }
 
     private UserMissionState state(long id, MissionStatus status, Integer slot) {
-        return new UserMissionState(id, id - 100, MissionCategory.MOVEMENT, status, TODAY, slot);
+        return new UserMissionState(
+                id, id - 100, MissionCategory.MOVEMENT, 1, status, TODAY, slot);
     }
 
     private UserMissionResponse response(long id, MissionStatus status) {
@@ -204,5 +218,11 @@ class MissionPhase4ServiceTest {
     private MissionSummaryResponse summary(int completedCount) {
         return new MissionSummaryResponse(
                 completedCount, 0, "QUIET_FOCUSER", List.of());
+    }
+
+    private WorldGrowthResponse growth(boolean applied) {
+        return new WorldGrowthResponse(
+                "TRAINING_CORNER", "MOVEMENT", applied ? 10 : 0,
+                1, 1, 10, 50, false, applied);
     }
 }

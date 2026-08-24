@@ -163,7 +163,7 @@ public class UserMissionRepository {
             long userId,
             long userMissionId) {
         return jdbcTemplate.query("""
-                SELECT um.USER_MISSION_ID, um.MISSION_ID, m.CATEGORY, um.STATUS,
+                SELECT um.USER_MISSION_ID, um.MISSION_ID, m.CATEGORY, m.DIFFICULTY, um.STATUS,
                        um.SERVICE_DATE, um.DAILY_SLOT_NO
                   FROM USER_MISSION um
                   JOIN MISSION m ON m.MISSION_ID = um.MISSION_ID
@@ -180,7 +180,7 @@ public class UserMissionRepository {
             long firstUserMissionId,
             long secondUserMissionId) {
         return jdbcTemplate.query("""
-                SELECT um.USER_MISSION_ID, um.MISSION_ID, m.CATEGORY, um.STATUS,
+                SELECT um.USER_MISSION_ID, um.MISSION_ID, m.CATEGORY, m.DIFFICULTY, um.STATUS,
                        um.SERVICE_DATE, um.DAILY_SLOT_NO
                   FROM USER_MISSION um
                   JOIN MISSION m ON m.MISSION_ID = um.MISSION_ID
@@ -280,6 +280,7 @@ public class UserMissionRepository {
                 resultSet.getLong("USER_MISSION_ID"),
                 resultSet.getLong("MISSION_ID"),
                 MissionCategory.valueOf(resultSet.getString("CATEGORY")),
+                resultSet.getInt("DIFFICULTY"),
                 MissionStatus.valueOf(resultSet.getString("STATUS")),
                 resultSet.getDate("SERVICE_DATE").toLocalDate(),
                 resultSet.wasNull() ? null : slot);

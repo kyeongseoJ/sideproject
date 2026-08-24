@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.novelty.user.AnonymousUserResponse;
 import com.novelty.user.UserService;
+import com.novelty.world.WorldProgressService;
 
 @SpringBootTest
 @EnabledIfEnvironmentVariable(named = "RUN_ORACLE_INTEGRATION", matches = "true")
@@ -36,6 +37,9 @@ class MissionPhase4OracleIntegrationTest {
     @Autowired
     private UserMissionService userMissionService;
 
+    @Autowired
+    private WorldProgressService worldProgressService;
+
     @Test
     @Timeout(90)
     void transitionsReplacesCompletesIdempotentlyAndRollsBack() {
@@ -48,12 +52,11 @@ class MissionPhase4OracleIntegrationTest {
                 .recommendToday(user.userKey())
                 .response()
                 .candidates();
-        assertThat(candidates).hasSizeGreaterThanOrEqualTo(4);
+        assertThat(candidates).hasSize(3);
 
         long first = candidates.get(0).userMissionId();
         long second = candidates.get(1).userMissionId();
         long third = candidates.get(2).userMissionId();
-        long fourth = candidates.get(3).userMissionId();
 
         UserMissionActionResponse selected = userMissionService.select(user.userKey(), first);
         assertThat(selected.mission().status()).isEqualTo(MissionStatus.SELECTED);
@@ -76,14 +79,26 @@ class MissionPhase4OracleIntegrationTest {
         UserMissionActionResponse completed = userMissionService.complete(user.userKey(), second);
         assertThat(completed.mission().status()).isEqualTo(MissionStatus.COMPLETED);
         assertThat(completed.idempotent()).isFalse();
+        assertThat(completed.completion().worldGrowth().rewardApplied()).isTrue();
+        assertThat(completed.completion().worldGrowth().awardedExp()).isBetween(10, 30);
+        assertThat(count("SELECT COUNT(*) FROM USER_WORLD_OBJECT WHERE USER_ID = ?", user.userId()))
+                .isEqualTo(1);
+        assertThat(worldProgressService.getSnapshot(user.userKey()).objects())
+                .anySatisfy(object -> {
+                    assertThat(object.objectCode())
+                            .isEqualTo(completed.completion().worldGrowth().objectCode());
+                    assertThat(object.exp())
+                            .isEqualTo(completed.completion().worldGrowth().currentExp());
+                });
         int completedLogCount = statusLogCount(second, "COMPLETED");
         UserMissionActionResponse retry = userMissionService.complete(user.userKey(), second);
         assertThat(retry.idempotent()).isTrue();
+        assertThat(retry.completion().worldGrowth().rewardApplied()).isFalse();
         assertThat(statusLogCount(second, "COMPLETED")).isEqualTo(completedLogCount);
         assertThat(profileCompletionCount(user.userId())).isEqualTo(1);
 
         userMissionService.select(user.userKey(), third);
-        assertThatThrownBy(() -> userMissionService.select(user.userKey(), fourth))
+        assertThatThrownBy(() -> userMissionService.select(user.userKey(), first))
                 .isInstanceOf(DailyLimitReachedException.class);
         assertThatThrownBy(() -> missionService.saveSettings(
                         user.userKey(), new MissionSettingsRequest(AvailableTime.SHORT, 1)))
