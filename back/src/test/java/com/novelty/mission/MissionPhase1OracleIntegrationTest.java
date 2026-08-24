@@ -90,7 +90,7 @@ class MissionPhase1OracleIntegrationTest {
                 .map(String::trim)
                 .filter(statement -> !statement.isEmpty())
                 .toList();
-        assertEquals(15, statements.size(), "Unexpected Mission Phase 1 statement count.");
+        assertEquals(17, statements.size(), "Unexpected Mission Phase 1 statement count.");
 
         boolean previousAutoCommit = connection.getAutoCommit();
         connection.setAutoCommit(true);
@@ -244,7 +244,11 @@ class MissionPhase1OracleIntegrationTest {
                     connection, -9_350_000_003L, -9_399_999_997L, FIRST_USER_ID,
                     FIRST_MISSION_ID, "MOVEMENT", "SHOWN"));
 
-            assertSqlError(2290, () -> updateAdaptedCount(connection, FIRST_USER_ID, 5, 4));
+            updateAdaptedCount(connection, FIRST_USER_ID, 5, 4);
+            assertEquals(4, queryLong(
+                    connection,
+                    "SELECT LAST_MISSION_ADAPTED_COUNT FROM USER_PERSONALITY_PROFILE WHERE USER_ID = ?",
+                    FIRST_USER_ID));
             assertSqlError(2290, () -> updateAdaptedCount(connection, FIRST_USER_ID, 5, 10));
         } finally {
             connection.rollback();

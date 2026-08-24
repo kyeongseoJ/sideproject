@@ -1,5 +1,4 @@
 import 'package:novelty_app/mission/mission_models.dart';
-import 'package:novelty_app/personality/personality_models.dart';
 
 class BehaviorPreferenceChange {
   const BehaviorPreferenceChange({
@@ -9,16 +8,13 @@ class BehaviorPreferenceChange {
     required this.novelty,
   });
 
-  factory BehaviorPreferenceChange.fromMission(
-    UserMission mission,
-    PersonalityProfile profile,
+  factory BehaviorPreferenceChange.fromCompletion(
+    MissionPersonalityChange change,
   ) => BehaviorPreferenceChange(
-    indoorOutdoor: _direction(
-      mission.indoorOutdoor - profile.indoorOutdoorScore,
-    ),
-    social: _direction(mission.socialLevel - profile.socialScore),
-    activity: _direction(mission.activityLevel - profile.physicalActivityScore),
-    novelty: _direction(mission.noveltyLevel - profile.noveltyScore),
+    indoorOutdoor: change.currentIndoorOutdoor - change.previousIndoorOutdoor,
+    social: change.currentSocialLevel - change.previousSocialLevel,
+    activity: change.currentActivityLevel - change.previousActivityLevel,
+    novelty: change.currentNoveltyLevel - change.previousNoveltyLevel,
   );
 
   final int indoorOutdoor;
@@ -46,5 +42,3 @@ class BehaviorPreferenceDelta {
   final String label;
   final int amount;
 }
-
-int _direction(int value) => value == 0 ? 0 : (value > 0 ? 1 : -1);

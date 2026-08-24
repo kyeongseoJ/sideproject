@@ -147,7 +147,7 @@ public class UserMissionService {
                 WorldGrowthResponse worldGrowth = worldProgressService.currentWithoutReward(
                         userId, target.category());
                 MissionCompletionEffectResponse effect = new MissionCompletionEffectResponse(
-                        completionRepository.findSummary(userId), false, 0, "NOT_DUE", worldGrowth);
+                        completionRepository.findSummary(userId), false, null, 0, "NOT_DUE", worldGrowth);
                 return new CompletionTransactionResult(
                         actionResponse(userId, userMissionId, context, true, effect), null);
             }
@@ -159,12 +159,14 @@ public class UserMissionService {
             userMissionRepository.markCompleted(userMissionId, occurredAt);
             appendLog(userId, target, MissionStatus.COMPLETED, "USER_COMPLETED", occurredAt);
             completionRepository.incrementCategory(userId, target.category(), occurredAt);
-            MissionProfileUpdater.CompletionUpdate update = profileUpdater.recordCompletion(userId);
+            MissionProfileUpdater.CompletionUpdate update = profileUpdater.recordCompletion(
+                    userId, target.missionId());
             WorldGrowthResponse worldGrowth = worldProgressService.applyMissionCompletion(
                     userId, target.category(), target.difficulty());
             MissionCompletionEffectResponse effect = new MissionCompletionEffectResponse(
                     completionRepository.findSummary(userId),
                     update.personalityUpdated(),
+                    MissionPersonalityChangeResponse.from(update),
                     update.milestone(),
                     "NOT_DUE",
                     worldGrowth);
@@ -187,6 +189,7 @@ public class UserMissionService {
         MissionCompletionEffectResponse completedEffect = new MissionCompletionEffectResponse(
                 current.summary(),
                 current.personalityUpdated(),
+                current.personalityChange(),
                 current.milestone(),
                 generationStatus,
                 current.worldGrowth());

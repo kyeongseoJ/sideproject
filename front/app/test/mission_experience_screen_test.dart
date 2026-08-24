@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novelty_app/api/mission_api.dart';
@@ -24,10 +25,11 @@ void main() {
     expect(gateway.savedSettings?.dailyLimit, 1);
     expect(find.byKey(const Key('mission-carousel')), findsOneWidget);
     expect(find.text('새로운 길 걷기'), findsOneWidget);
+    expect(find.text('하루 한 개'), findsNothing);
   });
 
   testWidgets(
-    'selects, replaces, cancels and completes with server response state',
+    'selects, cancels and completes without exposing direct replacement',
     (tester) async {
       final gateway = _FakeMissionGateway();
       await _pump(tester, gateway);
@@ -35,25 +37,38 @@ void main() {
       await tester.tap(find.byKey(const Key('mission-select-13')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('mission-complete-13')), findsOneWidget);
+      expect(find.byKey(const Key('mission-replace-13')), findsNothing);
+      expect(find.text('변경'), findsNothing);
 
-      await tester.tap(find.byKey(const Key('mission-replace-13')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('mission-replacement-14')));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('mission-complete-14')), findsOneWidget);
-
-      await tester.tap(find.byKey(const Key('mission-cancel-14')));
+      await tester.tap(find.byKey(const Key('mission-cancel-13')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('mission-select-14')), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('mission-select-14')));
+      await tester.tap(find.byKey(const Key('mission-select-13')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('mission-complete-14')));
+      await tester.tap(find.byKey(const Key('mission-complete-13')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('mission-completed-card')), findsOneWidget);
-      expect(find.textContaining('행동 선호 경험'), findsWidgets);
+      expect(find.text('미션을 완료했어요!'), findsOneWidget);
     },
   );
+
+  testWidgets('supports mouse drag on the web mission carousel', (
+    tester,
+  ) async {
+    await _pump(tester, _FakeMissionGateway());
+    final pageView = tester.widget<PageView>(find.byType(PageView));
+    expect(pageView.controller?.page, 0);
+
+    await tester.drag(
+      find.byType(PageView),
+      const Offset(-500, 0),
+      kind: PointerDeviceKind.mouse,
+    );
+    await tester.pumpAndSettle();
+
+    expect(pageView.controller?.page, greaterThan(0.5));
+  });
 
   testWidgets(
     'keeps current data and hides internal details when an action fails',
@@ -284,6 +299,18 @@ class _FakeMissionGateway implements MissionGateway {
       idempotent: false,
       summary: _summary(1),
       personalityUpdated: true,
+      personalityChange: const MissionPersonalityChange(
+        previousIndoorOutdoor: -1,
+        currentIndoorOutdoor: 0,
+        previousSocialLevel: -1,
+        currentSocialLevel: -1,
+        previousActivityLevel: 0,
+        currentActivityLevel: 1,
+        previousNoveltyLevel: 0,
+        currentNoveltyLevel: 1,
+        previousPersonalityCode: 'QUIET_FOCUSER',
+        currentPersonalityCode: 'BALANCED_COORDINATOR',
+      ),
       llmGenerationStatus: 'NOT_DUE',
     );
   }

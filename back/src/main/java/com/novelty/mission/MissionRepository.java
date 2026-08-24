@@ -63,6 +63,15 @@ public class MissionRepository {
                 this::mapMission);
     }
 
+    public Optional<Mission> findById(long missionId) {
+        return jdbcTemplate.query(
+                "SELECT %s FROM MISSION WHERE MISSION_ID = ?".formatted(MISSION_COLUMNS),
+                this::mapMission,
+                missionId)
+                .stream()
+                .findFirst();
+    }
+
     public List<Mission> findRecentCompleted(long userId, int limit) {
         return jdbcTemplate.query("""
                 SELECT %s

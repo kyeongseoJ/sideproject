@@ -90,17 +90,20 @@ class MissionPhase5ServiceTest {
     @Test
     void completionAtomicallyUpdatesCategoryAndCompletionCount() {
         UserMissionVector vector = new UserMissionVector(-1, -1, 0, 1, 1);
-        when(profileUpdater.recordCompletion(USER_ID)).thenReturn(
-                new MissionProfileUpdater.CompletionUpdate(vector, false, 0, null));
+        when(profileUpdater.recordCompletion(USER_ID, 1L)).thenReturn(
+                new MissionProfileUpdater.CompletionUpdate(
+                        new UserMissionVector(-1, -1, 0, 0, 0), vector,
+                        true, 0, "QUIET_FOCUSER", "QUIET_FOCUSER"));
         when(completionRepository.findSummary(USER_ID)).thenReturn(summary(1, 0));
 
         UserMissionActionResponse result = service.complete(USER_KEY, USER_MISSION_ID);
 
         assertThat(result.completion().summary().completedMissionCount()).isEqualTo(1);
-        assertThat(result.completion().personalityUpdated()).isFalse();
+        assertThat(result.completion().personalityUpdated()).isTrue();
+        assertThat(result.completion().personalityChange()).isNotNull();
         assertThat(result.completion().llmGenerationStatus()).isEqualTo("NOT_DUE");
         verify(completionRepository).incrementCategory(eq(USER_ID), eq(MissionCategory.MOVEMENT), any());
-        verify(profileUpdater).recordCompletion(USER_ID);
+        verify(profileUpdater).recordCompletion(USER_ID, 1L);
         verify(worldProgressService).applyMissionCompletion(
                 USER_ID, MissionCategory.MOVEMENT, 1);
         verify(llmGenerationService, never()).generateAtMilestone(
@@ -110,9 +113,10 @@ class MissionPhase5ServiceTest {
     @Test
     void fifthCompletionUpdatesPersonalityAndTriggersLlmAfterTransaction() {
         UserMissionVector vector = new UserMissionVector(0, 0, 1, 1, 5);
-        when(profileUpdater.recordCompletion(USER_ID)).thenReturn(
+        when(profileUpdater.recordCompletion(USER_ID, 1L)).thenReturn(
                 new MissionProfileUpdater.CompletionUpdate(
-                        vector, true, 5, "BALANCED_COORDINATOR"));
+                        new UserMissionVector(-1, -1, 0, 0, 4), vector,
+                        true, 5, "QUIET_FOCUSER", "BALANCED_COORDINATOR"));
         when(completionRepository.findSummary(USER_ID)).thenReturn(summary(5, 5));
         when(llmGenerationService.generateAtMilestone(USER_ID, 5, vector))
                 .thenReturn("CREATED");
@@ -129,9 +133,10 @@ class MissionPhase5ServiceTest {
     @Test
     void llmFailureIsIsolatedFromCommittedCompletionResponse() {
         UserMissionVector vector = new UserMissionVector(0, 0, 1, 1, 5);
-        when(profileUpdater.recordCompletion(USER_ID)).thenReturn(
+        when(profileUpdater.recordCompletion(USER_ID, 1L)).thenReturn(
                 new MissionProfileUpdater.CompletionUpdate(
-                        vector, true, 5, "BALANCED_COORDINATOR"));
+                        new UserMissionVector(-1, -1, 0, 0, 4), vector,
+                        true, 5, "QUIET_FOCUSER", "BALANCED_COORDINATOR"));
         when(completionRepository.findSummary(USER_ID)).thenReturn(summary(5, 5));
         when(llmGenerationService.generateAtMilestone(USER_ID, 5, vector))
                 .thenThrow(new IllegalStateException("external failure"));
@@ -153,7 +158,7 @@ class MissionPhase5ServiceTest {
         assertThat(result.idempotent()).isTrue();
         assertThat(result.completion().summary().completedMissionCount()).isEqualTo(5);
         verify(completionRepository, never()).incrementCategory(any(Long.class), any(), any());
-        verify(profileUpdater, never()).recordCompletion(USER_ID);
+        verify(profileUpdater, never()).recordCompletion(USER_ID, 1L);
         verify(worldProgressService, never()).applyMissionCompletion(
                 USER_ID, MissionCategory.MOVEMENT, 1);
         verify(llmGenerationService, never()).generateAtMilestone(eq(USER_ID), eq(5), any());
@@ -161,7 +166,7 @@ class MissionPhase5ServiceTest {
 
     @Test
     void profileUpdateFailureAbortsCompletionFlow() {
-        when(profileUpdater.recordCompletion(USER_ID))
+        when(profileUpdater.recordCompletion(USER_ID, 1L))
                 .thenThrow(new IllegalStateException("profile update failed"));
 
         assertThatThrownBy(() -> service.complete(USER_KEY, USER_MISSION_ID))

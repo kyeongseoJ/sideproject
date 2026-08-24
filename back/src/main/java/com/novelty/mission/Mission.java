@@ -74,7 +74,7 @@ public record Mission(
             throw new IllegalArgumentException("mission tags are invalid.");
         }
         for (String tag : tags) {
-            if (tag == null || !tag.matches("[A-Z0-9_]{1,30}")) {
+            if (tag == null || !tag.matches("[A-Z0-9_가-힣]{1,30}")) {
                 throw new IllegalArgumentException("mission tag is invalid.");
             }
         }

@@ -268,6 +268,7 @@ class MissionActionResult {
     required this.idempotent,
     this.summary,
     this.personalityUpdated = false,
+    this.personalityChange,
     this.llmGenerationStatus,
     this.worldGrowth,
   });
@@ -277,6 +278,7 @@ class MissionActionResult {
   final bool idempotent;
   final MissionSummary? summary;
   final bool personalityUpdated;
+  final MissionPersonalityChange? personalityChange;
   final String? llmGenerationStatus;
   final WorldGrowth? worldGrowth;
 
@@ -292,6 +294,7 @@ class MissionActionResult {
     }
     MissionSummary? summary;
     bool updated = false;
+    MissionPersonalityChange? personalityChange;
     String? llmStatus;
     WorldGrowth? worldGrowth;
     if (completion != null) {
@@ -306,6 +309,15 @@ class MissionActionResult {
         completion['summary'] as Map<String, Object?>,
       );
       updated = completion['personalityUpdated'] as bool;
+      final rawPersonalityChange = completion['personalityChange'];
+      if (rawPersonalityChange != null) {
+        if (rawPersonalityChange is! Map<String, Object?>) {
+          throw const FormatException('Invalid personality change.');
+        }
+        personalityChange = MissionPersonalityChange.fromJson(
+          rawPersonalityChange,
+        );
+      }
       llmStatus = completion['llmGenerationStatus'] as String;
       worldGrowth = WorldGrowth.fromJson(
         completion['worldGrowth'] as Map<String, Object?>,
@@ -317,8 +329,63 @@ class MissionActionResult {
       idempotent: idempotent,
       summary: summary,
       personalityUpdated: updated,
+      personalityChange: personalityChange,
       llmGenerationStatus: llmStatus,
       worldGrowth: worldGrowth,
+    );
+  }
+}
+
+class MissionPersonalityChange {
+  const MissionPersonalityChange({
+    required this.previousIndoorOutdoor,
+    required this.currentIndoorOutdoor,
+    required this.previousSocialLevel,
+    required this.currentSocialLevel,
+    required this.previousActivityLevel,
+    required this.currentActivityLevel,
+    required this.previousNoveltyLevel,
+    required this.currentNoveltyLevel,
+    required this.previousPersonalityCode,
+    required this.currentPersonalityCode,
+  });
+
+  final int previousIndoorOutdoor;
+  final int currentIndoorOutdoor;
+  final int previousSocialLevel;
+  final int currentSocialLevel;
+  final int previousActivityLevel;
+  final int currentActivityLevel;
+  final int previousNoveltyLevel;
+  final int currentNoveltyLevel;
+  final String previousPersonalityCode;
+  final String currentPersonalityCode;
+
+  factory MissionPersonalityChange.fromJson(Map<String, Object?> json) {
+    final values = <Object?>[
+      json['previousIndoorOutdoor'],
+      json['currentIndoorOutdoor'],
+      json['previousSocialLevel'],
+      json['currentSocialLevel'],
+      json['previousActivityLevel'],
+      json['currentActivityLevel'],
+      json['previousNoveltyLevel'],
+      json['currentNoveltyLevel'],
+    ];
+    if (values.any((value) => value is! int)) {
+      throw const FormatException('Invalid personality change axes.');
+    }
+    return MissionPersonalityChange(
+      previousIndoorOutdoor: values[0] as int,
+      currentIndoorOutdoor: values[1] as int,
+      previousSocialLevel: values[2] as int,
+      currentSocialLevel: values[3] as int,
+      previousActivityLevel: values[4] as int,
+      currentActivityLevel: values[5] as int,
+      previousNoveltyLevel: values[6] as int,
+      currentNoveltyLevel: values[7] as int,
+      previousPersonalityCode: _string(json, 'previousPersonalityCode'),
+      currentPersonalityCode: _string(json, 'currentPersonalityCode'),
     );
   }
 }

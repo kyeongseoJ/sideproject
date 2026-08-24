@@ -52,4 +52,22 @@ void main() {
       throwsFormatException,
     );
   });
+
+  test('parses persisted personality change values from completion response', () {
+    final change = MissionPersonalityChange.fromJson({
+      'previousIndoorOutdoor': -1,
+      'currentIndoorOutdoor': 0,
+      'previousSocialLevel': 0,
+      'currentSocialLevel': 1,
+      'previousActivityLevel': 0,
+      'currentActivityLevel': 1,
+      'previousNoveltyLevel': 1,
+      'currentNoveltyLevel': 2,
+      'previousPersonalityCode': 'QUIET_FOCUSER',
+      'currentPersonalityCode': 'ACTIVE_CONNECTOR',
+    });
+
+    expect(change.currentIndoorOutdoor - change.previousIndoorOutdoor, 1);
+    expect(change.currentPersonalityCode, 'ACTIVE_CONNECTOR');
+  });
 }

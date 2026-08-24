@@ -153,6 +153,41 @@ class MissionPhase3ServiceTest {
     }
 
     @Test
+    void newDailyCycleUsesLatestPersonalityAndEligibleLlmCatalog() {
+        MissionSettingsResponse settings = new MissionSettingsResponse(AvailableTime.SHORT, 1);
+        UserMissionVector latestVector = new UserMissionVector(1, 0, 2, 2, 5);
+        Mission generated = new Mission(
+                201, "새로 생성된 미션", "현재 성향과 먼 새 행동", MissionCategory.SOCIAL,
+                1, 10, -1, 1, 0, 1, true, MissionSourceType.LLM);
+        MissionRecommendation recommendation = recommendation(generated, 0.95);
+        UserMissionResponse stored = userMission(20101, generated, 0.95);
+
+        when(userMissionRepository.findSettings(USER_ID)).thenReturn(Optional.of(settings));
+        when(userMissionRepository.findToday(USER_ID, SERVICE_DATE))
+                .thenReturn(List.of(), List.of(stored));
+        when(missionRepository.findUserVector(USER_ID)).thenReturn(Optional.of(latestVector));
+        when(missionRepository.findCandidates(15, true)).thenReturn(List.of(generated));
+        when(userMissionRepository.findCategoryCompletionCounts(USER_ID)).thenReturn(Map.of());
+        when(statusLogRepository.findAll(USER_ID)).thenReturn(List.of());
+        when(recommendationPolicy.recommend(
+                any(), eq(latestVector), eq(AvailableTime.SHORT), any(), any(), any()))
+                .thenReturn(List.of(recommendation));
+        when(userMissionRepository.insertRecommendation(
+                eq(USER_ID), eq(SERVICE_DATE), eq(AvailableTime.SHORT),
+                any(), eq(recommendation), any()))
+                .thenReturn(20101L);
+
+        MissionRecommendationBatchResult result = service.recommendToday(USER_KEY);
+
+        assertThat(result.created()).isTrue();
+        assertThat(result.response().candidates()).extracting(UserMissionResponse::sourceType)
+                .containsExactly(MissionSourceType.LLM);
+        verify(missionRepository).findCandidates(15, true);
+        verify(recommendationPolicy).recommend(
+                any(), eq(latestVector), eq(AvailableTime.SHORT), any(), any(), any());
+    }
+
+    @Test
     void rejectsRecommendationWhenSettingsPersonalityOrCandidatesAreMissing() {
         when(userMissionRepository.findSettings(USER_ID)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.recommendToday(USER_KEY))

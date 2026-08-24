@@ -12,6 +12,7 @@ public record MissionRecommendation(
         double similarityPenalty,
         double repetitionPenalty,
         double rejectionPenalty,
+        double longTermRepeatPenalty,
         double recommendationScore) {
 
     public MissionRecommendation(
@@ -32,6 +33,7 @@ public record MissionRecommendation(
                 0.0,
                 0.0,
                 0.0,
+                0.0,
                 recommendationScore);
     }
 
@@ -49,6 +51,7 @@ public record MissionRecommendation(
         requireScore("similarityPenalty", similarityPenalty);
         requireScore("repetitionPenalty", repetitionPenalty);
         requireScore("rejectionPenalty", rejectionPenalty);
+        requireScore("longTermRepeatPenalty", longTermRepeatPenalty);
         requireScore("recommendationScore", recommendationScore);
     }
 

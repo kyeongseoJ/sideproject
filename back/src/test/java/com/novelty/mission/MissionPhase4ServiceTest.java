@@ -163,9 +163,11 @@ class MissionPhase4ServiceTest {
         UserMissionState selected = state(101, MissionStatus.SELECTED, 1);
         when(repository.findOwnedForUpdate(USER_ID, 101)).thenReturn(Optional.of(selected));
         when(repository.findOwned(USER_ID, 101)).thenReturn(Optional.of(response(101, MissionStatus.COMPLETED)));
-        when(profileUpdater.recordCompletion(USER_ID)).thenReturn(
+        when(profileUpdater.recordCompletion(USER_ID, 1L)).thenReturn(
                 new MissionProfileUpdater.CompletionUpdate(
-                        new UserMissionVector(-1, -1, 0, 1, 1), false, 0, null));
+                        new UserMissionVector(-1, -1, 0, 0, 0),
+                        new UserMissionVector(-1, -1, 0, 1, 1),
+                        true, 0, "QUIET_FOCUSER", "QUIET_FOCUSER"));
         when(completionRepository.findSummary(USER_ID)).thenReturn(summary(1));
         when(worldProgressService.applyMissionCompletion(USER_ID, MissionCategory.MOVEMENT, 1))
                 .thenReturn(growth(true));

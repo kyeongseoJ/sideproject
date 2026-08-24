@@ -1,13 +1,10 @@
 package com.novelty.mission;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -16,63 +13,53 @@ import org.mockito.ArgumentCaptor;
 class MissionProfileUpdaterTest {
 
     @Test
-    void fifthCompletionUpdatesAllVectorAxes() {
+    void everyCompletionUpdatesAllVectorAxes() {
         MissionRepository repository = mock(MissionRepository.class);
         when(repository.findUserVector(7L))
-                .thenReturn(Optional.of(new UserMissionVector(-1, -1, 0, 0, 4)));
-        when(repository.findRecentCompleted(7L, 5)).thenReturn(List.of(
-                mission(1, 1, 2, 2),
-                mission(1, 1, 2, 2),
-                mission(1, 1, 2, 2),
-                mission(1, 1, 2, 2),
-                mission(1, 1, 2, 2)));
+                .thenReturn(Optional.of(new UserMissionVector(-1, -1, 0, 0, 0)));
+        when(repository.findById(1L)).thenReturn(Optional.of(mission(1, 1, 2, 2)));
         MissionProfileUpdater updater = new MissionProfileUpdater(repository);
 
-        MissionProfileUpdater.CompletionUpdate result = updater.recordCompletion(7L);
+        MissionProfileUpdater.CompletionUpdate result = updater.recordCompletion(7L, 1L);
 
         assertThat(result.personalityUpdated()).isTrue();
-        assertThat(result.milestone()).isEqualTo(5);
+        assertThat(result.milestone()).isZero();
+        assertThat(result.previousVector()).isEqualTo(new UserMissionVector(-1, -1, 0, 0, 0));
         ArgumentCaptor<UserMissionVector> vector = ArgumentCaptor.forClass(UserMissionVector.class);
         verify(repository).updateUserVector(org.mockito.ArgumentMatchers.eq(7L), vector.capture());
-        assertThat(vector.getValue()).isEqualTo(new UserMissionVector(0, 0, 1, 1, 5));
+        assertThat(vector.getValue()).isEqualTo(new UserMissionVector(0, 0, 1, 1, 1));
         verify(repository).updatePersonalityClassification(
-                7L, "BALANCED_COORDINATOR", 5);
+                7L, "BALANCED_COORDINATOR", 1);
     }
 
     @Test
-    void nonMilestoneOnlyIncrementsCompletionCount() {
+    void fifthCompletionKeepsGenerationMilestoneSeparateFromPersonalityUpdate() {
         MissionRepository repository = mock(MissionRepository.class);
-        UserMissionVector current = new UserMissionVector(1, 0, 2, 1, 5);
+        UserMissionVector current = new UserMissionVector(-1, -1, 0, 0, 4);
         when(repository.findUserVector(7L)).thenReturn(Optional.of(current));
+        when(repository.findById(1L)).thenReturn(Optional.of(mission(1, 1, 2, 2)));
 
         MissionProfileUpdater.CompletionUpdate result = new MissionProfileUpdater(repository)
-                .recordCompletion(7L);
+                .recordCompletion(7L, 1L);
 
-        assertThat(result.personalityUpdated()).isFalse();
-        assertThat(result.vector()).isEqualTo(new UserMissionVector(1, 0, 2, 1, 6));
-        verify(repository, never()).updatePersonalityClassification(
-                org.mockito.ArgumentMatchers.anyLong(),
-                org.mockito.ArgumentMatchers.anyString(),
-                org.mockito.ArgumentMatchers.anyInt());
+        assertThat(result.personalityUpdated()).isTrue();
+        assertThat(result.vector()).isEqualTo(new UserMissionVector(0, 0, 1, 1, 5));
+        assertThat(result.milestone()).isEqualTo(5);
     }
 
     @Test
-    void rejectsMilestoneWhenRecentCompletionHistoryIsIncomplete() {
+    void matchingMissionIsRecordedWithoutReportingAVisibleDelta() {
         MissionRepository repository = mock(MissionRepository.class);
         when(repository.findUserVector(7L))
-                .thenReturn(Optional.of(new UserMissionVector(-1, -1, 0, 0, 4)));
-        when(repository.findRecentCompleted(7L, 5)).thenReturn(List.of(
-                mission(1, 1, 2, 2),
-                mission(1, 1, 2, 2),
-                mission(1, 1, 2, 2),
-                mission(1, 1, 2, 2)));
+                .thenReturn(Optional.of(new UserMissionVector(1, 1, 2, 2, 1)));
+        when(repository.findById(1L)).thenReturn(Optional.of(mission(1, 1, 2, 2)));
 
-        assertThatThrownBy(() -> new MissionProfileUpdater(repository).recordCompletion(7L))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("inconsistent");
-        verify(repository, never()).updateUserVector(
-                org.mockito.ArgumentMatchers.anyLong(),
-                org.mockito.ArgumentMatchers.any());
+        MissionProfileUpdater.CompletionUpdate result = new MissionProfileUpdater(repository)
+                .recordCompletion(7L, 1L);
+
+        assertThat(result.personalityUpdated()).isFalse();
+        assertThat(result.vector()).isEqualTo(new UserMissionVector(1, 1, 2, 2, 2));
+        verify(repository).updatePersonalityClassification(7L, "ACTIVE_CONNECTOR", 2);
     }
 
     private Mission mission(int indoorOutdoor, int social, int activity, int novelty) {

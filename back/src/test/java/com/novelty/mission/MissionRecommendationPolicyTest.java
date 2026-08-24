@@ -90,7 +90,7 @@ class MissionRecommendationPolicyTest {
                 event(5, MissionCategory.SOCIAL, MissionStatus.SHOWN, "2026-08-21T09:00:00+09:00"));
 
         assertThat(ids(recommend(missions, vector(0), AvailableTime.SHORT, Map.of(), history)))
-                .containsExactlyInAnyOrder(2L, 5L);
+                .containsExactly(5L);
     }
 
     @Test
@@ -339,6 +339,39 @@ class MissionRecommendationPolicyTest {
 
         assertThat(recent.similarityPenalty()).isGreaterThan(older.similarityPenalty());
         assertThat(recent.recommendationScore()).isLessThan(older.recommendationScore());
+    }
+
+    @Test
+    void appliesDedicatedLongTermPenaltyAfterTheIdentityHardBlock() {
+        Mission candidate = mission(1, MissionCategory.MOVEMENT);
+
+        assertThat(recommend(
+                List.of(candidate), vector(5), AvailableTime.SHORT, Map.of(),
+                List.of(completedEvent(900, candidate, "2026-08-17T09:00:00+09:00"))))
+                .isEmpty();
+
+        MissionRecommendation veryHigh = recommendationOf(recommend(
+                List.of(candidate), vector(5), AvailableTime.SHORT, Map.of(),
+                List.of(completedEvent(901, candidate, "2026-08-16T09:00:00+09:00"))), 1L);
+        MissionRecommendation high = recommendationOf(recommend(
+                List.of(candidate), vector(5), AvailableTime.SHORT, Map.of(),
+                List.of(completedEvent(902, candidate, "2026-08-12T09:00:00+09:00"))), 1L);
+        MissionRecommendation low = recommendationOf(recommend(
+                List.of(candidate), vector(5), AvailableTime.SHORT, Map.of(),
+                List.of(completedEvent(903, candidate, "2026-07-21T09:00:00+09:00"))), 1L);
+        MissionRecommendation expired = recommendationOf(recommend(
+                List.of(candidate), vector(5), AvailableTime.SHORT, Map.of(),
+                List.of(completedEvent(904, candidate, "2026-07-20T09:00:00+09:00"))), 1L);
+
+        assertThat(veryHigh.longTermRepeatPenalty()).isEqualTo(0.35);
+        assertThat(high.longTermRepeatPenalty()).isEqualTo(0.20);
+        assertThat(low.longTermRepeatPenalty()).isEqualTo(0.08);
+        assertThat(expired.longTermRepeatPenalty()).isZero();
+        assertThat(veryHigh.similarityPenalty()).isZero();
+        assertThat(veryHigh.repetitionPenalty()).isPositive();
+        assertThat(veryHigh.recommendationScore()).isLessThan(high.recommendationScore());
+        assertThat(high.recommendationScore()).isLessThan(low.recommendationScore());
+        assertThat(low.recommendationScore()).isLessThan(expired.recommendationScore());
     }
 
     @Test

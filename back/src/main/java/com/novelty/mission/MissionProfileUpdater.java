@@ -1,7 +1,5 @@
 package com.novelty.mission;
 
-import java.util.List;
-
 import org.springframework.stereotype.Component;
 
 import com.novelty.personality.IndoorOutdoor;
@@ -11,7 +9,7 @@ import com.novelty.personality.SocialLevel;
 @Component
 public class MissionProfileUpdater {
 
-    private static final int UPDATE_INTERVAL = 5;
+    private static final int GENERATION_INTERVAL = 5;
 
     private final MissionRepository missionRepository;
 
@@ -19,44 +17,44 @@ public class MissionProfileUpdater {
         this.missionRepository = missionRepository;
     }
 
-    CompletionUpdate recordCompletion(long userId) {
+    CompletionUpdate recordCompletion(long userId, long missionId) {
         UserMissionVector current = missionRepository.findUserVector(userId)
                 .orElseThrow(PersonalityRequiredException::new);
+        Mission completed = missionRepository.findById(missionId)
+                .orElseThrow(() -> new IllegalStateException("Completed mission does not exist."));
         int completedCount = current.completedMissionCount() + 1;
-        if (completedCount % UPDATE_INTERVAL != 0) {
-            UserMissionVector counted = new UserMissionVector(
-                    current.indoorOutdoor(),
-                    current.socialLevel(),
-                    current.activityLevel(),
-                    current.noveltyLevel(),
-                    completedCount);
-            missionRepository.updateUserVector(userId, counted);
-            return new CompletionUpdate(counted, false, 0, null);
-        }
-
-        List<Mission> recent = missionRepository.findRecentCompleted(userId, UPDATE_INTERVAL);
-        if (recent.size() != UPDATE_INTERVAL) {
-            throw new IllegalStateException("Recent completed mission history is inconsistent.");
-        }
         UserMissionVector updated = new UserMissionVector(
-                blend(current.indoorOutdoor(), average(recent, Axis.INDOOR_OUTDOOR), -1, 1),
-                blend(current.socialLevel(), average(recent, Axis.SOCIAL), -1, 1),
-                blend(current.activityLevel(), average(recent, Axis.ACTIVITY), 0, 2),
-                blend(current.noveltyLevel(), average(recent, Axis.NOVELTY), 0, 2),
+                blend(current.indoorOutdoor(), completed.indoorOutdoor(), -1, 1),
+                blend(current.socialLevel(), completed.socialLevel(), -1, 1),
+                blend(current.activityLevel(), completed.activityLevel(), 0, 2),
+                blend(current.noveltyLevel(), completed.noveltyLevel(), 0, 2),
                 completedCount);
         missionRepository.updateUserVector(userId, updated);
+        String previousPersonalityCode = personalityType(current).name();
         String personalityCode = personalityType(updated).name();
         missionRepository.updatePersonalityClassification(
                 userId, personalityCode, completedCount);
-        return new CompletionUpdate(updated, true, completedCount, personalityCode);
+        boolean changed = !sameAxes(current, updated)
+                || !previousPersonalityCode.equals(personalityCode);
+        int milestone = completedCount % GENERATION_INTERVAL == 0 ? completedCount : 0;
+        return new CompletionUpdate(
+                current,
+                updated,
+                changed,
+                milestone,
+                previousPersonalityCode,
+                personalityCode);
     }
 
-    private double average(List<Mission> missions, Axis axis) {
-        return missions.stream().mapToInt(mission -> axis.value(mission)).average().orElse(0.0);
+    private int blend(int current, int observed, int minimum, int maximum) {
+        return Math.max(minimum, Math.min(maximum, (int) Math.round((current + observed) / 2.0)));
     }
 
-    private int blend(int current, double observedAverage, int minimum, int maximum) {
-        return Math.max(minimum, Math.min(maximum, (int) Math.round((current + observedAverage) / 2.0)));
+    private boolean sameAxes(UserMissionVector first, UserMissionVector second) {
+        return first.indoorOutdoor() == second.indoorOutdoor()
+                && first.socialLevel() == second.socialLevel()
+                && first.activityLevel() == second.activityLevel()
+                && first.noveltyLevel() == second.noveltyLevel();
     }
 
     private PersonalityType personalityType(UserMissionVector vector) {
@@ -75,27 +73,12 @@ public class MissionProfileUpdater {
         return PersonalityType.from(indoorOutdoor, socialLevel);
     }
 
-    private enum Axis {
-        INDOOR_OUTDOOR {
-            @Override int value(Mission mission) { return mission.indoorOutdoor(); }
-        },
-        SOCIAL {
-            @Override int value(Mission mission) { return mission.socialLevel(); }
-        },
-        ACTIVITY {
-            @Override int value(Mission mission) { return mission.activityLevel(); }
-        },
-        NOVELTY {
-            @Override int value(Mission mission) { return mission.noveltyLevel(); }
-        };
-
-        abstract int value(Mission mission);
-    }
-
     record CompletionUpdate(
+            UserMissionVector previousVector,
             UserMissionVector vector,
             boolean personalityUpdated,
             int milestone,
+            String previousPersonalityCode,
             String personalityCode) {
     }
 }

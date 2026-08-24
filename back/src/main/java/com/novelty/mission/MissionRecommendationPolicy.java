@@ -2,7 +2,7 @@ package com.novelty.mission;
 
 import static com.novelty.mission.MissionRecommendationConfig.CANDIDATE_LIMIT;
 import static com.novelty.mission.MissionRecommendationConfig.CATEGORY_EXPLORATION_WEIGHT;
-import static com.novelty.mission.MissionRecommendationConfig.COMPLETED_BLOCK_DAYS;
+import static com.novelty.mission.MissionRecommendationConfig.COMPLETED_HARD_BLOCK_MAX_AGE_DAYS;
 import static com.novelty.mission.MissionRecommendationConfig.CONTEXT_FIT_WEIGHT;
 import static com.novelty.mission.MissionRecommendationConfig.EXPLORATION_WEIGHT;
 import static com.novelty.mission.MissionRecommendationConfig.FINAL_DIVERSITY_PENALTY;
@@ -19,6 +19,12 @@ import static com.novelty.mission.MissionRecommendationConfig.RECENCY_DECAY;
 import static com.novelty.mission.MissionRecommendationConfig.REEXPOSURE_BLOCK_DAYS;
 import static com.novelty.mission.MissionRecommendationConfig.REJECTION_PENALTY;
 import static com.novelty.mission.MissionRecommendationConfig.REPEATED_PATTERN_PENALTY;
+import static com.novelty.mission.MissionRecommendationConfig.REPEAT_HIGH_MAX_AGE_DAYS;
+import static com.novelty.mission.MissionRecommendationConfig.REPEAT_HIGH_PENALTY;
+import static com.novelty.mission.MissionRecommendationConfig.REPEAT_LOW_MAX_AGE_DAYS;
+import static com.novelty.mission.MissionRecommendationConfig.REPEAT_LOW_PENALTY;
+import static com.novelty.mission.MissionRecommendationConfig.REPEAT_VERY_HIGH_MAX_AGE_DAYS;
+import static com.novelty.mission.MissionRecommendationConfig.REPEAT_VERY_HIGH_PENALTY;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -57,8 +63,8 @@ public class MissionRecommendationPolicy {
             RandomGenerator random) {
         validateInputs(missions, userVector, availableTime, categoryCompletionCounts, history, random);
 
-        Set<Long> recentlyCompletedIds = missionIdsWithinWindow(
-                history, MissionStatus.COMPLETED, COMPLETED_BLOCK_DAYS);
+        Set<Long> recentlyCompletedIds = missionIdsWithinMaximumAge(
+                history, MissionStatus.COMPLETED, COMPLETED_HARD_BLOCK_MAX_AGE_DAYS);
         Set<Long> recentlyShownIds = missionIdsWithinWindow(
                 history, MissionStatus.SHOWN, REEXPOSURE_BLOCK_DAYS);
         List<WeightedExperience> recentCompleted = recentCompleted(history);
@@ -95,8 +101,8 @@ public class MissionRecommendationPolicy {
             List<MissionStatusEvent> history) {
         Objects.requireNonNull(candidates, "candidates are required.");
         Objects.requireNonNull(history, "history is required.");
-        Set<Long> recentlyCompleted = missionIdsWithinWindow(
-                history, MissionStatus.COMPLETED, COMPLETED_BLOCK_DAYS);
+        Set<Long> recentlyCompleted = missionIdsWithinMaximumAge(
+                history, MissionStatus.COMPLETED, COMPLETED_HARD_BLOCK_MAX_AGE_DAYS);
         Set<Long> recentlyShown = missionIdsWithinWindow(
                 history, MissionStatus.SHOWN, REEXPOSURE_BLOCK_DAYS);
         return candidates.stream()
@@ -131,6 +137,7 @@ public class MissionRecommendationPolicy {
             repetitionPenalty = Math.min(1.0, repetitionPenalty + REPEATED_PATTERN_PENALTY);
         }
         double rejectionPenalty = rejectedPatternScore(mission, history) * REJECTION_PENALTY;
+        double longTermRepeatPenalty = longTermRepeatPenalty(mission, history);
 
         double positiveScore = personalityDistance * PERSONALITY_WEIGHT
                 + noveltyScore * NOVELTY_WEIGHT
@@ -139,7 +146,8 @@ public class MissionRecommendationPolicy {
                 + explorationBonus * EXPLORATION_WEIGHT
                 + contextFitScore * CONTEXT_FIT_WEIGHT;
         double recommendationScore = clamp(
-                positiveScore - similarityPenalty - repetitionPenalty - rejectionPenalty);
+                positiveScore - similarityPenalty - repetitionPenalty
+                        - rejectionPenalty - longTermRepeatPenalty);
 
         return new MissionRecommendation(
                 mission,
@@ -153,6 +161,7 @@ public class MissionRecommendationPolicy {
                 similarityPenalty,
                 repetitionPenalty,
                 rejectionPenalty,
+                longTermRepeatPenalty,
                 recommendationScore);
     }
 
@@ -243,14 +252,43 @@ public class MissionRecommendationPolicy {
             Mission candidate,
             List<WeightedExperience> recentCompleted) {
         return recentCompleted.stream().anyMatch(experience ->
-                experienceSimilarity.calculate(candidate, experience.mission())
+                candidate.id() != experience.mission().id()
+                        && experienceSimilarity.calculate(candidate, experience.mission())
                         >= RECENT_HARD_SIMILARITY);
+    }
+
+    private double longTermRepeatPenalty(
+            Mission candidate,
+            List<MissionStatusEvent> history) {
+        LocalDate serviceDate = LocalDate.now(clock);
+        long ageDays = history.stream()
+                .filter(event -> event.status() == MissionStatus.COMPLETED)
+                .filter(event -> event.missionId() == candidate.id())
+                .map(this::eventDate)
+                .filter(date -> !date.isAfter(serviceDate))
+                .mapToLong(date -> ChronoUnit.DAYS.between(date, serviceDate))
+                .min()
+                .orElse(Long.MAX_VALUE);
+        if (ageDays <= COMPLETED_HARD_BLOCK_MAX_AGE_DAYS) {
+            return 0.0;
+        }
+        if (ageDays <= REPEAT_VERY_HIGH_MAX_AGE_DAYS) {
+            return REPEAT_VERY_HIGH_PENALTY;
+        }
+        if (ageDays <= REPEAT_HIGH_MAX_AGE_DAYS) {
+            return REPEAT_HIGH_PENALTY;
+        }
+        if (ageDays <= REPEAT_LOW_MAX_AGE_DAYS) {
+            return REPEAT_LOW_PENALTY;
+        }
+        return 0.0;
     }
 
     private double maximumRecentSimilarity(
             Mission candidate,
             List<WeightedExperience> recentCompleted) {
         return recentCompleted.stream()
+                .filter(experience -> candidate.id() != experience.mission().id())
                 .mapToDouble(experience -> experienceSimilarity.calculate(
                         candidate, experience.mission()) * experience.recencyWeight())
                 .max()
@@ -261,6 +299,7 @@ public class MissionRecommendationPolicy {
             Mission candidate,
             List<WeightedExperience> recentCompleted) {
         return recentCompleted.stream()
+                .filter(experience -> candidate.id() != experience.mission().id())
                 .mapToDouble(experience -> patternOverlap(candidate, experience.mission())
                         * experience.recencyWeight())
                 .max()
@@ -339,6 +378,21 @@ public class MissionRecommendationPolicy {
         Set<Long> missionIds = new HashSet<>();
         for (MissionStatusEvent event : history) {
             if (event.status() == status && isWithin(event, firstBlockedDate, serviceDate)) {
+                missionIds.add(event.missionId());
+            }
+        }
+        return missionIds;
+    }
+
+    private Set<Long> missionIdsWithinMaximumAge(
+            List<MissionStatusEvent> history,
+            MissionStatus status,
+            int maximumAgeDays) {
+        LocalDate serviceDate = LocalDate.now(clock);
+        Set<Long> missionIds = new HashSet<>();
+        for (MissionStatusEvent event : history) {
+            long ageDays = ChronoUnit.DAYS.between(eventDate(event), serviceDate);
+            if (event.status() == status && ageDays >= 0 && ageDays <= maximumAgeDays) {
                 missionIds.add(event.missionId());
             }
         }
