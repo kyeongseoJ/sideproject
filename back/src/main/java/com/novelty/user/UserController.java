@@ -18,6 +18,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Hidden;
 
 @RestController
 @RequestMapping("/api/users")
@@ -31,7 +32,30 @@ public class UserController {
         this.userService = userService;
     }
 
+    @PostMapping("/register")
+    @Operation(summary = "회원가입", description = "아이디와 비밀번호로 계정을 만들고 초기 랜덤 닉네임과 사용자 키를 반환합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "가입 성공"),
+            @ApiResponse(responseCode = "400", description = "아이디 또는 비밀번호 정책 위반"),
+            @ApiResponse(responseCode = "409", description = "중복 아이디")
+    })
+    public ResponseEntity<AccountSessionResponse> register(
+            @RequestBody AccountRegistrationRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(userService.register(request));
+    }
+
+    @PostMapping("/login")
+    @Operation(summary = "로그인", description = "아이디와 비밀번호를 확인하고 이후 API에 사용할 사용자 키를 반환합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "로그인 성공"),
+            @ApiResponse(responseCode = "401", description = "아이디 또는 비밀번호 불일치")
+    })
+    public AccountSessionResponse login(@RequestBody AccountLoginRequest request) {
+        return userService.login(request);
+    }
+
     @PostMapping("/anonymous")
+    @Hidden
     @Operation(
             summary = "익명 사용자 생성",
             description = "사용자 키와 중복되지 않는 초기 랜덤 닉네임을 생성합니다. "

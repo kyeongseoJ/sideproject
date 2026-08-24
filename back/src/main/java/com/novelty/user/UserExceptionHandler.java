@@ -43,12 +43,32 @@ public class UserExceptionHandler {
                 .body(new UserErrorResponse("NICKNAME_GENERATION_FAILED", exception.getMessage()));
     }
 
+    @ExceptionHandler({InvalidLoginIdException.class, InvalidPasswordException.class})
+    public ResponseEntity<UserErrorResponse> handleInvalidAccountInput(UserDomainException exception) {
+        String code = exception instanceof InvalidLoginIdException
+                ? "INVALID_LOGIN_ID"
+                : "INVALID_PASSWORD";
+        return ResponseEntity.badRequest().body(new UserErrorResponse(code, exception.getMessage()));
+    }
+
+    @ExceptionHandler(DuplicateLoginIdException.class)
+    public ResponseEntity<UserErrorResponse> handleDuplicateLoginId(DuplicateLoginIdException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new UserErrorResponse("DUPLICATE_LOGIN_ID", exception.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<UserErrorResponse> handleInvalidCredentials(InvalidCredentialsException exception) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new UserErrorResponse("INVALID_CREDENTIALS", exception.getMessage()));
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<UserErrorResponse> handleUnreadableRequest() {
         return ResponseEntity.badRequest()
                 .body(new UserErrorResponse(
-                        "INVALID_NICKNAME",
-                        "닉네임 변경 요청 형식이 올바르지 않습니다."));
+                        "INVALID_REQUEST",
+                        "요청 형식이 올바르지 않습니다."));
     }
 
     @ExceptionHandler({DataAccessException.class, TransactionException.class})

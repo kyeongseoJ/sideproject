@@ -25,6 +25,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/config/nickname_banned_words.txt
+    - assets/ui/
     - assets/world3d/
     - assets/world3d/assets/
     - assets/world3d/models/

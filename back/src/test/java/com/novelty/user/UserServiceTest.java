@@ -41,6 +41,7 @@ class UserServiceTest {
     private UserRepository userRepository;
     private NicknameBannedWords nicknameBannedWords;
     private SecureRandom secureRandom;
+    private PasswordHasher passwordHasher;
     private UserService userService;
 
     @BeforeEach
@@ -48,7 +49,69 @@ class UserServiceTest {
         userRepository = mock(UserRepository.class);
         nicknameBannedWords = mock(NicknameBannedWords.class);
         secureRandom = mock(SecureRandom.class);
-        userService = new UserService(userRepository, nicknameBannedWords, secureRandom);
+        passwordHasher = mock(PasswordHasher.class);
+        userService = new UserService(
+                userRepository, nicknameBannedWords, null, secureRandom, passwordHasher);
+    }
+
+    @Test
+    void registersAccountWithNormalizedLoginIdHashedPasswordAndRandomNickname() {
+        prepareDeterministicRandom();
+        when(userRepository.nextUserId()).thenReturn(7L);
+        when(passwordHasher.hash("Password1")).thenReturn("encoded-password");
+
+        AccountSessionResponse response = userService.register(
+                new AccountRegistrationRequest("  Test_User  ", "Password1"));
+
+        assertEquals(7L, response.userId());
+        assertEquals("노벨티07QK", response.nickname());
+        verify(userRepository).createAccount(
+                eq(7L), anyString(), eq("test_user"), eq("encoded-password"),
+                eq("노벨티07QK"), eq("노벨티07QK"));
+    }
+
+    @Test
+    void rejectsDuplicateOrInvalidRegistrationInput() {
+        when(userRepository.loginIdExists("taken1")).thenReturn(true);
+
+        assertThrows(DuplicateLoginIdException.class, () -> userService.register(
+                new AccountRegistrationRequest("taken1", "Password1")));
+        assertThrows(InvalidLoginIdException.class, () -> userService.register(
+                new AccountRegistrationRequest("bad id", "Password1")));
+        assertThrows(InvalidPasswordException.class, () -> userService.register(
+                new AccountRegistrationRequest("valid_id", "password")));
+    }
+
+    @Test
+    void logsInAndRotatesTheUserKeyWithoutReturningPasswordData() {
+        when(userRepository.findCredentials("tester1")).thenReturn(Optional.of(
+                new UserCredentials(9L, "encoded-password", "노벨티07QK", true)));
+        when(passwordHasher.matches("Password1", "encoded-password")).thenReturn(true);
+        doAnswer(invocation -> {
+            byte[] bytes = invocation.getArgument(0);
+            java.util.Arrays.fill(bytes, (byte) 3);
+            return null;
+        }).when(secureRandom).nextBytes(org.mockito.ArgumentMatchers.any(byte[].class));
+
+        AccountSessionResponse response = userService.login(
+                new AccountLoginRequest("Tester1", "Password1"));
+
+        assertTrue(response.personalityCompleted());
+        verify(userRepository).rotateUserKey(eq(9L), anyString());
+        assertFalse(response.toString().contains("Password1"));
+    }
+
+    @Test
+    void rejectsUnknownAccountAndWrongPasswordWithSameError() {
+        when(userRepository.findCredentials("unknown1")).thenReturn(Optional.empty());
+        when(userRepository.findCredentials("tester1")).thenReturn(Optional.of(
+                new UserCredentials(9L, "encoded-password", "노벨티07QK", false)));
+        when(passwordHasher.matches("Wrong123", "encoded-password")).thenReturn(false);
+
+        assertThrows(InvalidCredentialsException.class, () -> userService.login(
+                new AccountLoginRequest("unknown1", "Password1")));
+        assertThrows(InvalidCredentialsException.class, () -> userService.login(
+                new AccountLoginRequest("tester1", "Wrong123")));
     }
 
     @Test

@@ -57,6 +57,35 @@ class UserControllerTest {
     }
 
     @Test
+    void registersAccount() throws Exception {
+        when(userService.register(any(AccountRegistrationRequest.class)))
+                .thenReturn(new AccountSessionResponse(7L, USER_KEY, "노벨티07QK", false));
+
+        mockMvc.perform(post("/api/users/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"loginId":"tester1","password":"Password1"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.userKey").value(USER_KEY))
+                .andExpect(jsonPath("$.nickname").value("노벨티07QK"));
+    }
+
+    @Test
+    void logsIn() throws Exception {
+        when(userService.login(any(AccountLoginRequest.class)))
+                .thenReturn(new AccountSessionResponse(7L, USER_KEY, "노벨티07QK", true));
+
+        mockMvc.perform(post("/api/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"loginId":"tester1","password":"Password1"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.personalityCompleted").value(true));
+    }
+
+    @Test
     void returnsCurrentUser() throws Exception {
         when(userService.getCurrentUser(USER_KEY))
                 .thenReturn(new UserProfileResponse(7L, "노벨티07QK", false, null));
@@ -162,7 +191,7 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("INVALID_NICKNAME"));
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
     }
 
     @Test

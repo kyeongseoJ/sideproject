@@ -24,25 +24,30 @@ public class UserService {
     private static final String INITIAL_NICKNAME_PREFIX = "노벨티";
     private static final Pattern USER_KEY_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{43}$");
     private static final Pattern NICKNAME_PATTERN = Pattern.compile("^[가-힣A-Za-z0-9]{1,12}$");
+    private static final Pattern LOGIN_ID_PATTERN = Pattern.compile("^[a-z0-9_]{4,20}$");
+    private static final Pattern PASSWORD_LETTER = Pattern.compile(".*[A-Za-z].*");
+    private static final Pattern PASSWORD_DIGIT = Pattern.compile(".*[0-9].*");
 
     private final UserRepository userRepository;
     private final NicknameBannedWords nicknameBannedWords;
     private final PersonalityRepository personalityRepository;
     private final SecureRandom secureRandom;
+    private final PasswordHasher passwordHasher;
 
     @Autowired
     public UserService(
             UserRepository userRepository,
             NicknameBannedWords nicknameBannedWords,
-            PersonalityRepository personalityRepository) {
-        this(userRepository, nicknameBannedWords, personalityRepository, new SecureRandom());
+            PersonalityRepository personalityRepository,
+            PasswordHasher passwordHasher) {
+        this(userRepository, nicknameBannedWords, personalityRepository, new SecureRandom(), passwordHasher);
     }
 
     UserService(
             UserRepository userRepository,
             NicknameBannedWords nicknameBannedWords,
             SecureRandom secureRandom) {
-        this(userRepository, nicknameBannedWords, null, secureRandom);
+        this(userRepository, nicknameBannedWords, null, secureRandom, new PasswordHasher());
     }
 
     UserService(
@@ -50,10 +55,68 @@ public class UserService {
             NicknameBannedWords nicknameBannedWords,
             PersonalityRepository personalityRepository,
             SecureRandom secureRandom) {
+        this(userRepository, nicknameBannedWords, personalityRepository, secureRandom, new PasswordHasher());
+    }
+
+    UserService(
+            UserRepository userRepository,
+            NicknameBannedWords nicknameBannedWords,
+            PersonalityRepository personalityRepository,
+            SecureRandom secureRandom,
+            PasswordHasher passwordHasher) {
         this.userRepository = userRepository;
         this.nicknameBannedWords = nicknameBannedWords;
         this.personalityRepository = personalityRepository;
         this.secureRandom = secureRandom;
+        this.passwordHasher = passwordHasher;
+    }
+
+    @Transactional
+    public AccountSessionResponse register(AccountRegistrationRequest request) {
+        String loginId = validateLoginId(request == null ? null : request.loginId());
+        String password = validatePassword(request == null ? null : request.password());
+        if (userRepository.loginIdExists(loginId)) {
+            throw new DuplicateLoginIdException();
+        }
+        for (int attempt = 0; attempt < MAX_NICKNAME_GENERATION_ATTEMPTS; attempt++) {
+            String userKey = generateUserKey();
+            String nickname = generateInitialNickname();
+            try {
+                long userId = userRepository.nextUserId();
+                userRepository.createAccount(
+                        userId,
+                        hashUserKey(userKey),
+                        loginId,
+                        passwordHasher.hash(password),
+                        nickname,
+                        normalizeNickname(nickname));
+                return new AccountSessionResponse(userId, userKey, nickname, false);
+            } catch (DuplicateKeyException exception) {
+                if (userRepository.loginIdExists(loginId)) {
+                    throw new DuplicateLoginIdException();
+                }
+            }
+        }
+        throw new NicknameGenerationException();
+    }
+
+    @Transactional
+    public AccountSessionResponse login(AccountLoginRequest request) {
+        String loginId = validateLoginId(request == null ? null : request.loginId());
+        String password = request == null ? null : request.password();
+        if (password == null || password.isEmpty()) {
+            throw new InvalidCredentialsException();
+        }
+        UserCredentials credentials = userRepository.findCredentials(loginId)
+                .filter(value -> passwordHasher.matches(password, value.passwordHash()))
+                .orElseThrow(InvalidCredentialsException::new);
+        String userKey = generateUserKey();
+        userRepository.rotateUserKey(credentials.userId(), hashUserKey(userKey));
+        return new AccountSessionResponse(
+                credentials.userId(),
+                userKey,
+                credentials.nickname(),
+                credentials.personalityCompleted());
     }
 
     @Transactional
@@ -141,6 +204,28 @@ public class UserService {
         byte[] bytes = new byte[USER_KEY_BYTES];
         secureRandom.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private String validateLoginId(String rawLoginId) {
+        if (rawLoginId == null) {
+            throw new InvalidLoginIdException();
+        }
+        String normalized = rawLoginId.trim().toLowerCase(Locale.ROOT);
+        if (!LOGIN_ID_PATTERN.matcher(normalized).matches()) {
+            throw new InvalidLoginIdException();
+        }
+        return normalized;
+    }
+
+    private String validatePassword(String password) {
+        if (password == null
+                || password.length() < 8
+                || password.length() > 64
+                || !PASSWORD_LETTER.matcher(password).matches()
+                || !PASSWORD_DIGIT.matcher(password).matches()) {
+            throw new InvalidPasswordException();
+        }
+        return password;
     }
 
     private String generateInitialNickname() {

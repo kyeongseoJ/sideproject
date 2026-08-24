@@ -95,11 +95,7 @@ class _NicknameSetupScreenState extends State<NicknameSetupScreen> {
                     ),
                     const Spacer(),
                     DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: NoveltyColors.line),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                      decoration: NoveltyDecorations.card(),
                       child: Padding(
                         padding: const EdgeInsets.all(24),
                         child: Column(
@@ -125,7 +121,6 @@ class _NicknameSetupScreenState extends State<NicknameSetupScreen> {
                               decoration: const InputDecoration(
                                 labelText: '닉네임',
                                 hintText: '한글, 영문, 숫자 1~12자',
-                                border: OutlineInputBorder(),
                               ),
                             ),
                             if (_error case final error?) ...[
@@ -167,7 +162,10 @@ class _NicknameSetupScreenState extends State<NicknameSetupScreen> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: NoveltyColors.primaryFaint,
-                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: NoveltyColors.primarySubtle),
+                        borderRadius: BorderRadius.circular(
+                          NoveltyRadii.medium,
+                        ),
                       ),
                       child: Text(
                         '이미 이용 중인 사용자는 같은 브라우저나 앱으로 접속하면 저장된 정보로 자동으로 이어집니다.',
@@ -212,11 +210,7 @@ Future<String?> showNicknameEditDialog({
           autofocus: true,
           enabled: !busy,
           maxLength: 12,
-          decoration: InputDecoration(
-            labelText: '닉네임',
-            errorText: errorText,
-            border: const OutlineInputBorder(),
-          ),
+          decoration: InputDecoration(labelText: '닉네임', errorText: errorText),
         ),
         actions: [
           TextButton(

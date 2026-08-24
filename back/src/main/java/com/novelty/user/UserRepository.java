@@ -18,6 +18,13 @@ public class UserRepository {
             ) VALUES (?, ?, ?, ?)
             """;
 
+    private static final String INSERT_ACCOUNT_SQL = """
+            INSERT INTO NOVELTY_USER (
+                USER_ID, USER_KEY_HASH, LOGIN_ID_NORMALIZED, PASSWORD_HASH,
+                NICKNAME, NICKNAME_NORMALIZED
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """;
+
     private static final String FIND_USER_SQL = """
             SELECT
                 u.USER_ID,
@@ -26,6 +33,17 @@ public class UserRepository {
             FROM NOVELTY_USER u
             LEFT JOIN USER_PERSONALITY_PROFILE p ON p.USER_ID = u.USER_ID
             WHERE u.USER_KEY_HASH = ?
+            """;
+
+    private static final String FIND_CREDENTIALS_SQL = """
+            SELECT
+                u.USER_ID,
+                u.PASSWORD_HASH,
+                u.NICKNAME,
+                CASE WHEN p.USER_ID IS NULL THEN 0 ELSE 1 END AS PERSONALITY_COMPLETED
+            FROM NOVELTY_USER u
+            LEFT JOIN USER_PERSONALITY_PROFILE p ON p.USER_ID = u.USER_ID
+            WHERE u.LOGIN_ID_NORMALIZED = ?
             """;
 
     private static final String TOUCH_USER_SQL = """
@@ -80,6 +98,23 @@ public class UserRepository {
                 normalizedNickname);
     }
 
+    public void createAccount(
+            long userId,
+            String userKeyHash,
+            String normalizedLoginId,
+            String passwordHash,
+            String nickname,
+            String normalizedNickname) {
+        jdbcTemplate.update(
+                INSERT_ACCOUNT_SQL,
+                userId,
+                userKeyHash,
+                normalizedLoginId,
+                passwordHash,
+                nickname,
+                normalizedNickname);
+    }
+
     public Optional<UserAccount> findByUserKeyHash(String userKeyHash) {
         List<UserAccount> users = jdbcTemplate.query(
                 FIND_USER_SQL,
@@ -89,6 +124,38 @@ public class UserRepository {
                         resultSet.getInt("PERSONALITY_COMPLETED") == 1),
                 userKeyHash);
         return users.stream().findFirst();
+    }
+
+    public Optional<UserCredentials> findCredentials(String normalizedLoginId) {
+        List<UserCredentials> users = jdbcTemplate.query(
+                FIND_CREDENTIALS_SQL,
+                (resultSet, rowNumber) -> new UserCredentials(
+                        resultSet.getLong("USER_ID"),
+                        resultSet.getString("PASSWORD_HASH"),
+                        resultSet.getString("NICKNAME"),
+                        resultSet.getInt("PERSONALITY_COMPLETED") == 1),
+                normalizedLoginId);
+        return users.stream().findFirst();
+    }
+
+    public boolean loginIdExists(String normalizedLoginId) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM NOVELTY_USER WHERE LOGIN_ID_NORMALIZED = ?",
+                Integer.class,
+                normalizedLoginId);
+        return count != null && count > 0;
+    }
+
+    public void rotateUserKey(long userId, String userKeyHash) {
+        jdbcTemplate.update(
+                """
+                UPDATE NOVELTY_USER
+                   SET USER_KEY_HASH = ?, UPDATED_AT = CURRENT_TIMESTAMP,
+                       LAST_SEEN_AT = CURRENT_TIMESTAMP
+                 WHERE USER_ID = ?
+                """,
+                userKeyHash,
+                userId);
     }
 
     public void touch(long userId) {
