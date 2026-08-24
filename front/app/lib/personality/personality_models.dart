@@ -284,11 +284,13 @@ class AnonymousUser {
     required this.userId,
     required this.userKey,
     required this.nickname,
+    this.personalityCompleted = false,
   });
 
   final int userId;
   final String userKey;
   final String nickname;
+  final bool personalityCompleted;
 
   factory AnonymousUser.fromJson(Map<String, Object?> json) {
     final userId = json['userId'];
@@ -301,16 +303,21 @@ class AnonymousUser {
         userKey.trim().isEmpty ||
         nickname is! String ||
         nickname.trim().isEmpty ||
-        personalityCompleted != false) {
+        personalityCompleted is! bool) {
       throw const FormatException('Invalid anonymous user response.');
     }
-    return AnonymousUser(userId: userId, userKey: userKey, nickname: nickname);
+    return AnonymousUser(
+      userId: userId,
+      userKey: userKey,
+      nickname: nickname,
+      personalityCompleted: personalityCompleted,
+    );
   }
 
   UserProfile toProfile() => UserProfile(
     userId: userId,
     nickname: nickname,
-    personalityCompleted: false,
+    personalityCompleted: personalityCompleted,
     personality: null,
   );
 }

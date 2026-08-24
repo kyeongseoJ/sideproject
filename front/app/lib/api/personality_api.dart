@@ -8,6 +8,10 @@ import 'package:novelty_app/personality/personality_models.dart';
 abstract interface class PersonalityGateway {
   Future<AnonymousUser> createAnonymousUser();
 
+  Future<AnonymousUser> register(String loginId, String password);
+
+  Future<AnonymousUser> login(String loginId, String password);
+
   Future<UserProfile> getCurrentUser(String userKey);
 
   Future<String> updateNickname(String userKey, String nickname);
@@ -29,6 +33,10 @@ enum PersonalityApiErrorCode {
   invalidNickname('INVALID_NICKNAME'),
   bannedNickname('BANNED_NICKNAME'),
   duplicateNickname('DUPLICATE_NICKNAME'),
+  invalidLoginId('INVALID_LOGIN_ID'),
+  invalidPassword('INVALID_PASSWORD'),
+  duplicateLoginId('DUPLICATE_LOGIN_ID'),
+  invalidCredentials('INVALID_CREDENTIALS'),
   profileSaveFailed('PROFILE_SAVE_FAILED'),
   unknown('UNKNOWN');
 
@@ -89,6 +97,32 @@ class PersonalityApi implements PersonalityGateway {
     if (response.statusCode != 201) {
       throw _apiError(response);
     }
+    return _parse(() => AnonymousUser.fromJson(_readJsonObject(response)));
+  }
+
+  @override
+  Future<AnonymousUser> register(String loginId, String password) async {
+    final response = await _send(
+      () => _client.post(
+        _uri('/api/users/register'),
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode({'loginId': loginId, 'password': password}),
+      ),
+    );
+    if (response.statusCode != 201) throw _apiError(response);
+    return _parse(() => AnonymousUser.fromJson(_readJsonObject(response)));
+  }
+
+  @override
+  Future<AnonymousUser> login(String loginId, String password) async {
+    final response = await _send(
+      () => _client.post(
+        _uri('/api/users/login'),
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode({'loginId': loginId, 'password': password}),
+      ),
+    );
+    if (response.statusCode != 200) throw _apiError(response);
     return _parse(() => AnonymousUser.fromJson(_readJsonObject(response)));
   }
 

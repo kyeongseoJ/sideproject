@@ -303,6 +303,14 @@ class _FakeGateway implements PersonalityGateway {
   Future<AnonymousUser> createAnonymousUser() => throw UnimplementedError();
 
   @override
+  Future<AnonymousUser> register(String loginId, String password) =>
+      throw UnimplementedError();
+
+  @override
+  Future<AnonymousUser> login(String loginId, String password) =>
+      throw UnimplementedError();
+
+  @override
   Future<UserProfile> getCurrentUser(String userKey) =>
       throw UnimplementedError();
 

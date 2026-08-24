@@ -60,11 +60,7 @@ class _PersonalityFormScreenState extends State<PersonalityFormScreen> {
                   child: _result == null
                       ? _buildSurveyLayout()
                       : DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(color: NoveltyColors.line),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
+                          decoration: NoveltyDecorations.card(),
                           child: _buildResultBoundary(_result!),
                         ),
                 ),
@@ -118,13 +114,9 @@ class _PersonalityFormScreenState extends State<PersonalityFormScreen> {
         const SizedBox(height: 8),
         Expanded(
           child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: NoveltyColors.line),
-              borderRadius: BorderRadius.circular(16),
-            ),
+            decoration: NoveltyDecorations.card(),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(NoveltyRadii.card),
               child: _buildForm(),
             ),
           ),
@@ -533,13 +525,13 @@ class _ChoiceTile extends StatelessWidget {
         shape: RoundedRectangleBorder(
           side: BorderSide(
             color: selected ? NoveltyColors.primary : NoveltyColors.line,
-            width: selected ? 2 : 1,
+            width: 1,
           ),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(NoveltyRadii.button),
         ),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(NoveltyRadii.button),
           child: Padding(
             padding: EdgeInsets.symmetric(
               horizontal: 16,
@@ -585,11 +577,7 @@ class _SubmissionError extends StatelessWidget {
       child: Container(
         key: const Key('personality-submit-error'),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: NoveltyColors.errorFaint,
-          border: Border.all(color: NoveltyColors.error),
-          borderRadius: BorderRadius.circular(10),
-        ),
+        decoration: NoveltyDecorations.error(),
         child: Row(
           children: [
             const Icon(Icons.error_outline_rounded, color: NoveltyColors.error),

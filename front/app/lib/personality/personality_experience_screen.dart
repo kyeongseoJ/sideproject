@@ -7,7 +7,6 @@ import 'package:novelty_app/personality/personality_form_screen.dart';
 import 'package:novelty_app/personality/personality_models.dart';
 import 'package:novelty_app/personality/submission_key.dart';
 import 'package:novelty_app/profile/personality_profile_screen.dart';
-import 'package:novelty_app/user/nickname_input.dart';
 import 'package:novelty_app/world/world_spike_screen.dart';
 import 'package:novelty_app/api/world_api.dart';
 import 'package:novelty_app/world/world_models.dart';
@@ -41,7 +40,6 @@ class _PersonalityExperienceScreenState
     extends State<PersonalityExperienceScreen> {
   late UserProfile _user;
   late bool _showingForm;
-  late bool _showingNickname;
   AnalysisMode _analysisMode = AnalysisMode.initial;
   bool _showingWorld = false;
   WorldGrowth? _pendingWorldGrowth;
@@ -51,8 +49,7 @@ class _PersonalityExperienceScreenState
   void initState() {
     super.initState();
     _user = widget.initialUser;
-    _showingNickname = !_user.personalityCompleted;
-    _showingForm = false;
+    _showingForm = !_user.personalityCompleted;
   }
 
   @override
@@ -71,12 +68,6 @@ class _PersonalityExperienceScreenState
         baseCategoryCodes: personalityWorldCategories(_user.personality!),
         pendingGrowth: _pendingWorldGrowth,
         onBack: () => setState(() => _showingWorld = false),
-      );
-    }
-    if (_showingNickname) {
-      return NicknameSetupScreen(
-        initialNickname: _user.nickname,
-        onSubmit: _saveInitialNickname,
       );
     }
     if (_showingForm) {
@@ -103,25 +94,10 @@ class _PersonalityExperienceScreenState
       worldGateway: widget.worldGateway,
       userKey: widget.userKey,
       lastPreferenceChange: _lastPreferenceChange,
+      pendingWorldGrowth: _pendingWorldGrowth,
       onWorldGrowth: (growth) => setState(() => _pendingWorldGrowth = growth),
       onMissionCompleted: _handleMissionCompleted,
     );
-  }
-
-  Future<String> _saveInitialNickname(String nickname) async {
-    final saved = await widget.gateway.updateNickname(widget.userKey, nickname);
-    if (!mounted) return saved;
-    setState(() {
-      _user = UserProfile(
-        userId: _user.userId,
-        nickname: saved,
-        personalityCompleted: false,
-        personality: null,
-      );
-      _showingNickname = false;
-      _showingForm = true;
-    });
-    return saved;
   }
 
   Future<String> _editNickname(String nickname) async {
@@ -139,13 +115,11 @@ class _PersonalityExperienceScreenState
   }
 
   void _handleMissionCompleted(MissionActionResult result) {
-    final profile = _user.personality;
-    if (profile == null) return;
+    final personalityChange = result.personalityChange;
     setState(() {
-      _lastPreferenceChange = BehaviorPreferenceChange.fromMission(
-        result.mission,
-        profile,
-      );
+      _lastPreferenceChange = personalityChange == null
+          ? null
+          : BehaviorPreferenceChange.fromCompletion(personalityChange);
     });
     if (result.personalityUpdated) _refreshUser();
   }

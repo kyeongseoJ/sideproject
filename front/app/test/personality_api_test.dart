@@ -7,6 +7,35 @@ import 'package:novelty_app/api/personality_api.dart';
 import 'package:novelty_app/personality/personality_models.dart';
 
 void main() {
+  test('registers and logs in with account credentials', () async {
+    final paths = <String>[];
+    final client = MockClient((request) async {
+      paths.add(request.url.path);
+      expect(jsonDecode(request.body), {
+        'loginId': 'tester1',
+        'password': 'Password1',
+      });
+      return _jsonResponse({
+        'userId': 7,
+        'userKey': 'user-key-value',
+        'nickname': '노벨티07QK',
+        'personalityCompleted': request.url.path.endsWith('/login'),
+      }, request.url.path.endsWith('/register') ? 201 : 200);
+    });
+    final api = PersonalityApi(
+      client: client,
+      baseUrl: 'http://localhost:8080',
+    );
+
+    final registered = await api.register('tester1', 'Password1');
+    final loggedIn = await api.login('tester1', 'Password1');
+
+    expect(registered.personalityCompleted, isFalse);
+    expect(loggedIn.personalityCompleted, isTrue);
+    expect(paths, ['/api/users/register', '/api/users/login']);
+    api.close();
+  });
+
   test('creates an anonymous user through the V2 user endpoint', () async {
     final client = MockClient((request) async {
       expect(request.method, 'POST');

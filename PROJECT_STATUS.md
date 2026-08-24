@@ -1,6 +1,6 @@
 # Novelty 프로젝트 진행 상태
 
-최종 갱신일: 2026-08-20
+최종 갱신일: 2026-08-24
 
 ## 문서 목적
 
@@ -55,7 +55,7 @@ Phase 5~7 선택폼·통합 검증이며, 이후 상태 변경도 현재 SDD의 
 - 현재 유효한 흐름은 최초 1회 성향 분석, 결과 표시, 할애 가능 시간 질문의 순서이므로 과거 완료 기록은 현재 사양의 완료 근거로 사용하지 않는다.
 - 구형 Survey 화면·API Client·Backend 전용 저장 API는 제거했다.
 - 현재 선택지 원본 저장과 성향 분석은 `POST /api/personality-analyses`와 `PersonalityService` 하나로 통일했다.
-- V2 익명 사용자 식별과 제출 계약 및 개정된 여섯 문항 선택폼이 연결됐다.
+- 계정 V1 회원가입·로그인과 사용자 키 식별, 제출 계약 및 개정된 여섯 문항 선택폼이 연결됐다.
 
 - V2 Phase 7에서 Flutter부터 Oracle까지 동일 사용자 기준 E2E와 실패 시나리오 검증을 완료했다.
 
@@ -84,7 +84,7 @@ Phase 5~7 선택폼·통합 검증이며, 이후 상태 변경도 현재 SDD의 
 - 사용자, 닉네임 정책, 성향 프로필 Schema 및 Backend 코드가 일부 구현되어 있다.
 - Flutter의 사용자 키 저장·복원, 최초 접속 분기, 여섯 문항, 전체 Profile과 재분석 화면 흐름이 완료됐다.
 - 신규 닉네임 시작 화면의 서비스 설명과 선택폼 카드 레이아웃을 적용했으며 첫 문항은 이전 버튼을 표시하지 않는다.
-- 같은 브라우저·앱의 기존 사용자는 캐시 `userKey`로 자동 복원된다. 캐시 삭제·다른 기기 복구는 현재 범위 밖이다.
+- 같은 브라우저·앱의 기존 사용자는 캐시 `userKey`로 자동 복원되며 캐시 삭제·다른 기기에서는 아이디·비밀번호로 로그인한다.
 - Backend 사용자 프로필 응답은 저장된 성향 유형, 네 축, 실행 방식, 관심 분야, 버전과 분석 시각을 반환한다.
 - 기존 `activityLevel`은 실내·실외 의미여서 V2에서 `indoorOutdoor`로 명확히 하고 별도 `physicalActivityLevel` 문항을 추가한다.
 - V2 범위는 성향 분석과 Profile 및 재분석까지다. 시간 질문, 미션 생성, OpenAI와 World는 제외한다.
@@ -109,23 +109,30 @@ Phase 5~7 선택폼·통합 검증이며, 이후 상태 변경도 현재 SDD의 
 - Phase 2: 순수 Java 추천 Domain의 정상·실패 집중 테스트 21개와 실제 Oracle 회귀를 포함한 Backend 전체 129개 테스트 및 Package 완료
 - Phase 3: 설정·오늘 후보 API, 사용자별 통계, Oracle 후보·연결 로그 저장과 재사용을 구현하고 집중 29개·실제 Oracle·전체 140개 테스트 및 Package 완료
 - Phase 4: `userMissionId` 기반 선택·취소·교체·완료 API, 소유권과 서울 날짜 검증, 활성 슬롯, 원자적 교체, 완료 멱등성을 구현하고 집중 32개·실제 Oracle·전체 153개 테스트 및 Package 완료
-- Phase 5: 카테고리 통계, 전체 완료 수, 5회 성향 벡터·유형 갱신, 커밋 이후 LLM 생성과 중복·유사도 차단, 완료 요약 API를 구현하고 집중 25개·실제 Oracle 3개·전체 170개 테스트 및 Package 완료
+- Phase 5: 카테고리 통계, 전체 완료 수, 매 완료 성향 벡터·유형 갱신, 커밋 이후 5회 단위 LLM 생성과 중복·유사도 차단, 완료 요약 API를 구현했다.
 - Phase 6: Flutter Model·REST Client·설정·추천·수행 중·변경·취소·완료·통계 화면과 중복 입력 잠금·안전한 오류 처리를 구현하고 집중 12개 테스트 완료
 - Phase 7: Flutter UI → REST → 최신 Spring Boot → 실제 Oracle → 응답 UI 갱신 E2E, 잘못된 사용자 키 실패, Oracle 행·로그·통계 직접 조회와 테스트 데이터 정리 완료
-- 하루 후보는 최대 3개이며 동일 미션은 서울 달력 날짜 기준 노출·완료 후 3일 동안 추천하지 않는다. 현재 Flutter UI는 하루 수행 미션을 1개로 고정하고 할애 가능 시간만 받는다.
-- 취소·변경 횟수는 제한하지 않고 오늘 저장된 후보 안에서만 변경하도록 확정했다.
+- 하루 후보는 최대 3개다. 동일 미션 완료는 서울 달력 경과 0~3일 하드 필터와 4~30일 단계별 반복 감점을 적용하고, 노출은 D~D+2 재노출하지 않는다. 현재 Flutter UI는 하루 수행 미션을 1개로 고정하고 할애 가능 시간만 받는다.
+- Flutter Web UI는 직접 변경 버튼을 제거하고 수행 중 미션 취소 후 오늘 저장된 후보 캐러셀에서 다시 선택하도록 확정했다. Backend 교체 API는 호환을 위해 유지한다.
 - Mission V1.1에서 성향 거리·새로움·최근 다양성·미경험 탐색·조건 적합의 양의 점수와 최근 경험·반복·거부 패널티를 적용하고, 상위 20개에서 서로 다른 경험 최대 3개를 구성한다.
 - REST, Oracle 논리 구조, 상태 전이, 동시성, 멱등성과 정상·실패 인수 조건을 정의했다.
 - Backend에는 미션 속성, 성향 거리 기반 추천, 상태 로그, 완료 횟수 기반 LLM 생성 코드와 테스트가 일부 존재한다.
-- 초기 기본 미션과 사용자 미션·설정·카테고리 통계·상태 로그 관련 Oracle DDL을 실제 적용했다.
+- M001~M200 기본 미션과 사용자 미션·설정·카테고리 통계·상태 로그 관련 Oracle DDL을 실제 적용했다. 활성 기본 Catalog는 200개이며 Category별 24~26개다.
 - Flutter 성향 완료 홈 상단에 오늘의 미션을 직접 배치했다. 시간 선택 뒤 후보 캐러셀, 선택 뒤 단일 수행 카드, 완료 뒤 완료 카드 순서로 전환한다.
-- 관심 분야와 행동 선호를 분리하고 네 축 점수 그래프와 완료 미션의 행동 선호 경험 방향을 표시한다.
+- 관심 분야와 행동 선호를 분리하고 네 축 점수 그래프와 완료 응답의 실제 저장 전·후 성향 변동을 표시한다.
 - 최근 완료·노출 3일, 최근 7일·최신 완료 10개 행동 메타데이터와 최근성 가중치, 문구 변형 유사 미션 차단, 최종 후보 간 다양성을 추천 Domain에서 검증했다. 완료 5회 단위 LLM Catalog 저장 정책은 유지하며 생성 결과에도 같은 메타데이터를 요구한다.
 - 신규 사용자에게 성향 프로필이 생성되지 않으면 정상 추천 흐름에 진입할 수 없다.
 
 현재 SDD V1의 Phase 0~7 완료 조건을 충족했고 World 성장 연결도 별도 World SDD에 따라 구현되어 있다.
 
 2026-08-24 Mission V1.1 추천 다양성 개정을 적용했다. Oracle `MISSION`에 행동 메타데이터 6개를 멱등 적용하고 기본 미션 12건을 보강했으며, 추천 집중 22개·실제 Oracle 정상/Constraint 실패 1개·Backend 전체 179개·Flutter 81개 테스트, Backend package, Flutter analyze와 Web build를 통과했다. 기본 전체 테스트에서 환경 조건부 Oracle/E2E 11개는 제외되며 새 Oracle 테스트는 환경 변수를 주입한 별도 실행에서 통과했다.
+
+2026-08-24 Mission V1.2에서 기존 활성 후보를 비활성화하고 M001~M200을 실제 Oracle에 적용했다. 동일 Mission 완료 후 0~3일 하드 필터, 4~7일 0.35, 8~14일 0.20, 15~30일 0.08 감점을 추가했으며 동일 ID를 의미 유사도·패턴 감점에서 제외해 이중 계산을 막았다. 실제 Oracle 통합 테스트에서 활성 200개, Category별 24~26개, 한글 태그 및 실패 Constraint, 30일 동안 매일 3개 추천을 통과했다.
+Backend 전체 181개 테스트는 실패 0·환경조건부 12개 제외로 통과했고 Package도 성공했다. Oracle 조건부 테스트 2개는 실제 DB 연결로 별도 통과했다. Frontend는 Dart analyze 오류 0, Flutter 테스트 81개 통과·1개 제외를 확인했다.
+
+2026-08-24 Mission 날짜 계약을 사용자 설정 Timezone의 Local Date 기준으로 명시했다. MVP는 사용자별 Timezone 입력 없이 `Asia/Seoul`로 고정하며, 기존 Backend의 Service Clock과 `SERVICE_DATE` 구현이 동일 Local Date 추천 재사용 및 날짜 변경 시 신규 추천 주기 정책을 이미 충족함을 확인했다. 사용자별 Timezone 저장·변경 기능은 미구현 범위다.
+
+2026-08-24 Flutter Web의 오늘의 미션 UI에서 수행 카드의 직접 변경 버튼과 제목 옆 `하루 한 개` 문구를 제거했다. 취소 후 기존 추천 후보를 다시 선택하는 흐름은 유지하고, 추천 캐러셀에 마우스·터치·스타일러스·트랙패드 드래그를 적용했다. 관련 위젯 테스트 7개와 전체 Flutter 테스트 82개가 통과했고 조건부 테스트 1개는 제외됐으며, 정적 분석과 Web 빌드도 성공했다.
 
 안정화 Phase 1~7에서 `/api/missions/random`과 `PATCH /api/missions/{missionId}/status`를 제거했다. 완료는 `UserMissionService.complete(userMissionId)`만 사용하며 `USER_MISSION` 상태, 연결 로그, 카테고리 통계와 성향 후처리를 한 Transaction에서 처리한다. 완료 재요청은 멱등 응답이며 LLM 생성만 커밋 이후 격리한다.
 
@@ -152,14 +159,14 @@ Phase 5~7 선택폼·통합 검증이며, 이후 상태 변경도 현재 SDD의 
 
 | 영역 | 상태 | 비고 |
 |---|---|---|
-| 익명 사용자·닉네임 | 자동 검증 완료 | 서비스 설명이 포함된 최초 닉네임 화면, 프로필 편집 UI·REST 연결, 동일 Client 캐시 자동 복원과 Frontend Validation 검증 |
+| 계정·닉네임 | 자동 검증 완료 | 회원가입·로그인, PBKDF2 비밀번호 해시, 랜덤 초기 닉네임, 프로필 편집, 동일 Client 캐시 자동 복원 검증 |
 | Oracle Personality V2 Schema | 검증 완료 | 로컬 Oracle에 Phase 1 적용 및 재실행 성공. 기존 V1 설문 4건 보존 |
 | Oracle Mission·World 목표 Schema | 검증 완료 | World Table 3개·Object 8개·Level 40개 적용, 완료→EXP→Snapshot Rollback 통합 테스트 통과 |
 | Swagger UI | 검증 완료 | 공식 API 노출과 `/api/surveys`, `/api/missions/random`, `missionId` 직접 상태 변경 미노출 자동 검증. 기본 주소 `http://localhost:8080/swagger-ui.html` |
 | OpenAI 설정 | 진행 중 | API Key는 `OPENAI_API_KEY` 환경 변수로만 주입; 실제 연동 성공 검증 필요 |
-| Backend 자동 테스트 | 검증 완료 | World 포함 전체 182개 실행, 실패 0, 오류 0, 환경 조건부 Oracle 10개 제외; Package 성공 |
-| Three.js Build | 검증 완료 | 8종×5레벨 GLB 포함 Build 성공, 번들 611.93KB로 500KB 경고 존재 |
-| Flutter 자동 테스트 | 검증 완료 | 전체 81개 통과, 환경 조건부 1개 제외; Analyze 무결점, Web Build와 Android Debug APK 성공 |
+| Backend 자동 테스트 | 검증 완료 | 전체 회귀 188개 실행, 실패 0, 오류 0, 환경 조건부 12개 제외; 계정 Swagger 1개 별도 통과 및 Package 성공 |
+| Three.js Build | 검증 완료 | 8종×5레벨 GLB 40개 존재 및 Build 성공, 번들 612.36KB로 500KB 경고 존재 |
+| Flutter 자동 테스트 | 검증 완료 | 전체 87개 통과, 환경 조건부 1개 제외; Analyze 무결점과 Web·Android Debug Build 성공 |
 | Flutter Android 기반 | 검증 완료 | Debug APK Build, WebView Renderer Ready, GLB 표시·교체, Background/Foreground 복귀 성공 |
 | Flutter 성향 분석 흐름 | 검증 완료 | 최초 분석·복원·멱등 재시도·재분석과 Oracle 직접 조회 E2E 완료 |
 | 로컬 환경 설정 | 검증 완료 | Git 제외 `.env`, 추적 가능한 `.env.example`, Spring Boot 자동 import와 Oracle Connection 생성 확인. OpenAI Key는 유효한 값을 별도 입력해야 함 |
@@ -182,6 +189,11 @@ Phase 5~7 선택폼·통합 검증이며, 이후 상태 변경도 현재 SDD의 
 
 | 날짜 | 변경 내용 |
 |---|---|
+| 2026-08-24 | DESIGN.md 기준 Flutter 공통 Theme와 계정·설문·미션·프로필·World 화면을 재점검하고 CTA·입력·Card·Chip·상태·Utility Control 토큰을 통일 |
+| 2026-08-24 | 미션 매 완료 시 성향 네 축·유형 반영, 완료 응답 실제 변화량 표시, 5회 LLM 신규 미션의 다음 날짜 추천 후보 반영 계약과 World 도움말 5초 페이드 적용 |
+| 2026-08-24 | 계정 회원가입·로그인과 랜덤 닉네임 배정, PBKDF2 저장 및 Oracle 계정 컬럼·제약 적용, 성향 결과 Purple 카드, 미션 진행/완료 상태 패널, Web World 도움말 클릭 및 인라인·전체 World 8개 객체 5단계 즉시 성장 계약 보강 |
+| 2026-08-24 | `assets/ui` White 심볼·워드마크 기반 Web·Android 공통 애니메이션 스플래시 적용, 신규 사용자는 회원가입 화면으로 기본 진입하고 캐시 사용자는 기존 자동 복원 유지 |
+| 2026-08-24 | 전체 3D World의 Object 마우스·펜 호버와 클릭 선택을 Bridge로 연결하고 한글 Object명·성향 Category·현재/최대 단계·EXP 툴팁 적용 |
 | 2026-08-24 | 시작 화면 서비스 설명·기존 사용자 자동 복원 안내, 성향 선택폼 카드 레이아웃과 첫 문항 이전 버튼 미노출 적용 |
 | 2026-08-24 | 성향 완료 홈을 첨부 레이아웃 기준으로 재구성하고 시간 선택·미션 캐러셀·단일 진행 카드·행동 선호 그래프와 완료 변화·World 도움말 토글 구현 |
 | 2026-08-20 | 미션 완료 500 원인인 미적용 World Schema 해결: Oracle World 3 Table·8 Object·40 Level 적용, 완료→EXP→Snapshot 통합 검증 |

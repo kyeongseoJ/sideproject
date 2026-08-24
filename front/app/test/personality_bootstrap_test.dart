@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novelty_app/api/personality_api.dart';
@@ -9,7 +7,7 @@ import 'package:novelty_app/personality/personality_models.dart';
 import 'package:novelty_app/user/user_key_store.dart';
 
 void main() {
-  test('creates and caches an anonymous user when no key exists', () async {
+  test('requires sign in when no cached user key exists', () async {
     final store = _FakeUserKeyStore();
     final gateway = _FakePersonalityGateway();
     final service = PersonalityBootstrapService(
@@ -17,14 +15,18 @@ void main() {
       userKeyStore: store,
     );
 
-    final result = await service.load();
-
-    expect(result.entry, PersonalityEntry.form);
-    expect(result.user.nickname, '노벨티07QK');
-    expect(result.userKey, 'new-user-key');
-    expect(store.value, 'new-user-key');
-    expect(gateway.createCalls, 1);
-    expect(gateway.getCalls, 0);
+    await expectLater(
+      service.load(),
+      throwsA(
+        isA<PersonalityBootstrapException>().having(
+          (error) => error.kind,
+          'kind',
+          PersonalityBootstrapFailureKind.signInRequired,
+        ),
+      ),
+    );
+    expect(store.value, isNull);
+    expect(gateway.createCalls, 0);
   });
 
   test('restores cached user and branches to form when not analyzed', () async {
@@ -53,7 +55,7 @@ void main() {
   });
 
   test(
-    'does not replace cached identity after a 401 restore failure',
+    'reports an invalid cached identity so the UI can return to login',
     () async {
       final store = _FakeUserKeyStore(value: 'expired-user-key');
       final gateway = _FakePersonalityGateway(
@@ -90,9 +92,32 @@ void main() {
     },
   );
 
-  test('maps cache read and write failures to safe bootstrap errors', () async {
+  testWidgets('returns an expired cached identity to the login screen', (
+    tester,
+  ) async {
+    final store = _FakeUserKeyStore(value: 'expired-user-key');
+    await tester.pumpWidget(
+      NoveltyApp(
+        personalityGateway: _FakePersonalityGateway(
+          getError: const PersonalityApiException(
+            kind: PersonalityApiFailureKind.api,
+            code: PersonalityApiErrorCode.invalidUserKey,
+            statusCode: 401,
+            message: '사용자 정보를 확인할 수 없습니다.',
+          ),
+        ),
+        userKeyStore: store,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('account-entry-card')), findsOneWidget);
+    expect(store.value, isNull);
+    expect(store.clearCalls, 1);
+  });
+
+  test('maps cache read failures to safe bootstrap errors', () async {
     final readFailure = _FakeUserKeyStore(readError: StateError('cache path'));
-    final writeFailure = _FakeUserKeyStore(writeError: StateError('disk path'));
 
     await expectLater(
       PersonalityBootstrapService(
@@ -105,25 +130,6 @@ void main() {
           'kind',
           PersonalityBootstrapFailureKind.cache,
         ),
-      ),
-    );
-    await expectLater(
-      PersonalityBootstrapService(
-        gateway: _FakePersonalityGateway(),
-        userKeyStore: writeFailure,
-      ).load(),
-      throwsA(
-        isA<PersonalityBootstrapException>()
-            .having(
-              (error) => error.kind,
-              'kind',
-              PersonalityBootstrapFailureKind.cache,
-            )
-            .having(
-              (error) => error.message,
-              'message',
-              isNot(contains('disk path')),
-            ),
       ),
     );
   });
@@ -157,35 +163,38 @@ void main() {
     );
   });
 
-  testWidgets('shows loading then nickname setup for a new user', (
-    tester,
-  ) async {
-    final completer = Completer<AnonymousUser>();
-    final gateway = _FakePersonalityGateway(createFuture: completer.future);
+  testWidgets(
+    'shows account entry and continues to the form after registration',
+    (tester) async {
+      final gateway = _FakePersonalityGateway(currentUser: _notAnalyzedUser());
 
-    await tester.pumpWidget(
-      NoveltyApp(
-        personalityGateway: gateway,
-        userKeyStore: _FakeUserKeyStore(),
-      ),
-    );
+      await tester.pumpWidget(
+        NoveltyApp(
+          personalityGateway: gateway,
+          userKeyStore: _FakeUserKeyStore(),
+        ),
+      );
 
-    expect(
-      find.byKey(const Key('personality-bootstrap-loading')),
-      findsOneWidget,
-    );
-    completer.complete(_anonymousUser());
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('personality-form-entry')), findsOneWidget);
-    expect(find.text('먼저 이름을 정해 주세요'), findsOneWidget);
-    expect(find.byKey(const Key('nickname-setup-input')), findsOneWidget);
-    expect(
-      find.byKey(const Key('novelty-service-description')),
-      findsOneWidget,
-    );
-    expect(find.byKey(const Key('returning-user-guidance')), findsOneWidget);
-  });
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('account-entry-card')), findsOneWidget);
+      expect(
+        find.byKey(const Key('novelty-service-description')),
+        findsOneWidget,
+      );
+      await tester.enterText(
+        find.byKey(const Key('account-login-id')),
+        'tester1',
+      );
+      await tester.enterText(
+        find.byKey(const Key('account-password')),
+        'Password1',
+      );
+      await tester.tap(find.byKey(const Key('account-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('personality-form-entry')), findsOneWidget);
+      expect(find.text('쉬는 날의 나는?'), findsOneWidget);
+    },
+  );
 
   testWidgets('skips the form and shows profile entry for analyzed user', (
     tester,
@@ -241,11 +250,10 @@ void main() {
 }
 
 class _FakeUserKeyStore implements UserKeyStore {
-  _FakeUserKeyStore({this.value, this.readError, this.writeError});
+  _FakeUserKeyStore({this.value, this.readError});
 
   String? value;
   final Object? readError;
-  final Object? writeError;
   int clearCalls = 0;
 
   @override
@@ -256,7 +264,6 @@ class _FakeUserKeyStore implements UserKeyStore {
 
   @override
   Future<void> write(String userKey) async {
-    if (writeError != null) throw writeError!;
     value = userKey;
   }
 
@@ -268,11 +275,10 @@ class _FakeUserKeyStore implements UserKeyStore {
 }
 
 class _FakePersonalityGateway implements PersonalityGateway {
-  _FakePersonalityGateway({this.currentUser, this.getError, this.createFuture});
+  _FakePersonalityGateway({this.currentUser, this.getError});
 
   UserProfile? currentUser;
   Object? getError;
-  final Future<AnonymousUser>? createFuture;
   int createCalls = 0;
   int getCalls = 0;
   String? receivedUserKey;
@@ -280,8 +286,16 @@ class _FakePersonalityGateway implements PersonalityGateway {
   @override
   Future<AnonymousUser> createAnonymousUser() async {
     createCalls++;
-    return createFuture == null ? _anonymousUser() : await createFuture!;
+    return _anonymousUser();
   }
+
+  @override
+  Future<AnonymousUser> register(String loginId, String password) async =>
+      _anonymousUser();
+
+  @override
+  Future<AnonymousUser> login(String loginId, String password) async =>
+      _anonymousUser();
 
   @override
   Future<UserProfile> getCurrentUser(String userKey) async {

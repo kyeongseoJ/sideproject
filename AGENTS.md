@@ -170,7 +170,7 @@ back/src/main/java/com/novelty/
 
 각 패키지의 역할은 다음과 같다.
 
-- `user`: 익명 사용자 식별과 닉네임 관리
+- `user`: 회원가입·로그인, 사용자 키 식별과 닉네임 관리
 - `personality`: 선택지 원본 저장, 성향 분석, 프로필 및 분석 이력 관리
 - `mission`: 성향 기반 추천, 사용자 미션 상태, 완료 후처리 및 미션 Catalog 관리
 - `completion`: 별도 완료 경로를 만들지 않기 위한 기능 경계이며 공식 완료 처리는 `mission`의 `UserMissionService`가 담당
@@ -229,9 +229,9 @@ Controller에 핵심 비즈니스 로직을 직접 작성하지 않는다. 비�
 
 현재 공식 선택지 제출과 성향 분석은 `POST /api/personality-analyses` 하나를 사용한다. 사용자 미션 선택·취소·교체·완료는 Catalog `missionId`가 아니라 소유권이 확인된 `userMissionId`를 사용한다. World 전체 상태는 `GET /api/world` 하나로 조회한다. `/api/surveys`, `/api/missions/random`, `PATCH /api/missions/{missionId}/status` 같은 폐기 경로를 다시 추가하지 않는다.
 
-최초 미분석 사용자는 닉네임을 확인·수정한 뒤 성향 선택폼을 시작한다. 분석 완료 후에는 프로필의 편집 아이콘으로 닉네임을 변경한다. 성향 프로필 안의 3D World 미리보기와 전체 World 화면은 동일한 Snapshot과 Three.js Renderer를 사용하며 별도 성장 상태를 만들지 않는다.
+최초 사용자는 아이디·비밀번호로 회원가입하며 초기 랜덤 닉네임을 배정받은 뒤 성향 선택폼을 시작한다. 기존 사용자는 캐시의 사용자 키로 자동 복원하고 캐시가 없으면 로그인한다. 분석 완료 후에는 프로필의 편집 아이콘으로 닉네임을 변경한다. 성향 프로필 안의 3D World 미리보기와 전체 World 화면은 동일한 Snapshot과 Three.js Renderer를 사용하며 별도 성장 상태를 만들지 않는다.
 
-성향 완료 홈은 오늘의 미션을 상단에 인라인으로 표시한다. Flutter에서는 하루 미션 수 선택을 노출하지 않고 1개로 저장하며 할애 가능 시간만 받는다. 후보는 가로 캐러셀, 수행 중 미션은 단일 대형 카드로 표시한다. 행동 선호 그래프는 Backend 저장 점수를 사용하고 완료 미션 벡터는 별도의 경험 방향으로만 표시한다.
+성향 완료 홈은 오늘의 미션을 상단에 인라인으로 표시한다. Flutter에서는 하루 미션 수 선택을 노출하지 않고 1개로 저장하며 할애 가능 시간만 받는다. 후보는 가로 캐러셀, 수행 중 미션은 단일 대형 카드로 표시한다. 행동 선호 그래프는 Backend 저장 점수를 사용하고 완료 응답의 실제 저장 전·후 차이만 프로필의 성향 변동으로 표시한다.
 
 Mission 완료와 World EXP 지급은 같은 Transaction에서 처리한다. 동일 `userMissionId` 완료 재요청에는 상태·통계·성향 후처리·World EXP를 중복 반영하지 않는다. Three.js는 Backend API를 직접 호출하거나 EXP·Level을 계산하지 않는다.
 

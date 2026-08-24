@@ -12,16 +12,6 @@ void main() {
     final gateway = _FakeGateway(result: _newResult());
     await _pumpExperience(tester, gateway, _notAnalyzedUser());
 
-    expect(find.text('먼저 이름을 정해 주세요'), findsOneWidget);
-    expect(
-      find.byKey(const Key('novelty-service-description')),
-      findsOneWidget,
-    );
-    await tester.pumpAndSettle();
-    final submit = find.byKey(const Key('nickname-setup-submit'));
-    await tester.ensureVisible(submit);
-    await tester.tap(submit);
-    await tester.pumpAndSettle();
     expect(find.text('쉬는 날의 나는?'), findsOneWidget);
     await _fillAndSubmit(tester);
 
@@ -123,21 +113,18 @@ void main() {
     expect(find.textContaining('oracle-secret-detail'), findsNothing);
   });
 
-  testWidgets('renders the nickname start screen without overflow on mobile', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(320, 568));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets(
+    'renders the initial personality form without overflow on mobile',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 568));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await _pumpExperience(tester, _FakeGateway(), _notAnalyzedUser());
+      await _pumpExperience(tester, _FakeGateway(), _notAnalyzedUser());
 
-    expect(find.text('먼저 이름을 정해 주세요'), findsOneWidget);
-    expect(
-      find.byKey(const Key('novelty-service-description')),
-      findsOneWidget,
-    );
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.text('쉬는 날의 나는?'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 Future<void> _openReanalysisDialog(WidgetTester tester) async {
@@ -230,6 +217,14 @@ class _FakeGateway implements PersonalityGateway {
 
   @override
   Future<AnonymousUser> createAnonymousUser() => throw UnimplementedError();
+
+  @override
+  Future<AnonymousUser> register(String loginId, String password) =>
+      throw UnimplementedError();
+
+  @override
+  Future<AnonymousUser> login(String loginId, String password) =>
+      throw UnimplementedError();
 
   @override
   Future<UserProfile> getCurrentUser(String userKey) =>

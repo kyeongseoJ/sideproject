@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:novelty_app/api/mission_api.dart';
 import 'package:novelty_app/api/personality_api.dart';
 import 'package:novelty_app/api/world_api.dart';
+import 'package:novelty_app/novelty_theme.dart';
 import 'package:novelty_app/personality/personality_experience_screen.dart';
 import 'package:novelty_app/personality/personality_models.dart';
 import 'package:novelty_app/user/user_key_store.dart';
+import 'package:novelty_app/user/account_entry_screen.dart';
 
 enum PersonalityEntry { form, profile }
 
@@ -20,7 +22,7 @@ class PersonalityBootstrapResult {
   final String userKey;
 }
 
-enum PersonalityBootstrapFailureKind { cache, api, unexpected }
+enum PersonalityBootstrapFailureKind { signInRequired, cache, api, unexpected }
 
 class PersonalityBootstrapException implements Exception {
   const PersonalityBootstrapException({
@@ -60,19 +62,9 @@ class PersonalityBootstrapService {
 
     try {
       if (userKey == null) {
-        final anonymousUser = await _gateway.createAnonymousUser();
-        try {
-          await _userKeyStore.write(anonymousUser.userKey);
-        } catch (_) {
-          throw const PersonalityBootstrapException(
-            kind: PersonalityBootstrapFailureKind.cache,
-            message: '새 사용자 정보를 기기에 저장하지 못했습니다.',
-          );
-        }
-        return PersonalityBootstrapResult(
-          entry: PersonalityEntry.form,
-          user: anonymousUser.toProfile(),
-          userKey: anonymousUser.userKey,
+        throw const PersonalityBootstrapException(
+          kind: PersonalityBootstrapFailureKind.signInRequired,
+          message: '로그인이 필요합니다.',
         );
       }
 
@@ -126,20 +118,24 @@ class _PersonalityBootstrapScreenState
   MissionApi? _ownedMissionApi;
   WorldApi? _ownedWorldApi;
   late final PersonalityBootstrapService _service;
+  late final PersonalityGateway _gateway;
+  late final UserKeyStore _userKeyStore;
   PersonalityBootstrapResult? _result;
   PersonalityBootstrapException? _error;
+  bool _showAccount = false;
 
   @override
   void initState() {
     super.initState();
-    final gateway = widget.gateway ?? (_ownedApi = PersonalityApi());
+    _gateway = widget.gateway ?? (_ownedApi = PersonalityApi());
+    _userKeyStore = widget.userKeyStore ?? SharedPreferencesUserKeyStore();
     _ownedMissionApi = widget.missionGateway == null ? MissionApi() : null;
     _ownedWorldApi = widget.worldGateway == null && widget.gateway == null
         ? WorldApi()
         : null;
     _service = PersonalityBootstrapService(
-      gateway: gateway,
-      userKeyStore: widget.userKeyStore ?? SharedPreferencesUserKeyStore(),
+      gateway: _gateway,
+      userKeyStore: _userKeyStore,
     );
     _load();
   }
@@ -156,6 +152,7 @@ class _PersonalityBootstrapScreenState
     setState(() {
       _result = null;
       _error = null;
+      _showAccount = false;
     });
     try {
       final result = await _service.load();
@@ -163,12 +160,59 @@ class _PersonalityBootstrapScreenState
       setState(() => _result = result);
     } on PersonalityBootstrapException catch (exception) {
       if (!mounted) return;
-      setState(() => _error = exception);
+      if (exception.kind == PersonalityBootstrapFailureKind.signInRequired) {
+        setState(() => _showAccount = true);
+      } else if (exception.apiError?.code ==
+          PersonalityApiErrorCode.invalidUserKey) {
+        try {
+          await _userKeyStore.clear();
+        } catch (_) {
+          if (!mounted) return;
+          setState(() => _error = exception);
+          return;
+        }
+        if (mounted) setState(() => _showAccount = true);
+      } else {
+        setState(() => _error = exception);
+      }
+    }
+  }
+
+  Future<void> _authenticated(AnonymousUser account) async {
+    try {
+      await _userKeyStore.write(account.userKey);
+      final profile = await _gateway.getCurrentUser(account.userKey);
+      if (!mounted) return;
+      setState(() {
+        _showAccount = false;
+        _error = null;
+        _result = PersonalityBootstrapResult(
+          entry: profile.personalityCompleted
+              ? PersonalityEntry.profile
+              : PersonalityEntry.form,
+          user: profile,
+          userKey: account.userKey,
+        );
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(
+        () => _error = const PersonalityBootstrapException(
+          kind: PersonalityBootstrapFailureKind.cache,
+          message: '로그인 정보를 기기에 저장하지 못했습니다.',
+        ),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_showAccount) {
+      return AccountEntryScreen(
+        gateway: _gateway,
+        onAuthenticated: _authenticated,
+      );
+    }
     final error = _error;
     if (error != null) {
       return _BootstrapMessageScaffold(
@@ -197,7 +241,7 @@ class _PersonalityBootstrapScreenState
             ? 'personality-profile-entry'
             : 'personality-form-entry',
       ),
-      gateway: widget.gateway ?? _ownedApi!,
+      gateway: _gateway,
       missionGateway: widget.missionGateway ?? _ownedMissionApi,
       worldGateway: widget.worldGateway ?? _ownedWorldApi,
       userKey: result.userKey,
@@ -231,10 +275,8 @@ class _BootstrapMessageScaffold extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: DecoratedBox(
-                decoration: BoxDecoration(
+                decoration: NoveltyDecorations.card(
                   color: theme.colorScheme.surfaceContainerLowest,
-                  border: Border.all(color: const Color(0xFFEBEBEB)),
-                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(24),

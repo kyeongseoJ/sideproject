@@ -11,8 +11,8 @@
 ## 공식 기능 흐름
 
 ```text
-POST /api/users/anonymous → GET /api/users/me
-→ PATCH /api/users/me/nickname
+POST /api/users/register 또는 POST /api/users/login
+→ GET /api/users/me → PATCH /api/users/me/nickname
 → POST /api/personality-analyses
 → POST /api/missions/today/recommendations
 → /api/user-missions/{userMissionId}/select|cancel|replace|complete
@@ -21,9 +21,10 @@ POST /api/users/anonymous → GET /api/users/me
 
 사용자 범위 요청은 `X-User-Key`를 사용한다. `missionId`는 공용 Catalog ID이고, 선택·취소·교체·완료는 사용자에게 발급된 `userMissionId`를 사용한다.
 
-최초 사용자는 서비스 설명을 확인하고 랜덤 닉네임을 확인·수정한 뒤 성향 선택폼을 시작한다.
+최초 사용자는 아이디·비밀번호로 회원가입하고 서버가 중복 없는 랜덤 닉네임을 배정한 뒤 성향 선택폼을 시작한다.
+Web과 Android 모두 Purple 배경의 White 로고 스플래시를 표시한 후 진입하며, 캐시 사용자가 없으면 회원가입 화면이 기본으로 열린다.
 첫 문항에는 이전 버튼이 없고 두 번째 문항부터 이전 답변으로 돌아갈 수 있다. 같은 브라우저·앱의
-기존 사용자는 저장된 `userKey`로 자동 복원되며, 캐시가 삭제됐거나 다른 기기에서는 현재 복구할 수 없다. 완료된 성향 프로필에는
+기존 사용자는 저장된 `userKey`로 자동 복원되며, 캐시가 삭제됐거나 다른 기기에서는 아이디·비밀번호로 로그인해 복구한다. 완료된 성향 프로필에는
 회전·확대 가능한 3D World가 인라인으로 표시되며 장면을 탭하면 성향별 이름을 가진 전체 화면으로 이동한다.
 
 성향 완료 홈에서는 오늘의 미션을 가장 먼저 보여준다. 사용자는 하루 할애 시간만 고른 뒤
@@ -68,6 +69,9 @@ Oracle 값을 채운다. `.env`는 Git에서 제외되며, LLM 미션 생성을 
 
 `application.yml`은 저장소 루트와 `back` 디렉터리 양쪽 실행 위치를 지원한다. 배포에서는
 `.env`를 이미지에 포함하지 않고 호스팅 환경의 Secret/환경 변수 기능으로 같은 이름의 값을 주입한다.
+
+Windows SQL*Plus에서 한글 Seed가 포함된 `DB.sql`을 직접 실행할 때는 세션의 `NLS_LANG`을
+`KOREAN_KOREA.AL32UTF8`로 지정한다. 지정하지 않으면 한글 태그 정규식이 잘못 해석될 수 있다.
 
 Swagger UI는 Backend 실행 후 `http://localhost:8080/swagger-ui.html`에서 확인한다.
 

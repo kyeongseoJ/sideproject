@@ -24,6 +24,7 @@ class PersonalityProfileScreen extends StatelessWidget {
     this.lastPreferenceChange,
     this.onWorldGrowth,
     this.onMissionCompleted,
+    this.pendingWorldGrowth,
   }) : assert(user.personalityCompleted && user.personality != null);
 
   final UserProfile user;
@@ -36,6 +37,7 @@ class PersonalityProfileScreen extends StatelessWidget {
   final BehaviorPreferenceChange? lastPreferenceChange;
   final ValueChanged<WorldGrowth>? onWorldGrowth;
   final ValueChanged<MissionActionResult>? onMissionCompleted;
+  final WorldGrowth? pendingWorldGrowth;
 
   @override
   Widget build(BuildContext context) {
@@ -52,11 +54,13 @@ class PersonalityProfileScreen extends StatelessWidget {
                   constraints: const BoxConstraints(maxWidth: 760),
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: NoveltyColors.canvas,
                       border: wide
                           ? Border.all(color: NoveltyColors.line)
                           : null,
-                      borderRadius: BorderRadius.circular(wide ? 16 : 0),
+                      borderRadius: BorderRadius.circular(
+                        wide ? NoveltyRadii.card : 0,
+                      ),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(24),
@@ -115,6 +119,7 @@ class PersonalityProfileScreen extends StatelessWidget {
                               baseCategoryCodes: personalityWorldCategories(
                                 profile,
                               ),
+                              pendingGrowth: pendingWorldGrowth,
                               onOpen: onOpenWorld!,
                             ),
                           ],
@@ -163,6 +168,11 @@ class _NicknameHeader extends StatelessWidget {
             onSubmit: onEditNickname!,
           ),
           icon: const Icon(Icons.edit_rounded, size: 20),
+          style: IconButton.styleFrom(
+            minimumSize: const Size.square(40),
+            backgroundColor: NoveltyColors.canvas,
+            side: const BorderSide(color: NoveltyColors.line),
+          ),
         ),
     ],
   );
@@ -174,18 +184,30 @@ class _PersonalityTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
     decoration: BoxDecoration(
-      color: NoveltyColors.ink,
-      borderRadius: BorderRadius.circular(6),
+      color: NoveltyColors.primaryFaint,
+      border: Border.all(color: NoveltyColors.primarySubtle),
+      borderRadius: BorderRadius.circular(NoveltyRadii.card),
     ),
-    child: Text(
-      profile.typeName,
-      key: const Key('personality-profile-type-name'),
-      textAlign: TextAlign.center,
-      style: Theme.of(
-        context,
-      ).textTheme.titleLarge?.copyWith(color: Colors.white),
+    child: Column(
+      children: [
+        Text(
+          '나의 성향 분석 결과',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: NoveltyColors.primaryStrong),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          profile.typeName,
+          key: const Key('personality-profile-type-name'),
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: NoveltyColors.primaryStrong,
+          ),
+        ),
+      ],
     ),
   );
 }
@@ -314,7 +336,7 @@ class _BehaviorPreferenceSection extends StatelessWidget {
           if (changes.isNotEmpty) ...[
             const Divider(height: 28),
             Text(
-              '이번 미션의 행동 선호 경험',
+              '성향 변동',
               key: const Key('behavior-preference-change'),
               style: Theme.of(context).textTheme.titleSmall,
             ),
@@ -325,15 +347,16 @@ class _BehaviorPreferenceSection extends StatelessWidget {
               children: [
                 for (final item in changes)
                   Chip(
-                    avatar: const Icon(Icons.trending_up_rounded, size: 16),
+                    avatar: const Icon(
+                      Icons.swap_vert_rounded,
+                      size: 16,
+                      color: NoveltyColors.success,
+                    ),
                     label: Text('${item.label} +${item.amount}'),
+                    backgroundColor: NoveltyColors.successFaint,
+                    side: const BorderSide(color: NoveltyColors.success),
                   ),
               ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '현재 그래프는 저장된 성향 점수이며, 경험은 미션 5회마다 성향에 반영됩니다.',
-              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ],
@@ -346,9 +369,9 @@ double _normalizedSigned(int score) => (score + 1) / 2;
 double _normalizedLevel(int score) => score / 2;
 
 BoxDecoration _sectionDecoration() => BoxDecoration(
-  color: Colors.white,
+  color: NoveltyColors.canvas,
   border: Border.all(color: NoveltyColors.line),
-  borderRadius: BorderRadius.circular(16),
+  borderRadius: BorderRadius.circular(NoveltyRadii.card),
 );
 
 String _indoorOutdoorLabel(IndoorOutdoor value) => switch (value) {
