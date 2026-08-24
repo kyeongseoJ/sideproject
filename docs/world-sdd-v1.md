@@ -69,6 +69,7 @@ Three.js → Flutter:
 
 - `rendererReady`
 - `rendererError`
+- `objectHovered`: Web 마우스·펜이 가리키는 Object Code이며 이탈 시 `null`
 - `objectSelected`
 - `sceneTapped`: 드래그가 아닌 장면 탭. 인라인 미리보기에서 전체 화면 진입에 사용
 
@@ -78,6 +79,7 @@ Android는 WebView JavaScript Channel `NoveltyWorldBridge`, Web은 same-origin i
 
 - Orthographic Camera와 고정 아이소메트릭 초기 시점
 - 제한된 회전·Zoom·Object Tap
+- 전체 화면에서는 Object 호버 또는 클릭 시 한글 Object명, 연결된 성향 Category와 현재·최대 단계를 Flutter 툴팁으로 표시한다.
 - 성향 프로필 안의 인라인 Renderer와 전체 화면 Renderer는 동일한 Snapshot·Manifest를 사용한다.
 - 인라인 초기 표시는 성향 관심 Category와 완료 EXP가 있는 Category Object로 제한한다.
 - 전체 화면 제목은 Personality type별 공간명을 사용한다.

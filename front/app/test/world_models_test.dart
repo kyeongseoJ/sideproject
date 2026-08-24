@@ -8,13 +8,17 @@ void main() {
         {
           'objectCode': 'TRAINING_CORNER',
           'categoryCode': 'MOVEMENT',
+          'displayName': '운동 코너',
           'level': 2,
           'exp': 60,
           'nextLevelRequiredExp': 120,
+          'maxLevel': 5,
         },
       ],
     });
     expect(snapshot.objects.single.level, 2);
+    expect(snapshot.objects.single.displayName, '운동 코너');
+    expect(snapshot.objects.single.categoryDisplayName, '움직임');
   });
 
   test('world snapshot rejects an invalid level', () {
@@ -24,9 +28,11 @@ void main() {
           {
             'objectCode': 'TRAINING_CORNER',
             'categoryCode': 'MOVEMENT',
+            'displayName': '운동 코너',
             'level': 0,
             'exp': 0,
             'nextLevelRequiredExp': 50,
+            'maxLevel': 5,
           },
         ],
       }),

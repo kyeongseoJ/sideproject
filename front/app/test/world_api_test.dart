@@ -11,7 +11,7 @@ void main() {
         expect(request.url.path, '/api/world');
         expect(request.headers['X-User-Key'], 'user-key');
         return http.Response(
-          '{"objects":[{"objectCode":"BOOKSHELF","categoryCode":"LEARNING","level":1,"exp":0,"nextLevelRequiredExp":50}]}',
+          '{"objects":[{"objectCode":"BOOKSHELF","categoryCode":"LEARNING","displayName":"책장","level":1,"exp":0,"nextLevelRequiredExp":50,"maxLevel":5}]}',
           200,
           headers: {'content-type': 'application/json; charset=utf-8'},
         );

@@ -16,6 +16,7 @@ async function loadSpikeLevel(level) {
 }
 
 worldRenderer.onObjectSelected = (objectCode) => postBridgeMessage('objectSelected', { objectCode });
+worldRenderer.onObjectHovered = (objectCode) => postBridgeMessage('objectHovered', { objectCode });
 worldRenderer.onSceneTapped = () => postBridgeMessage('sceneTapped');
 
 async function updateObjectLevel(objectCode, level) {

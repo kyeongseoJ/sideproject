@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:novelty_app/api/world_api.dart';
+import 'package:novelty_app/novelty_theme.dart';
 import 'package:novelty_app/world/world_bridge_controller.dart';
 import 'package:novelty_app/world/world_models.dart';
 import 'package:novelty_app/world/world_renderer_view.dart';
@@ -38,6 +39,7 @@ class _WorldScreenState extends State<WorldScreen> {
   final _controller = WorldBridgeController();
   WorldSnapshot? _snapshot;
   WorldObjectProgress? _selected;
+  WorldObjectProgress? _hovered;
   String? _error;
   bool _rendererReady = false;
 
@@ -98,16 +100,25 @@ class _WorldScreenState extends State<WorldScreen> {
       setState(
         () => _error = text is String ? text : '3D Renderer 오류가 발생했습니다.',
       );
-    } else if (type == 'objectSelected' && payload is Map<String, Object?>) {
+    } else if ((type == 'objectSelected' || type == 'objectHovered') &&
+        payload is Map<String, Object?>) {
       final code = payload['objectCode'];
       final matches = _snapshot?.objects.where(
         (item) => item.objectCode == code,
       );
-      setState(
-        () => _selected = matches == null || matches.isEmpty
-            ? null
-            : matches.first,
-      );
+      final object = matches == null || matches.isEmpty ? null : matches.first;
+      setState(() {
+        if (type == 'objectHovered') {
+          _hovered = object;
+        } else {
+          _selected = object;
+        }
+      });
+    } else if (type == 'sceneTapped') {
+      setState(() {
+        _selected = null;
+        _hovered = null;
+      });
     }
   }
 
@@ -156,20 +167,23 @@ class _WorldScreenState extends State<WorldScreen> {
                 ),
               ),
             ),
-          if (_selected case final object?)
+          if ((_hovered ?? _selected) case final object?)
             Positioned(
               left: 16,
               right: 16,
               bottom: 16,
-              child: Card(
-                child: ListTile(
-                  title: Text(object.objectCode),
-                  subtitle: Text(
-                    '${object.categoryCode} · Lv.${object.level} · ${object.exp} EXP',
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: _WorldObjectTooltip(
+                    object: object,
+                    pinned: _selected == object,
+                    onClose: () => setState(() {
+                      _selected = null;
+                      _hovered = null;
+                    }),
                   ),
-                  trailing: object.nextLevelRequiredExp == null
-                      ? const Text('MAX')
-                      : Text('다음 ${object.nextLevelRequiredExp}'),
                 ),
               ),
             ),
@@ -180,7 +194,10 @@ class _WorldScreenState extends State<WorldScreen> {
               right: 16,
               child: Material(
                 color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(16),
+                shape: RoundedRectangleBorder(
+                  side: const BorderSide(color: NoveltyColors.primarySubtle),
+                  borderRadius: BorderRadius.circular(NoveltyRadii.card),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Text(
@@ -196,4 +213,90 @@ class _WorldScreenState extends State<WorldScreen> {
       ),
     );
   }
+}
+
+class _WorldObjectTooltip extends StatelessWidget {
+  const _WorldObjectTooltip({
+    required this.object,
+    required this.pinned,
+    required this.onClose,
+  });
+
+  final WorldObjectProgress object;
+  final bool pinned;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    key: const Key('world-object-tooltip'),
+    color: NoveltyColors.canvas,
+    shape: RoundedRectangleBorder(
+      side: const BorderSide(color: NoveltyColors.line),
+      borderRadius: BorderRadius.circular(NoveltyRadii.card),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(18, 16, 10, 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: NoveltyColors.primaryFaint,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.auto_awesome_rounded,
+              color: NoveltyColors.primary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  pinned ? '선택한 성장 오브젝트' : '성장 오브젝트',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: NoveltyColors.primaryStrong,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  object.displayName,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  '${object.categoryDisplayName} 성향 · 현재 ${object.level}단계 / ${object.maxLevel}단계',
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  object.nextLevelRequiredExp == null
+                      ? '${object.exp} EXP · 최고 단계 달성'
+                      : '${object.exp} EXP · 다음 단계 ${object.nextLevelRequiredExp} EXP',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: NoveltyColors.gray040),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            key: const Key('world-object-tooltip-close'),
+            tooltip: '오브젝트 정보 닫기',
+            onPressed: onClose,
+            icon: const Icon(Icons.close_rounded, size: 20),
+            style: IconButton.styleFrom(
+              minimumSize: const Size.square(40),
+              backgroundColor: NoveltyColors.canvas,
+              side: const BorderSide(color: NoveltyColors.line),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }

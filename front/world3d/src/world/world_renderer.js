@@ -36,9 +36,14 @@ export class WorldRenderer {
     this.controls.update();
     this.levelObjects = new Map();
     this.mixers = new Map();
+    this.raycaster = new THREE.Raycaster();
+    this.pointer = new THREE.Vector2();
+    this.hoveredObjectCode = null;
     this.animationFrame = null;
     this.resizeHandler = () => this.resize();
     this.selectionHandler = (event) => this.selectAt(event);
+    this.hoverHandler = (event) => this.hoverAt(event);
+    this.pointerLeaveHandler = () => this.setHoveredObject(null);
     this.pointerStart = null;
     this.pointerDownHandler = (event) => {
       this.pointerStart = { x: event.clientX, y: event.clientY };
@@ -46,7 +51,10 @@ export class WorldRenderer {
     addEventListener('resize', this.resizeHandler);
     this.renderer.domElement.addEventListener('pointerdown', this.pointerDownHandler);
     this.renderer.domElement.addEventListener('pointerup', this.selectionHandler);
+    this.renderer.domElement.addEventListener('pointermove', this.hoverHandler);
+    this.renderer.domElement.addEventListener('pointerleave', this.pointerLeaveHandler);
     this.onObjectSelected = null;
+    this.onObjectHovered = null;
     this.onSceneTapped = null;
   }
 
@@ -82,27 +90,45 @@ export class WorldRenderer {
     requestAnimationFrame(animate);
   }
 
+  objectCodeAt(event) {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.pointer.set(
+      ((event.clientX - rect.left) / rect.width) * 2 - 1,
+      -((event.clientY - rect.top) / rect.height) * 2 + 1,
+    );
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    const candidates = [...this.levelObjects.entries()]
+      .filter(([key]) => key !== 'ROOM').map(([, object]) => object);
+    const hit = this.raycaster.intersectObjects(candidates, true)[0];
+    if (!hit) return null;
+    let root = hit.object;
+    while (root.parent && !root.userData.objectCode) root = root.parent;
+    return root.userData.objectCode ?? null;
+  }
+
+  setHoveredObject(objectCode) {
+    if (this.hoveredObjectCode === objectCode) return;
+    this.hoveredObjectCode = objectCode;
+    this.renderer.domElement.style.cursor = objectCode ? 'pointer' : 'grab';
+    this.onObjectHovered?.(objectCode);
+  }
+
+  hoverAt(event) {
+    if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') return;
+    this.setHoveredObject(this.objectCodeAt(event));
+  }
+
   selectAt(event) {
     const start = this.pointerStart;
     this.pointerStart = null;
     if (!start || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) return;
-    const rect = this.renderer.domElement.getBoundingClientRect();
-    const pointer = new THREE.Vector2(
-      ((event.clientX - rect.left) / rect.width) * 2 - 1,
-      -((event.clientY - rect.top) / rect.height) * 2 + 1,
-    );
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(pointer, this.camera);
-    const candidates = [...this.levelObjects.entries()]
-      .filter(([key]) => key !== 'ROOM').map(([, object]) => object);
-    const hit = raycaster.intersectObjects(candidates, true)[0];
-    if (!hit) {
+    const objectCode = this.objectCodeAt(event);
+    if (!objectCode) {
+      this.setHoveredObject(null);
       this.onSceneTapped?.();
       return;
     }
-    let root = hit.object;
-    while (root.parent && !root.userData.objectCode) root = root.parent;
-    if (root.userData.objectCode) this.onObjectSelected?.(root.userData.objectCode);
+    this.onObjectSelected?.(objectCode);
   }
 
   start() {
@@ -130,6 +156,8 @@ export class WorldRenderer {
     removeEventListener('resize', this.resizeHandler);
     this.renderer.domElement.removeEventListener('pointerdown', this.pointerDownHandler);
     this.renderer.domElement.removeEventListener('pointerup', this.selectionHandler);
+    this.renderer.domElement.removeEventListener('pointermove', this.hoverHandler);
+    this.renderer.domElement.removeEventListener('pointerleave', this.pointerLeaveHandler);
     if (this.animationFrame !== null) {
       cancelAnimationFrame(this.animationFrame);
     }

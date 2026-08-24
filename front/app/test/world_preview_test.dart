@@ -12,23 +12,29 @@ class _FakeWorldGateway implements WorldGateway {
     const WorldObjectProgress(
       objectCode: 'ART_EASEL',
       categoryCode: 'CREATIVE',
+      displayName: '창작 이젤',
       level: 1,
       exp: 0,
       nextLevelRequiredExp: 50,
+      maxLevel: 5,
     ),
     const WorldObjectProgress(
       objectCode: 'BOOKSHELF',
       categoryCode: 'LEARNING',
+      displayName: '책장',
       level: 2,
       exp: 60,
       nextLevelRequiredExp: 120,
+      maxLevel: 5,
     ),
     const WorldObjectProgress(
       objectCode: 'KITCHEN_TABLE',
       categoryCode: 'FOOD',
+      displayName: '키친 테이블',
       level: 1,
       exp: 0,
       nextLevelRequiredExp: 50,
+      maxLevel: 5,
     ),
   ]);
 }
@@ -48,6 +54,17 @@ void main() {
               userKey: 'user-key',
               worldName: '고요한 몰입 작업실',
               baseCategoryCodes: const {'CREATIVE'},
+              pendingGrowth: const WorldGrowth(
+                objectCode: 'BOOKSHELF',
+                categoryCode: 'LEARNING',
+                awardedExp: 20,
+                previousLevel: 1,
+                currentLevel: 2,
+                currentExp: 60,
+                nextLevelRequiredExp: 120,
+                levelUp: true,
+                rewardApplied: true,
+              ),
               onOpen: () => opened++,
               rendererBuilder: (controller, onMessage) {
                 controller.attach((raw) async {
@@ -80,12 +97,23 @@ void main() {
           .map((object) => (object as Map<String, Object?>)['objectCode'])
           .toSet();
       expect(codes, {'ART_EASEL', 'BOOKSHELF'});
+      expect(
+        messages.map((message) => message['type']),
+        containsAllInOrder([
+          'initializeWorld',
+          'updateObjectLevel',
+          'playLevelUp',
+        ]),
+      );
       expect(find.text('고요한 몰입 작업실'), findsOneWidget);
 
       expect(find.textContaining('드래그 회전'), findsNothing);
       await tester.tap(find.byKey(const Key('world-help-toggle')));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 400));
       expect(find.textContaining('드래그 회전'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.textContaining('드래그 회전'), findsNothing);
 
       await tester.tap(find.byKey(const Key('world-preview-open-header')));
       expect(opened, 1);

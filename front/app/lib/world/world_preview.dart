@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:novelty_app/api/world_api.dart';
 import 'package:novelty_app/novelty_theme.dart';
@@ -19,6 +21,7 @@ class WorldPreview extends StatefulWidget {
     required this.worldName,
     required this.baseCategoryCodes,
     required this.onOpen,
+    this.pendingGrowth,
     this.rendererBuilder,
   });
 
@@ -27,6 +30,7 @@ class WorldPreview extends StatefulWidget {
   final String worldName;
   final Set<String> baseCategoryCodes;
   final VoidCallback onOpen;
+  final WorldGrowth? pendingGrowth;
   final WorldPreviewRendererBuilder? rendererBuilder;
 
   @override
@@ -39,11 +43,34 @@ class _WorldPreviewState extends State<WorldPreview> {
   String? _error;
   bool _rendererReady = false;
   bool _helpExpanded = false;
+  Timer? _helpTimer;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant WorldPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.pendingGrowth != oldWidget.pendingGrowth) {
+      _applyPendingGrowth();
+    }
+  }
+
+  @override
+  void dispose() {
+    _helpTimer?.cancel();
+    super.dispose();
+  }
+
+  void _showHelp() {
+    _helpTimer?.cancel();
+    setState(() => _helpExpanded = true);
+    _helpTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted) setState(() => _helpExpanded = false);
+    });
   }
 
   List<WorldObjectProgress> _visibleObjects(WorldSnapshot snapshot) {
@@ -81,6 +108,19 @@ class _WorldPreviewState extends State<WorldPreview> {
         snapshot,
       ).map((object) => object.toBridgeJson()).toList(),
     });
+    await _applyPendingGrowth();
+  }
+
+  Future<void> _applyPendingGrowth() async {
+    final growth = widget.pendingGrowth;
+    if (!_rendererReady || growth == null || !growth.rewardApplied) return;
+    await _controller.send('updateObjectLevel', {
+      'objectCode': growth.objectCode,
+      'level': growth.currentLevel,
+    });
+    if (growth.levelUp) {
+      await _controller.send('playLevelUp', {'objectCode': growth.objectCode});
+    }
   }
 
   void _onMessage(Map<String, Object?> message) {
@@ -109,7 +149,7 @@ class _WorldPreviewState extends State<WorldPreview> {
     decoration: BoxDecoration(
       color: NoveltyColors.surfaceAlt,
       border: Border.all(color: NoveltyColors.line),
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(NoveltyRadii.card),
     ),
     clipBehavior: Clip.antiAlias,
     child: Column(
@@ -171,35 +211,42 @@ class _WorldPreviewState extends State<WorldPreview> {
                     ),
                   ),
                 ),
-              Positioned(
-                left: 12,
-                bottom: 10,
-                right: 12,
-                child: Align(
-                  alignment: Alignment.bottomLeft,
-                  child: InkWell(
-                    key: const Key('world-help-toggle'),
-                    onTap: () => setState(() => _helpExpanded = !_helpExpanded),
-                    borderRadius: BorderRadius.circular(999),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      constraints: const BoxConstraints(minHeight: 32),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: _helpExpanded ? 12 : 8,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.86),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: _helpExpanded
-                          ? const Text('드래그 회전 · 휠/핀치 확대 · 공간 탭 전체보기')
-                          : const Icon(Icons.question_mark_rounded, size: 18),
-                    ),
+            ],
+          ),
+        ),
+        Material(
+          color: NoveltyColors.canvas,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Row(
+              children: [
+                IconButton(
+                  key: const Key('world-help-toggle'),
+                  tooltip: '공간 조작 도움말',
+                  onPressed: _showHelp,
+                  icon: const Icon(Icons.help_outline_rounded),
+                  color: NoveltyColors.primary,
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size.square(40),
+                    backgroundColor: NoveltyColors.canvas,
+                    side: const BorderSide(color: NoveltyColors.line),
                   ),
                 ),
-              ),
-            ],
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: NoveltyMotion.slow,
+                    transitionBuilder: (child, animation) =>
+                        FadeTransition(opacity: animation, child: child),
+                    child: _helpExpanded
+                        ? const Text(
+                            '드래그 회전 · 휠/핀치 확대 · 공간 클릭 전체보기',
+                            key: Key('world-help-text'),
+                          )
+                        : const SizedBox(key: Key('world-help-hidden')),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],

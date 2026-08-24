@@ -2,50 +2,76 @@ class WorldObjectProgress {
   const WorldObjectProgress({
     required this.objectCode,
     required this.categoryCode,
+    required this.displayName,
     required this.level,
     required this.exp,
     required this.nextLevelRequiredExp,
+    required this.maxLevel,
   });
 
   final String objectCode;
   final String categoryCode;
+  final String displayName;
   final int level;
   final int exp;
   final int? nextLevelRequiredExp;
+  final int maxLevel;
+
+  String get categoryDisplayName => switch (categoryCode) {
+    'MOVEMENT' => '움직임',
+    'CREATIVE' => '창작',
+    'FOOD' => '음식',
+    'LEARNING' => '학습',
+    'SOCIAL' => '교류',
+    'OUTDOOR' => '야외 탐색',
+    'ORGANIZING' => '정리',
+    'CULTURE' => '문화',
+    _ => categoryCode,
+  };
 
   factory WorldObjectProgress.fromJson(Map<String, Object?> json) {
     final objectCode = json['objectCode'];
     final categoryCode = json['categoryCode'];
+    final displayName = json['displayName'];
     final level = json['level'];
     final exp = json['exp'];
     final next = json['nextLevelRequiredExp'];
+    final maxLevel = json['maxLevel'];
     if (objectCode is! String ||
         objectCode.isEmpty ||
         categoryCode is! String ||
         categoryCode.isEmpty ||
+        displayName is! String ||
+        displayName.isEmpty ||
         level is! int ||
         level < 1 ||
         level > 5 ||
         exp is! int ||
         exp < 0 ||
-        (next != null && next is! int)) {
+        (next != null && next is! int) ||
+        maxLevel is! int ||
+        maxLevel < level) {
       throw const FormatException('Invalid world object progress.');
     }
     return WorldObjectProgress(
       objectCode: objectCode,
       categoryCode: categoryCode,
+      displayName: displayName,
       level: level,
       exp: exp,
       nextLevelRequiredExp: next as int?,
+      maxLevel: maxLevel,
     );
   }
 
   Map<String, Object?> toBridgeJson() => {
     'objectCode': objectCode,
     'categoryCode': categoryCode,
+    'displayName': displayName,
     'level': level,
     'exp': exp,
     'nextLevelRequiredExp': nextLevelRequiredExp,
+    'maxLevel': maxLevel,
   };
 }
 
