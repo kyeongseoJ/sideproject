@@ -88,7 +88,6 @@ class _PersonalityExperienceScreenState
     return PersonalityProfileScreen(
       user: _user,
       onReanalyze: _confirmReanalysis,
-      onEditNickname: _editNickname,
       onOpenWorld: () => setState(() => _showingWorld = true),
       missionGateway: widget.missionGateway,
       worldGateway: widget.worldGateway,
@@ -98,20 +97,6 @@ class _PersonalityExperienceScreenState
       onWorldGrowth: (growth) => setState(() => _pendingWorldGrowth = growth),
       onMissionCompleted: _handleMissionCompleted,
     );
-  }
-
-  Future<String> _editNickname(String nickname) async {
-    final saved = await widget.gateway.updateNickname(widget.userKey, nickname);
-    if (!mounted) return saved;
-    setState(() {
-      _user = UserProfile(
-        userId: _user.userId,
-        nickname: saved,
-        personalityCompleted: _user.personalityCompleted,
-        personality: _user.personality,
-      );
-    });
-    return saved;
   }
 
   void _handleMissionCompleted(MissionActionResult result) {

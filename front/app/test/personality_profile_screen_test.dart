@@ -10,7 +10,9 @@ void main() {
     var reanalyzeCalls = 0;
     await _pumpProfile(tester, onReanalyze: () => reanalyzeCalls++);
 
-    expect(find.text('노벨티07QK'), findsOneWidget);
+    expect(find.byKey(const Key('novelty-wordmark')), findsOneWidget);
+    expect(find.byKey(const Key('novelty-symbol')), findsOneWidget);
+    expect(find.text('노벨티07QK'), findsNothing);
     expect(find.text('고요한 몰입가'), findsOneWidget);
     expect(find.textContaining('익숙하고 조용한 공간'), findsOneWidget);
     expect(find.textContaining('실내 중심'), findsOneWidget);
@@ -64,33 +66,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('opens nickname editor and submits a valid nickname', (
-    tester,
-  ) async {
-    String? submitted;
-    await _pumpProfile(
-      tester,
-      onEditNickname: (nickname) async {
-        submitted = nickname;
-        return nickname;
-      },
-    );
-
-    await tester.tap(find.byKey(const Key('nickname-edit-button')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('nickname-edit-dialog')), findsOneWidget);
-
-    await tester.enterText(
-      find.byKey(const Key('nickname-edit-input')),
-      '새닉네임7',
-    );
-    await tester.tap(find.byKey(const Key('nickname-edit-submit')));
-    await tester.pumpAndSettle();
-
-    expect(submitted, '새닉네임7');
-    expect(find.byKey(const Key('nickname-edit-dialog')), findsNothing);
-  });
-
   testWidgets('shows the latest mission preference direction separately', (
     tester,
   ) async {
@@ -114,7 +89,6 @@ void main() {
 Future<void> _pumpProfile(
   WidgetTester tester, {
   VoidCallback? onReanalyze,
-  Future<String> Function(String)? onEditNickname,
   BehaviorPreferenceChange? lastPreferenceChange,
 }) {
   return tester.pumpWidget(
@@ -123,7 +97,6 @@ Future<void> _pumpProfile(
       home: PersonalityProfileScreen(
         user: _analyzedUser(),
         onReanalyze: onReanalyze ?? () {},
-        onEditNickname: onEditNickname,
         lastPreferenceChange: lastPreferenceChange,
       ),
     ),

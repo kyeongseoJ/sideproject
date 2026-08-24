@@ -6,7 +6,6 @@ import 'package:novelty_app/mission/mission_experience_screen.dart';
 import 'package:novelty_app/mission/mission_models.dart';
 import 'package:novelty_app/novelty_theme.dart';
 import 'package:novelty_app/personality/personality_models.dart';
-import 'package:novelty_app/user/nickname_input.dart';
 import 'package:novelty_app/world/world_models.dart';
 import 'package:novelty_app/world/world_name.dart';
 import 'package:novelty_app/world/world_preview.dart';
@@ -16,7 +15,6 @@ class PersonalityProfileScreen extends StatelessWidget {
     super.key,
     required this.user,
     required this.onReanalyze,
-    this.onEditNickname,
     this.onOpenWorld,
     this.missionGateway,
     this.worldGateway,
@@ -29,7 +27,6 @@ class PersonalityProfileScreen extends StatelessWidget {
 
   final UserProfile user;
   final VoidCallback onReanalyze;
-  final NicknameSubmit? onEditNickname;
   final VoidCallback? onOpenWorld;
   final MissionGateway? missionGateway;
   final WorldGateway? worldGateway;
@@ -68,10 +65,7 @@ class PersonalityProfileScreen extends StatelessWidget {
                         key: const Key('personality-profile-content'),
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _NicknameHeader(
-                            nickname: user.nickname,
-                            onEditNickname: onEditNickname,
-                          ),
+                          const _BrandHeader(),
                           const SizedBox(height: 10),
                           _PersonalityTitle(profile: profile),
                           if (missionGateway != null && userKey != null) ...[
@@ -147,33 +141,29 @@ class PersonalityProfileScreen extends StatelessWidget {
   }
 }
 
-class _NicknameHeader extends StatelessWidget {
-  const _NicknameHeader({required this.nickname, this.onEditNickname});
-  final String nickname;
-  final NicknameSubmit? onEditNickname;
+class _BrandHeader extends StatelessWidget {
+  const _BrandHeader();
 
   @override
   Widget build(BuildContext context) => Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    crossAxisAlignment: CrossAxisAlignment.center,
     children: [
-      Expanded(
-        child: Text(nickname, style: Theme.of(context).textTheme.titleMedium),
+      Image.asset(
+        'assets/ui/Novelty_logo_letter.png',
+        key: const Key('novelty-wordmark'),
+        width: 148,
+        height: 25,
+        fit: BoxFit.contain,
+        alignment: Alignment.centerLeft,
       ),
-      if (onEditNickname != null)
-        IconButton(
-          key: const Key('nickname-edit-button'),
-          tooltip: '닉네임 수정',
-          onPressed: () => showNicknameEditDialog(
-            context: context,
-            initialNickname: nickname,
-            onSubmit: onEditNickname!,
-          ),
-          icon: const Icon(Icons.edit_rounded, size: 20),
-          style: IconButton.styleFrom(
-            minimumSize: const Size.square(40),
-            backgroundColor: NoveltyColors.canvas,
-            side: const BorderSide(color: NoveltyColors.line),
-          ),
-        ),
+      Image.asset(
+        'assets/ui/Novelty_logo_dark.png',
+        key: const Key('novelty-symbol'),
+        width: 34,
+        height: 34,
+        fit: BoxFit.contain,
+      ),
     ],
   );
 }
