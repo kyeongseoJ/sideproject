@@ -63,6 +63,23 @@ void main() {
     },
   );
 
+  test('updates nickname with the official user endpoint', () async {
+    final client = MockClient((request) async {
+      expect(request.method, 'PATCH');
+      expect(request.url.path, '/api/users/me/nickname');
+      expect(request.headers['X-User-Key'], 'cached-user-key');
+      expect(jsonDecode(request.body), {'nickname': '새닉네임7'});
+      return _jsonResponse({'nickname': '새닉네임7'}, 200);
+    });
+    final api = PersonalityApi(
+      client: client,
+      baseUrl: 'http://localhost:8080',
+    );
+
+    expect(await api.updateNickname('cached-user-key', '새닉네임7'), '새닉네임7');
+    api.close();
+  });
+
   test('posts the V2 analysis contract with the cached user key', () async {
     final client = MockClient((request) async {
       expect(request.method, 'POST');

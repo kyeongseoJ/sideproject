@@ -12,6 +12,16 @@ void main() {
     final gateway = _FakeGateway(result: _newResult());
     await _pumpExperience(tester, gateway, _notAnalyzedUser());
 
+    expect(find.text('먼저 이름을 정해 주세요'), findsOneWidget);
+    expect(
+      find.byKey(const Key('novelty-service-description')),
+      findsOneWidget,
+    );
+    await tester.pumpAndSettle();
+    final submit = find.byKey(const Key('nickname-setup-submit'));
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
     expect(find.text('쉬는 날의 나는?'), findsOneWidget);
     await _fillAndSubmit(tester);
 
@@ -112,6 +122,22 @@ void main() {
     expect(find.text('성향 분석을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.'), findsOneWidget);
     expect(find.textContaining('oracle-secret-detail'), findsNothing);
   });
+
+  testWidgets('renders the nickname start screen without overflow on mobile', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await _pumpExperience(tester, _FakeGateway(), _notAnalyzedUser());
+
+    expect(find.text('먼저 이름을 정해 주세요'), findsOneWidget);
+    expect(
+      find.byKey(const Key('novelty-service-description')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _openReanalysisDialog(WidgetTester tester) async {
@@ -188,6 +214,7 @@ class _FakeGateway implements PersonalityGateway {
   final List<PersonalityAnalysisRequest> requests = [];
   final List<String> userKeys = [];
   int submitCalls = 0;
+  int nicknameUpdateCalls = 0;
 
   @override
   Future<PersonalityAnalysisResult> submitAnalysis(
@@ -207,6 +234,12 @@ class _FakeGateway implements PersonalityGateway {
   @override
   Future<UserProfile> getCurrentUser(String userKey) =>
       throw UnimplementedError();
+
+  @override
+  Future<String> updateNickname(String userKey, String nickname) async {
+    nicknameUpdateCalls++;
+    return nickname;
+  }
 }
 
 UserProfile _notAnalyzedUser() => const UserProfile(

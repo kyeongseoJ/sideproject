@@ -2,34 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:novelty_app/api/mission_api.dart';
 import 'package:novelty_app/mission/mission_models.dart';
 import 'package:novelty_app/novelty_theme.dart';
+import 'package:novelty_app/world/world_models.dart';
 
-class MissionExperienceScreen extends StatefulWidget {
-  const MissionExperienceScreen({
+class MissionDashboardSection extends StatefulWidget {
+  const MissionDashboardSection({
     super.key,
     required this.gateway,
     required this.userKey,
-    required this.onBackToProfile,
+    this.onWorldGrowth,
+    this.onMissionCompleted,
   });
 
   final MissionGateway gateway;
   final String userKey;
-  final Future<void> Function() onBackToProfile;
+  final ValueChanged<WorldGrowth>? onWorldGrowth;
+  final ValueChanged<MissionActionResult>? onMissionCompleted;
 
   @override
-  State<MissionExperienceScreen> createState() =>
-      _MissionExperienceScreenState();
+  State<MissionDashboardSection> createState() =>
+      _MissionDashboardSectionState();
 }
 
-class _MissionExperienceScreenState extends State<MissionExperienceScreen> {
+class _MissionDashboardSectionState extends State<MissionDashboardSection> {
+  final _pageController = PageController(viewportFraction: 0.88);
   MissionToday? _today;
-  MissionSummary? _summary;
-  MissionSettings _settings = const MissionSettings(
-    availableTime: AvailableTime.short,
-    dailyLimit: 1,
-  );
-  bool _needsSettings = false;
+  UserMission? _lastCompleted;
   bool _loading = true;
   bool _busy = false;
+  bool _choosingTime = false;
   String? _error;
 
   @override
@@ -38,33 +38,30 @@ class _MissionExperienceScreenState extends State<MissionExperienceScreen> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final settings = await widget.gateway.getSettings(widget.userKey);
-      var today = await widget.gateway.getToday(widget.userKey);
-      if (today.activeMissions.isEmpty &&
-          today.candidates.isEmpty &&
-          today.remainingSlots > 0) {
-        today = await widget.gateway.recommendToday(widget.userKey);
-      }
-      final summary = await widget.gateway.getSummary(widget.userKey);
+      await widget.gateway.getSettings(widget.userKey);
+      final today = await widget.gateway.getToday(widget.userKey);
       if (!mounted) return;
       setState(() {
-        _settings = settings;
         _today = today;
-        _summary = summary;
-        _needsSettings = false;
         _loading = false;
       });
     } on MissionApiException catch (exception) {
       if (!mounted) return;
       if (exception.code == 'MISSION_SETTINGS_REQUIRED') {
         setState(() {
-          _needsSettings = true;
+          _today = null;
           _loading = false;
         });
       } else {
@@ -82,71 +79,74 @@ class _MissionExperienceScreenState extends State<MissionExperienceScreen> {
     }
   }
 
-  Future<void> _saveSettings() async {
+  Future<void> _chooseTime(AvailableTime time) async {
     if (_busy) return;
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final settings = await widget.gateway.saveSettings(
+      await widget.gateway.saveSettings(
         widget.userKey,
-        _settings,
+        MissionSettings(availableTime: time, dailyLimit: 1),
       );
       final today = await widget.gateway.recommendToday(widget.userKey);
-      final summary = await widget.gateway.getSummary(widget.userKey);
       if (!mounted) return;
       setState(() {
-        _settings = settings;
         _today = today;
-        _summary = summary;
-        _needsSettings = false;
+        _choosingTime = false;
       });
     } on MissionApiException catch (exception) {
-      if (mounted) setState(() => _error = exception.message);
+      if (mounted) _showActionError(exception.message);
     } catch (_) {
-      if (mounted) setState(() => _error = '설정을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      if (mounted) _showActionError('미션을 준비하지 못했습니다. 잠시 후 다시 시도해 주세요.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _act(
-    Future<MissionActionResult> Function() request, {
-    String? successMessage,
-  }) async {
-    if (_busy) return;
+  Future<MissionActionResult?> _act(
+    Future<MissionActionResult> Function() request,
+  ) async {
+    if (_busy) return null;
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
       final result = await request();
-      if (!mounted) return;
-      setState(() {
-        _today = result.today;
-        if (result.summary != null) _summary = result.summary;
-      });
-      if (successMessage != null) {
-        final suffix = result.personalityUpdated ? ' 성향 프로필도 갱신되었어요.' : '';
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('$successMessage$suffix')));
+      if (!mounted) return result;
+      setState(() => _today = result.today);
+      if (result.worldGrowth != null) {
+        widget.onWorldGrowth?.call(result.worldGrowth!);
       }
+      return result;
     } on MissionApiException catch (exception) {
-      if (mounted) setState(() => _error = exception.message);
+      if (mounted) _showActionError(exception.message);
     } catch (_) {
-      if (mounted) setState(() => _error = '미션을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      if (mounted) _showActionError('미션을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+    return null;
+  }
+
+  Future<void> _complete(UserMission mission) async {
+    final result = await _act(
+      () => widget.gateway.complete(widget.userKey, mission.userMissionId),
+    );
+    if (result == null || !mounted) return;
+    setState(() => _lastCompleted = result.mission);
+    widget.onMissionCompleted?.call(result);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('미션을 완료했어요! 행동 선호 경험을 확인해 보세요.')),
+    );
   }
 
   Future<void> _replace(UserMission current) async {
     final candidates = _today?.candidates ?? const <UserMission>[];
     final replacement = await showModalBottomSheet<UserMission>(
       context: context,
-      isScrollControlled: true,
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -155,7 +155,7 @@ class _MissionExperienceScreenState extends State<MissionExperienceScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text('바꿀 미션 선택', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               if (candidates.isEmpty)
                 const Text('변경할 수 있는 다른 미션이 없습니다.')
               else
@@ -183,191 +183,96 @@ class _MissionExperienceScreenState extends State<MissionExperienceScreen> {
     );
   }
 
+  void _showActionError(String message) {
+    setState(() => _error = message);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('오늘의 미션'),
-        leading: IconButton(
-          key: const Key('mission-back-profile'),
-          onPressed: _busy ? null : () => widget.onBackToProfile(),
-          icon: const Icon(Icons.arrow_back_rounded),
-          tooltip: '프로필로 돌아가기',
-        ),
-      ),
-      body: SafeArea(child: _body()),
-    );
-  }
-
-  Widget _body() {
-    if (_loading)
-      return const Center(
-        child: CircularProgressIndicator(key: Key('mission-loading')),
-      );
-    if (_needsSettings) return _settingsForm();
-    if (_today == null) return _loadFailure();
-    return _todayContent(_today!);
-  }
-
-  Widget _loadFailure() => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+  Widget build(BuildContext context) => Column(
+    key: const Key('mission-dashboard'),
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Row(
         children: [
-          _errorView(),
-          const SizedBox(height: 16),
-          FilledButton(
-            key: const Key('mission-retry'),
-            onPressed: _load,
-            child: const Text('다시 시도'),
+          Expanded(
+            child: Text(
+              '오늘의 미션',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
           ),
+          if (_today case final today?)
+            Text(
+              today.completedToday > 0 ? '오늘 완료' : '하루 한 개',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
         ],
       ),
-    ),
-  );
-
-  Widget _settingsForm() => SingleChildScrollView(
-    key: const Key('mission-settings-form'),
-    padding: const EdgeInsets.all(24),
-    child: Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 680),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('미션 설정', style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 8),
-            const Text('오늘 미션에 사용할 수 있는 시간과 하루 목표를 알려주세요.'),
-            const SizedBox(height: 24),
-            Text('할애 가능 시간', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final time in AvailableTime.values)
-                  ChoiceChip(
-                    key: Key('mission-time-${time.code}'),
-                    label: Text(time.label),
-                    selected: _settings.availableTime == time,
-                    onSelected: _busy
-                        ? null
-                        : (_) => setState(
-                            () => _settings = MissionSettings(
-                              availableTime: time,
-                              dailyLimit: _settings.dailyLimit,
-                            ),
-                          ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Text('하루 미션 수', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (var limit = 1; limit <= 3; limit++)
-                  ChoiceChip(
-                    key: Key('mission-limit-$limit'),
-                    label: Text('$limit개'),
-                    selected: _settings.dailyLimit == limit,
-                    onSelected: _busy
-                        ? null
-                        : (_) => setState(
-                            () => _settings = MissionSettings(
-                              availableTime: _settings.availableTime,
-                              dailyLimit: limit,
-                            ),
-                          ),
-                  ),
-              ],
-            ),
-            if (_error != null) ...[const SizedBox(height: 16), _errorView()],
-            const SizedBox(height: 24),
-            FilledButton(
-              key: const Key('mission-settings-save'),
-              onPressed: _busy ? null : _saveSettings,
-              child: Text(_busy ? '저장 중...' : '설정 저장하고 미션 보기'),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-
-  Widget _todayContent(MissionToday today) => RefreshIndicator(
-    onRefresh: _load,
-    child: ListView(
-      key: const Key('mission-today-screen'),
-      padding: const EdgeInsets.all(24),
-      children: [
-        Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 760),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  '${today.completedToday}개 완료 · ${today.remainingSlots}개 남음',
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-                if (_error != null) ...[
-                  const SizedBox(height: 12),
-                  _errorView(),
-                ],
-                const SizedBox(height: 20),
-                Text('수행 중', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                if (today.activeMissions.isEmpty)
-                  const _EmptyCard('수행 중인 미션이 없습니다. 아래에서 하나를 선택해 보세요.')
-                else
-                  for (final mission in today.activeMissions)
-                    _MissionCard(
-                      mission: mission,
-                      busy: _busy,
-                      active: true,
-                      onComplete: () => _act(
-                        () => widget.gateway.complete(
-                          widget.userKey,
-                          mission.userMissionId,
-                        ),
-                        successMessage: '미션을 완료했어요!',
-                      ),
-                      onCancel: () => _act(
-                        () => widget.gateway.cancel(
-                          widget.userKey,
-                          mission.userMissionId,
-                        ),
-                      ),
-                      onReplace: () => _replace(mission),
-                    ),
-                const SizedBox(height: 24),
-                Text('추천 미션', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                if (today.candidates.isEmpty)
-                  const _EmptyCard('지금 선택할 수 있는 추천 미션이 없습니다.')
-                else
-                  for (final mission in today.candidates)
-                    _MissionCard(
-                      mission: mission,
-                      busy: _busy,
-                      active: false,
-                      onSelect: () => _act(
-                        () => widget.gateway.select(
-                          widget.userKey,
-                          mission.userMissionId,
-                        ),
-                      ),
-                    ),
-                if (_summary != null) ...[
-                  const SizedBox(height: 24),
-                  _SummaryCard(summary: _summary!),
-                ],
-              ],
-            ),
+      const SizedBox(height: 12),
+      if (_loading)
+        const SizedBox(
+          height: 220,
+          child: Center(
+            child: CircularProgressIndicator(key: Key('mission-loading')),
           ),
+        )
+      else if (_error != null && _today == null)
+        _loadFailure()
+      else if (_lastCompleted != null)
+        _CompletedMissionCard(mission: _lastCompleted!)
+      else if (_today?.activeMissions case [final active, ...])
+        _ActiveMissionCard(
+          mission: active,
+          busy: _busy,
+          onComplete: () => _complete(active),
+          onReplace: () => _replace(active),
+          onCancel: () => _act(
+            () => widget.gateway.cancel(widget.userKey, active.userMissionId),
+          ),
+        )
+      else if (_today?.completedToday case final count? when count > 0)
+        const _CompletedTodayCard()
+      else if (_today?.candidates case final candidates?
+          when candidates.isNotEmpty)
+        _MissionCarousel(
+          missions: candidates,
+          controller: _pageController,
+          busy: _busy,
+          onSelect: (mission) => _act(
+            () => widget.gateway.select(widget.userKey, mission.userMissionId),
+          ),
+          onChangeTime: () => setState(() {
+            _today = null;
+            _choosingTime = true;
+          }),
+        )
+      else
+        _MissionStartCard(
+          choosingTime: _choosingTime,
+          busy: _busy,
+          onStart: () => setState(() => _choosingTime = true),
+          onTimeSelected: _chooseTime,
+        ),
+      if (_error != null && _today != null) ...[
+        const SizedBox(height: 12),
+        _errorView(),
+      ],
+    ],
+  );
+
+  Widget _loadFailure() => Container(
+    padding: const EdgeInsets.all(20),
+    decoration: _missionDecoration(),
+    child: Column(
+      children: [
+        _errorView(),
+        const SizedBox(height: 12),
+        FilledButton(
+          key: const Key('mission-retry'),
+          onPressed: _load,
+          child: const Text('다시 시도'),
         ),
       ],
     ),
@@ -375,7 +280,7 @@ class _MissionExperienceScreenState extends State<MissionExperienceScreen> {
 
   Widget _errorView() => Container(
     key: const Key('mission-error'),
-    padding: const EdgeInsets.all(14),
+    padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: NoveltyColors.errorFaint,
       borderRadius: BorderRadius.circular(10),
@@ -384,131 +289,270 @@ class _MissionExperienceScreenState extends State<MissionExperienceScreen> {
   );
 }
 
-class _MissionCard extends StatelessWidget {
-  const _MissionCard({
-    required this.mission,
+class _MissionStartCard extends StatelessWidget {
+  const _MissionStartCard({
+    required this.choosingTime,
     required this.busy,
-    required this.active,
-    this.onSelect,
-    this.onComplete,
-    this.onCancel,
-    this.onReplace,
+    required this.onStart,
+    required this.onTimeSelected,
   });
-  final UserMission mission;
+
+  final bool choosingTime;
   final bool busy;
-  final bool active;
-  final VoidCallback? onSelect;
-  final VoidCallback? onComplete;
-  final VoidCallback? onCancel;
-  final VoidCallback? onReplace;
+  final VoidCallback onStart;
+  final ValueChanged<AvailableTime> onTimeSelected;
 
   @override
   Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: active ? NoveltyColors.primaryFaint : Colors.white,
-      border: Border.all(
-        color: active ? NoveltyColors.primarySubtle : NoveltyColors.line,
-      ),
-      borderRadius: BorderRadius.circular(16),
+    key: const Key('mission-settings-form'),
+    height: 220,
+    padding: const EdgeInsets.all(24),
+    decoration: _missionDecoration(emphasized: true),
+    child: AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      child: choosingTime
+          ? Column(
+              key: const Key('mission-time-picker'),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  '새로운 모험에 사용할 시간을 알려주세요.',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    for (final time in const [
+                      AvailableTime.short,
+                      AvailableTime.medium,
+                      AvailableTime.long,
+                    ])
+                      OutlinedButton(
+                        key: Key('mission-time-${time.code}'),
+                        onPressed: busy ? null : () => onTimeSelected(time),
+                        child: Text(
+                          time == AvailableTime.long ? '1시간' : time.label,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            )
+          : Column(
+              key: const Key('mission-start'),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '평소와 다른 작은 행동을 시작해 보세요.',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ),
+                const Spacer(),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    key: const Key('mission-start-select'),
+                    onPressed: onStart,
+                    label: const Text('선택하기'),
+                    icon: const Icon(Icons.arrow_forward_rounded),
+                  ),
+                ),
+              ],
+            ),
     ),
+  );
+}
+
+class _MissionCarousel extends StatelessWidget {
+  const _MissionCarousel({
+    required this.missions,
+    required this.controller,
+    required this.busy,
+    required this.onSelect,
+    required this.onChangeTime,
+  });
+
+  final List<UserMission> missions;
+  final PageController controller;
+  final bool busy;
+  final ValueChanged<UserMission> onSelect;
+  final VoidCallback onChangeTime;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      SizedBox(
+        key: const Key('mission-carousel'),
+        height: 270,
+        child: PageView.builder(
+          controller: controller,
+          padEnds: false,
+          itemCount: missions.length,
+          itemBuilder: (context, index) {
+            final mission = missions[index];
+            return Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Container(
+                padding: const EdgeInsets.all(22),
+                decoration: _missionDecoration(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      '${mission.category.label} · ${mission.estimatedMinutes}분 · 난이도 ${mission.difficulty}',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      mission.title,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      mission.description,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const Spacer(),
+                    FilledButton(
+                      key: Key('mission-select-${mission.userMissionId}'),
+                      onPressed: busy ? null : () => onSelect(mission),
+                      child: const Text('선택'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton(
+          key: const Key('mission-change-time'),
+          onPressed: busy ? null : onChangeTime,
+          child: const Text('시간 변경'),
+        ),
+      ),
+    ],
+  );
+}
+
+class _ActiveMissionCard extends StatelessWidget {
+  const _ActiveMissionCard({
+    required this.mission,
+    required this.busy,
+    required this.onComplete,
+    required this.onReplace,
+    required this.onCancel,
+  });
+
+  final UserMission mission;
+  final bool busy;
+  final VoidCallback onComplete;
+  final VoidCallback onReplace;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('mission-today-screen'),
+    padding: const EdgeInsets.all(24),
+    decoration: _missionDecoration(),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(mission.title, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 6),
-        Text(mission.description),
-        const SizedBox(height: 10),
-        Text(
-          '${mission.category.label} · ${mission.estimatedMinutes}분 · 난이도 ${mission.difficulty}',
-          style: Theme.of(context).textTheme.bodyMedium,
+        Row(
+          children: [
+            const Chip(label: Text('진행중')),
+            const Spacer(),
+            Text('${mission.category.label} · ${mission.estimatedMinutes}분'),
+          ],
         ),
-        const SizedBox(height: 16),
-        if (!active)
-          FilledButton(
-            key: Key('mission-select-${mission.userMissionId}'),
-            onPressed: busy ? null : onSelect,
-            child: const Text('이 미션 선택'),
-          )
-        else ...[
-          FilledButton(
-            key: Key('mission-complete-${mission.userMissionId}'),
-            onPressed: busy ? null : onComplete,
-            child: const Text('완료'),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  key: Key('mission-replace-${mission.userMissionId}'),
-                  onPressed: busy ? null : onReplace,
-                  child: const Text('변경'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextButton(
-                  key: Key('mission-cancel-${mission.userMissionId}'),
-                  onPressed: busy ? null : onCancel,
-                  child: const Text('취소'),
-                ),
-              ),
-            ],
-          ),
-        ],
+        const SizedBox(height: 12),
+        Text(mission.title, style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 8),
+        Text(mission.description, style: Theme.of(context).textTheme.bodyLarge),
+        const SizedBox(height: 24),
+        FilledButton(
+          key: Key('mission-complete-${mission.userMissionId}'),
+          onPressed: busy ? null : onComplete,
+          child: Text(busy ? '처리 중...' : '완료'),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              key: Key('mission-replace-${mission.userMissionId}'),
+              onPressed: busy ? null : onReplace,
+              child: const Text('변경'),
+            ),
+            TextButton(
+              key: Key('mission-cancel-${mission.userMissionId}'),
+              onPressed: busy ? null : onCancel,
+              child: const Text('취소'),
+            ),
+          ],
+        ),
       ],
     ),
   );
 }
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.summary});
-  final MissionSummary summary;
+class _CompletedMissionCard extends StatelessWidget {
+  const _CompletedMissionCard({required this.mission});
+  final UserMission mission;
+
   @override
   Widget build(BuildContext context) => Container(
-    key: const Key('mission-summary'),
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      border: Border.all(color: NoveltyColors.line),
-      borderRadius: BorderRadius.circular(16),
+    key: const Key('mission-completed-card'),
+    padding: const EdgeInsets.all(24),
+    decoration: _missionDecoration(),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Chip(label: Text('완료')),
+        const SizedBox(height: 12),
+        Text(mission.title, style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 8),
+        Text(mission.description),
+        const SizedBox(height: 16),
+        const Text('아래 행동 선호에서 이번 경험의 방향을 확인할 수 있어요.'),
+      ],
     ),
+  );
+}
+
+class _CompletedTodayCard extends StatelessWidget {
+  const _CompletedTodayCard();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('mission-completed-today'),
+    padding: const EdgeInsets.all(24),
+    decoration: _missionDecoration(),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('나의 미션 기록', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8),
-        Text('총 ${summary.completedMissionCount}개 완료'),
-        if (summary.categoryStats.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final stat in summary.categoryStats)
-                Chip(
-                  label: Text('${stat.category.label} ${stat.completedCount}'),
-                ),
-            ],
-          ),
-        ],
+        const Chip(label: Text('완료')),
+        const SizedBox(height: 12),
+        Text('오늘의 미션을 완료했어요', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 6),
+        const Text('내일 새로운 미션으로 다시 만나요.'),
       ],
     ),
   );
 }
 
-class _EmptyCard extends StatelessWidget {
-  const _EmptyCard(this.message);
-  final String message;
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: NoveltyColors.surfaceAlt,
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Text(message),
-  );
-}
+BoxDecoration _missionDecoration({bool emphasized = false}) => BoxDecoration(
+  color: emphasized ? NoveltyColors.primaryFaint : Colors.white,
+  border: Border.all(
+    color: emphasized ? NoveltyColors.primarySubtle : NoveltyColors.line,
+  ),
+  borderRadius: BorderRadius.circular(16),
+);

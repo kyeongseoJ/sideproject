@@ -1,3 +1,5 @@
+import 'package:novelty_app/world/world_models.dart';
+
 enum AvailableTime {
   quick('QUICK', '5분'),
   short('SHORT', '15분'),
@@ -78,6 +80,10 @@ class UserMission {
     required this.category,
     required this.difficulty,
     required this.estimatedMinutes,
+    required this.indoorOutdoor,
+    required this.socialLevel,
+    required this.activityLevel,
+    required this.noveltyLevel,
     required this.status,
     required this.personalityDistance,
   });
@@ -89,6 +95,10 @@ class UserMission {
   final MissionCategory category;
   final int difficulty;
   final int estimatedMinutes;
+  final int indoorOutdoor;
+  final int socialLevel;
+  final int activityLevel;
+  final int noveltyLevel;
   final MissionStatus status;
   final double personalityDistance;
 
@@ -99,6 +109,10 @@ class UserMission {
     final description = json['description'];
     final difficulty = json['difficulty'];
     final estimatedMinutes = json['estimatedMinutes'];
+    final indoorOutdoor = json['indoorOutdoor'];
+    final socialLevel = json['socialLevel'];
+    final activityLevel = json['activityLevel'];
+    final noveltyLevel = json['noveltyLevel'];
     final distance = json['personalityDistance'];
     if (userMissionId is! int ||
         userMissionId <= 0 ||
@@ -113,6 +127,18 @@ class UserMission {
         difficulty > 3 ||
         estimatedMinutes is! int ||
         estimatedMinutes <= 0 ||
+        indoorOutdoor is! int ||
+        indoorOutdoor < -1 ||
+        indoorOutdoor > 1 ||
+        socialLevel is! int ||
+        socialLevel < -1 ||
+        socialLevel > 1 ||
+        activityLevel is! int ||
+        activityLevel < 0 ||
+        activityLevel > 2 ||
+        noveltyLevel is! int ||
+        noveltyLevel < 0 ||
+        noveltyLevel > 2 ||
         distance is! num ||
         distance < 0 ||
         distance > 1) {
@@ -126,6 +152,10 @@ class UserMission {
       category: _enumByCode(MissionCategory.values, json['category']),
       difficulty: difficulty,
       estimatedMinutes: estimatedMinutes,
+      indoorOutdoor: indoorOutdoor,
+      socialLevel: socialLevel,
+      activityLevel: activityLevel,
+      noveltyLevel: noveltyLevel,
       status: _enumByCode(MissionStatus.values, json['status']),
       personalityDistance: distance.toDouble(),
     );
@@ -239,6 +269,7 @@ class MissionActionResult {
     this.summary,
     this.personalityUpdated = false,
     this.llmGenerationStatus,
+    this.worldGrowth,
   });
 
   final UserMission mission;
@@ -247,6 +278,7 @@ class MissionActionResult {
   final MissionSummary? summary;
   final bool personalityUpdated;
   final String? llmGenerationStatus;
+  final WorldGrowth? worldGrowth;
 
   factory MissionActionResult.fromJson(Map<String, Object?> json) {
     final mission = json['mission'];
@@ -261,11 +293,13 @@ class MissionActionResult {
     MissionSummary? summary;
     bool updated = false;
     String? llmStatus;
+    WorldGrowth? worldGrowth;
     if (completion != null) {
       if (completion is! Map<String, Object?> ||
           completion['summary'] is! Map<String, Object?> ||
           completion['personalityUpdated'] is! bool ||
-          completion['llmGenerationStatus'] is! String) {
+          completion['llmGenerationStatus'] is! String ||
+          completion['worldGrowth'] is! Map<String, Object?>) {
         throw const FormatException('Invalid completion effect.');
       }
       summary = MissionSummary.fromJson(
@@ -273,6 +307,9 @@ class MissionActionResult {
       );
       updated = completion['personalityUpdated'] as bool;
       llmStatus = completion['llmGenerationStatus'] as String;
+      worldGrowth = WorldGrowth.fromJson(
+        completion['worldGrowth'] as Map<String, Object?>,
+      );
     }
     return MissionActionResult(
       mission: UserMission.fromJson(mission),
@@ -281,6 +318,7 @@ class MissionActionResult {
       summary: summary,
       personalityUpdated: updated,
       llmGenerationStatus: llmStatus,
+      worldGrowth: worldGrowth,
     );
   }
 }

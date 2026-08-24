@@ -45,27 +45,30 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: buildNoveltyTheme(),
-          home: MissionExperienceScreen(
-            gateway: missionApi,
-            userKey: user.userKey,
-            onBackToProfile: () async {},
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: MissionDashboardSection(
+                gateway: missionApi,
+                userKey: user.userKey,
+              ),
+            ),
           ),
         ),
       );
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('mission-settings-form')), findsOneWidget);
 
+      await tester.tap(find.byKey(const Key('mission-start-select')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('mission-time-MEDIUM')));
-      await tester.tap(find.byKey(const Key('mission-limit-1')));
-      await tester.tap(find.byKey(const Key('mission-settings-save')));
       await tester.pumpAndSettle();
-      expect(find.text('추천 미션'), findsOneWidget);
-      expect(find.text('이 미션 선택'), findsWidgets);
+      expect(find.byKey(const Key('mission-carousel')), findsOneWidget);
+      expect(find.text('선택'), findsWidgets);
 
-      await tester.ensureVisible(find.text('이 미션 선택').first);
-      await tester.tap(find.text('이 미션 선택').first);
+      await tester.ensureVisible(find.text('선택').first);
+      await tester.tap(find.text('선택').first);
       await tester.pumpAndSettle();
-      expect(find.text('수행 중'), findsOneWidget);
+      expect(find.text('진행중'), findsOneWidget);
       final completeButton = find.widgetWithText(FilledButton, '완료');
       expect(completeButton, findsOneWidget);
 
@@ -73,7 +76,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(completeButton);
       await tester.pumpAndSettle();
-      expect(find.text('총 1개 완료'), findsOneWidget);
+      expect(find.byKey(const Key('mission-completed-card')), findsOneWidget);
 
       final summary = await missionApi.getSummary(user.userKey);
       expect(summary.completedMissionCount, 1);

@@ -15,6 +15,7 @@ void main() {
     await _pumpForm(tester, _FakeGateway());
 
     expect(find.text('쉬는 날의 나는?'), findsOneWidget);
+    expect(find.byKey(const Key('personality-back-button')), findsNothing);
     expect(_filledButton(tester, 'personality-next-button').onPressed, isNull);
 
     await _tap(tester, 'personality-option-1-INDOOR');
@@ -22,6 +23,10 @@ void main() {
       _filledButton(tester, 'personality-next-button').onPressed,
       isNotNull,
     );
+
+    await _tap(tester, 'personality-next-button');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('personality-back-button')), findsOneWidget);
   });
 
   testWidgets('shows all six questions and submits the exact V2 answers', (
@@ -300,6 +305,10 @@ class _FakeGateway implements PersonalityGateway {
   @override
   Future<UserProfile> getCurrentUser(String userKey) =>
       throw UnimplementedError();
+
+  @override
+  Future<String> updateNickname(String userKey, String nickname) async =>
+      nickname;
 }
 
 class _SequenceKey implements SubmissionKeyGenerator {

@@ -2,12 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:novelty_app/api/api_base_url.dart';
 import 'package:novelty_app/personality/personality_models.dart';
 
 abstract interface class PersonalityGateway {
   Future<AnonymousUser> createAnonymousUser();
 
   Future<UserProfile> getCurrentUser(String userKey);
+
+  Future<String> updateNickname(String userKey, String nickname);
 
   Future<PersonalityAnalysisResult> submitAnalysis(
     String userKey,
@@ -23,6 +26,10 @@ enum PersonalityApiErrorCode {
   personalityNotAnalyzed('PERSONALITY_NOT_ANALYZED'),
   submissionKeyConflict('SUBMISSION_KEY_CONFLICT'),
   personalitySaveFailed('PERSONALITY_SAVE_FAILED'),
+  invalidNickname('INVALID_NICKNAME'),
+  bannedNickname('BANNED_NICKNAME'),
+  duplicateNickname('DUPLICATE_NICKNAME'),
+  profileSaveFailed('PROFILE_SAVE_FAILED'),
   unknown('UNKNOWN');
 
   const PersonalityApiErrorCode(this.code);
@@ -64,10 +71,10 @@ class PersonalityApiException implements Exception {
 class PersonalityApi implements PersonalityGateway {
   PersonalityApi({
     http.Client? client,
-    String baseUrl = const String.fromEnvironment('API_BASE_URL'),
+    String? baseUrl,
     Duration timeout = const Duration(seconds: 10),
   }) : _client = client ?? http.Client(),
-       _baseUrl = baseUrl.trim(),
+       _baseUrl = (baseUrl ?? resolveApiBaseUrl()).trim(),
        _timeout = timeout;
 
   final http.Client _client;
@@ -97,6 +104,30 @@ class PersonalityApi implements PersonalityGateway {
       throw _apiError(response);
     }
     return _parse(() => UserProfile.fromJson(_readJsonObject(response)));
+  }
+
+  @override
+  Future<String> updateNickname(String userKey, String nickname) async {
+    final response = await _send(
+      () => _client.patch(
+        _uri('/api/users/me/nickname'),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'X-User-Key': userKey,
+        },
+        body: jsonEncode(<String, Object>{'nickname': nickname}),
+      ),
+    );
+    if (response.statusCode != 200) {
+      throw _apiError(response);
+    }
+    return _parse(() {
+      final value = _readJsonObject(response)['nickname'];
+      if (value is! String || value.trim().isEmpty) {
+        throw const FormatException('Invalid nickname response.');
+      }
+      return value;
+    });
   }
 
   @override

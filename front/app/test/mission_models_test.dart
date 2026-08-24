@@ -2,6 +2,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:novelty_app/mission/mission_models.dart';
 
 void main() {
+  test('uses the canonical mission category codes', () {
+    expect(MissionCategory.values.map((value) => value.code), {
+      'MOVEMENT',
+      'CREATIVE',
+      'FOOD',
+      'LEARNING',
+      'SOCIAL',
+      'OUTDOOR',
+      'ORGANIZING',
+      'CULTURE',
+    });
+  });
+
   test('parses a valid mission and maps UI status labels', () {
     final mission = UserMission.fromJson({
       'userMissionId': 1,
@@ -11,6 +24,10 @@ void main() {
       'category': 'CULTURE',
       'difficulty': 1,
       'estimatedMinutes': 15,
+      'indoorOutdoor': -1,
+      'socialLevel': -1,
+      'activityLevel': 0,
+      'noveltyLevel': 2,
       'personalityDistance': 0.8,
       'status': 'SELECTED',
     });

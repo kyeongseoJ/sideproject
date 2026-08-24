@@ -157,7 +157,7 @@ void main() {
     );
   });
 
-  testWidgets('shows loading then the V2 form entry for a new user', (
+  testWidgets('shows loading then nickname setup for a new user', (
     tester,
   ) async {
     final completer = Completer<AnonymousUser>();
@@ -178,7 +178,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('personality-form-entry')), findsOneWidget);
-    expect(find.text('쉬는 날의 나는?'), findsOneWidget);
+    expect(find.text('먼저 이름을 정해 주세요'), findsOneWidget);
+    expect(find.byKey(const Key('nickname-setup-input')), findsOneWidget);
+    expect(
+      find.byKey(const Key('novelty-service-description')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('returning-user-guidance')), findsOneWidget);
   });
 
   testWidgets('skips the form and shows profile entry for analyzed user', (
@@ -284,6 +290,10 @@ class _FakePersonalityGateway implements PersonalityGateway {
     if (getError != null) throw getError!;
     return currentUser ?? _notAnalyzedUser();
   }
+
+  @override
+  Future<String> updateNickname(String userKey, String nickname) async =>
+      nickname;
 
   @override
   Future<PersonalityAnalysisResult> submitAnalysis(

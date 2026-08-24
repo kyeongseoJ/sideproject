@@ -12,6 +12,8 @@ dependencies:
   google_fonts: ^8.2.1
   http: ^1.6.0
   shared_preferences: ^2.5.5
+  web: ^1.1.1
+  webview_flutter: ^4.14.1
 
 dev_dependencies:
   flutter_test:
@@ -23,3 +25,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/config/nickname_banned_words.txt
+    - assets/world3d/
+    - assets/world3d/assets/
+    - assets/world3d/models/

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:novelty_app/api/api_base_url.dart';
 import 'package:novelty_app/mission/mission_models.dart';
 
 abstract interface class MissionGateway {
@@ -43,10 +44,10 @@ class MissionApiException implements Exception {
 class MissionApi implements MissionGateway {
   MissionApi({
     http.Client? client,
-    String baseUrl = const String.fromEnvironment('API_BASE_URL'),
+    String? baseUrl,
     Duration timeout = const Duration(seconds: 10),
   }) : _client = client ?? http.Client(),
-       _baseUrl = baseUrl.trim(),
+       _baseUrl = (baseUrl ?? resolveApiBaseUrl()).trim(),
        _timeout = timeout;
 
   final http.Client _client;

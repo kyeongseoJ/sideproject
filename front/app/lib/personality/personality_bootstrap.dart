@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:novelty_app/api/mission_api.dart';
 import 'package:novelty_app/api/personality_api.dart';
+import 'package:novelty_app/api/world_api.dart';
 import 'package:novelty_app/personality/personality_experience_screen.dart';
 import 'package:novelty_app/personality/personality_models.dart';
 import 'package:novelty_app/user/user_key_store.dart';
@@ -106,11 +107,13 @@ class PersonalityBootstrapScreen extends StatefulWidget {
     this.gateway,
     this.missionGateway,
     this.userKeyStore,
+    this.worldGateway,
   });
 
   final PersonalityGateway? gateway;
   final MissionGateway? missionGateway;
   final UserKeyStore? userKeyStore;
+  final WorldGateway? worldGateway;
 
   @override
   State<PersonalityBootstrapScreen> createState() =>
@@ -121,6 +124,7 @@ class _PersonalityBootstrapScreenState
     extends State<PersonalityBootstrapScreen> {
   PersonalityApi? _ownedApi;
   MissionApi? _ownedMissionApi;
+  WorldApi? _ownedWorldApi;
   late final PersonalityBootstrapService _service;
   PersonalityBootstrapResult? _result;
   PersonalityBootstrapException? _error;
@@ -130,6 +134,9 @@ class _PersonalityBootstrapScreenState
     super.initState();
     final gateway = widget.gateway ?? (_ownedApi = PersonalityApi());
     _ownedMissionApi = widget.missionGateway == null ? MissionApi() : null;
+    _ownedWorldApi = widget.worldGateway == null && widget.gateway == null
+        ? WorldApi()
+        : null;
     _service = PersonalityBootstrapService(
       gateway: gateway,
       userKeyStore: widget.userKeyStore ?? SharedPreferencesUserKeyStore(),
@@ -141,6 +148,7 @@ class _PersonalityBootstrapScreenState
   void dispose() {
     _ownedApi?.close();
     _ownedMissionApi?.close();
+    _ownedWorldApi?.close();
     super.dispose();
   }
 
@@ -191,6 +199,7 @@ class _PersonalityBootstrapScreenState
       ),
       gateway: widget.gateway ?? _ownedApi!,
       missionGateway: widget.missionGateway ?? _ownedMissionApi,
+      worldGateway: widget.worldGateway ?? _ownedWorldApi,
       userKey: result.userKey,
       initialUser: result.user,
     );

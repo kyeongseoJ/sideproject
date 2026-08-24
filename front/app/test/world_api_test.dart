@@ -1,0 +1,36 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:novelty_app/api/world_api.dart';
+
+void main() {
+  test('GET /api/world sends the user key', () async {
+    final api = WorldApi(
+      baseUrl: 'http://localhost:8080',
+      client: MockClient((request) async {
+        expect(request.url.path, '/api/world');
+        expect(request.headers['X-User-Key'], 'user-key');
+        return http.Response(
+          '{"objects":[{"objectCode":"BOOKSHELF","categoryCode":"LEARNING","level":1,"exp":0,"nextLevelRequiredExp":50}]}',
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      }),
+    );
+    expect(
+      (await api.getSnapshot('user-key')).objects.single.objectCode,
+      'BOOKSHELF',
+    );
+  });
+
+  test('invalid contract is reported as a safe API error', () async {
+    final api = WorldApi(
+      baseUrl: 'http://localhost:8080',
+      client: MockClient((_) async => http.Response('{"objects":null}', 200)),
+    );
+    await expectLater(
+      api.getSnapshot('user-key'),
+      throwsA(isA<WorldApiException>()),
+    );
+  });
+}

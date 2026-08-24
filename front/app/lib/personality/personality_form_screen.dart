@@ -51,38 +51,85 @@ class _PersonalityFormScreenState extends State<PersonalityFormScreen> {
     return Scaffold(
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final useCardLayout = constraints.maxWidth >= 720;
           return SafeArea(
-            child: Padding(
-              padding: EdgeInsets.all(useCardLayout ? 24 : 0),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 680),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: useCardLayout
-                          ? Border.all(color: NoveltyColors.line)
-                          : null,
-                      borderRadius: BorderRadius.circular(
-                        useCardLayout ? 16 : 0,
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(
-                        useCardLayout ? 16 : 0,
-                      ),
-                      child: _result == null
-                          ? _buildForm()
-                          : _buildResultBoundary(_result!),
-                    ),
-                  ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                  child: _result == null
+                      ? _buildSurveyLayout()
+                      : DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(color: NoveltyColors.line),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: _buildResultBoundary(_result!),
+                        ),
                 ),
               ),
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _buildSurveyLayout() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Novelty',
+          key: const Key('novelty-form-logo'),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineMedium?.copyWith(color: NoveltyColors.primary),
+        ),
+        const SizedBox(height: 28),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Semantics(
+            label: '성향 분석 진행률 ${_step + 1}단계, 총 $_questionCount단계',
+            child: Text.rich(
+              key: const Key('personality-step-label'),
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: '${_step + 1}',
+                    style: const TextStyle(
+                      color: NoveltyColors.primary,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' / $_questionCount',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: NoveltyColors.gray040,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: NoveltyColors.line),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: _buildForm(),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -93,47 +140,17 @@ class _PersonalityFormScreenState extends State<PersonalityFormScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  widget.nickname,
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
+          if (widget.onCancel != null) ...[
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                key: const Key('personality-form-cancel'),
+                onPressed: _isSubmitting ? null : widget.onCancel,
+                child: const Text('기존 프로필로 돌아가기'),
               ),
-              if (widget.onCancel != null)
-                TextButton(
-                  key: const Key('personality-form-cancel'),
-                  onPressed: _isSubmitting ? null : widget.onCancel,
-                  child: const Text('기존 프로필로 돌아가기'),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: Semantics(
-                  label: '성향 분석 진행률 ${_step + 1}단계, 총 $_questionCount단계',
-                  child: LinearProgressIndicator(
-                    key: const Key('personality-progress'),
-                    value: (_step + 1) / _questionCount,
-                    minHeight: 4,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Text(
-                '${_step + 1} / $_questionCount',
-                key: const Key('personality-step-label'),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-              ),
-            ],
-          ),
-          const SizedBox(height: 28),
+            ),
+            const SizedBox(height: 8),
+          ],
           Expanded(
             child: AbsorbPointer(
               absorbing: _isSubmitting,
@@ -153,13 +170,17 @@ class _PersonalityFormScreenState extends State<PersonalityFormScreen> {
           const SizedBox(height: 20),
           Row(
             children: [
-              OutlinedButton(
-                key: const Key('personality-back-button'),
-                onPressed: _step == 0 || _isSubmitting ? null : _goBack,
-                child: const Text('이전'),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
+              if (_step > 0) ...[
+                OutlinedButton(
+                  key: const Key('personality-back-button'),
+                  onPressed: _isSubmitting ? null : _goBack,
+                  child: const Text('이전'),
+                ),
+                const SizedBox(width: 12),
+              ],
+              const Spacer(),
+              SizedBox(
+                width: 112,
                 child: FilledButton(
                   key: Key(
                     _step == _questionCount - 1
@@ -172,23 +193,13 @@ class _PersonalityFormScreenState extends State<PersonalityFormScreen> {
                           _errorMessage == null
                       ? _goNext
                       : null,
-                  child: _isSubmitting
-                      ? const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            ),
-                            SizedBox(width: 10),
-                            Text('분석 중...'),
-                          ],
-                        )
-                      : Text(_step == _questionCount - 1 ? '분석하기' : '다음'),
+                  child: Text(
+                    _isSubmitting
+                        ? '분석 중...'
+                        : _step == _questionCount - 1
+                        ? '분석하기'
+                        : '다음',
+                  ),
                 ),
               ),
             ],

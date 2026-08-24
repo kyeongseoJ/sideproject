@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novelty_app/novelty_theme.dart';
+import 'package:novelty_app/mission/behavior_preference_change.dart';
 import 'package:novelty_app/personality/personality_models.dart';
 import 'package:novelty_app/profile/personality_profile_screen.dart';
 
@@ -12,15 +13,18 @@ void main() {
     expect(find.text('노벨티07QK'), findsOneWidget);
     expect(find.text('고요한 몰입가'), findsOneWidget);
     expect(find.textContaining('익숙하고 조용한 공간'), findsOneWidget);
-    expect(find.text('실내 중심'), findsOneWidget);
-    expect(find.text('혼자 하는 편'), findsOneWidget);
-    expect(find.text('가벼운 움직임'), findsOneWidget);
-    expect(find.text('큰 새로움'), findsOneWidget);
+    expect(find.textContaining('실내 중심'), findsOneWidget);
+    expect(find.textContaining('혼자 하는 편'), findsOneWidget);
+    expect(find.textContaining('가벼운 움직임'), findsOneWidget);
+    expect(find.textContaining('큰 새로움'), findsOneWidget);
     expect(find.text('계획 실행형'), findsOneWidget);
     expect(find.text('만들기'), findsOneWidget);
     expect(find.text('배우기'), findsOneWidget);
-    expect(find.text('마지막 분석 2026.08.19 17:15'), findsOneWidget);
-    expect(find.text('분석 버전 PERSONALITY_V2'), findsOneWidget);
+    expect(
+      find.text('마지막 분석 2026.08.19 17:15\nPERSONALITY_V2'),
+      findsOneWidget,
+    );
+    expect(find.byType(LinearProgressIndicator), findsNWidgets(4));
 
     await tester.ensureVisible(
       find.byKey(const Key('personality-reanalyze-button')),
@@ -29,18 +33,17 @@ void main() {
     expect(reanalyzeCalls, 1);
   });
 
-  testWidgets('provides a clear boundary without time or mission navigation', (
+  testWidgets('separates interests and behavior preference sections', (
     tester,
   ) async {
     await _pumpProfile(tester);
 
+    expect(find.byKey(const Key('personality-summary-card')), findsOneWidget);
     expect(
-      find.byKey(const Key('personality-profile-boundary')),
+      find.byKey(const Key('personality-profile-interests')),
       findsOneWidget,
     );
-    expect(find.textContaining('할애 가능 시간과 미션은 다음 기능'), findsOneWidget);
-    expect(find.text('사용 가능한 시간'), findsNothing);
-    expect(find.text('미션 생성하기'), findsNothing);
+    expect(find.byKey(const Key('personality-profile-traits')), findsOneWidget);
   });
 
   testWidgets('renders without overflow on a narrow screen', (tester) async {
@@ -60,15 +63,68 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('opens nickname editor and submits a valid nickname', (
+    tester,
+  ) async {
+    String? submitted;
+    await _pumpProfile(
+      tester,
+      onEditNickname: (nickname) async {
+        submitted = nickname;
+        return nickname;
+      },
+    );
+
+    await tester.tap(find.byKey(const Key('nickname-edit-button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('nickname-edit-dialog')), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('nickname-edit-input')),
+      '새닉네임7',
+    );
+    await tester.tap(find.byKey(const Key('nickname-edit-submit')));
+    await tester.pumpAndSettle();
+
+    expect(submitted, '새닉네임7');
+    expect(find.byKey(const Key('nickname-edit-dialog')), findsNothing);
+  });
+
+  testWidgets('shows the latest mission preference direction separately', (
+    tester,
+  ) async {
+    await _pumpProfile(
+      tester,
+      lastPreferenceChange: const BehaviorPreferenceChange(
+        indoorOutdoor: 1,
+        social: 0,
+        activity: 1,
+        novelty: -1,
+      ),
+    );
+
+    expect(find.byKey(const Key('behavior-preference-change')), findsOneWidget);
+    expect(find.text('실외 경험 +1'), findsOneWidget);
+    expect(find.text('활동성 경험 +1'), findsOneWidget);
+    expect(find.text('익숙함 경험 +1'), findsOneWidget);
+  });
 }
 
-Future<void> _pumpProfile(WidgetTester tester, {VoidCallback? onReanalyze}) {
+Future<void> _pumpProfile(
+  WidgetTester tester, {
+  VoidCallback? onReanalyze,
+  Future<String> Function(String)? onEditNickname,
+  BehaviorPreferenceChange? lastPreferenceChange,
+}) {
   return tester.pumpWidget(
     MaterialApp(
       theme: buildNoveltyTheme(),
       home: PersonalityProfileScreen(
         user: _analyzedUser(),
         onReanalyze: onReanalyze ?? () {},
+        onEditNickname: onEditNickname,
+        lastPreferenceChange: lastPreferenceChange,
       ),
     ),
   );

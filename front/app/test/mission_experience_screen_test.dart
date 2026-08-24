@@ -15,13 +15,14 @@ void main() {
     await _pump(tester, gateway);
 
     expect(find.byKey(const Key('mission-settings-form')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('mission-start-select')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('mission-time-MEDIUM')));
-    await tester.tap(find.byKey(const Key('mission-limit-2')));
-    await tester.tap(find.byKey(const Key('mission-settings-save')));
     await tester.pumpAndSettle();
 
     expect(gateway.savedSettings?.availableTime, AvailableTime.medium);
-    expect(gateway.savedSettings?.dailyLimit, 2);
+    expect(gateway.savedSettings?.dailyLimit, 1);
+    expect(find.byKey(const Key('mission-carousel')), findsOneWidget);
     expect(find.text('새로운 길 걷기'), findsOneWidget);
   });
 
@@ -49,8 +50,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('mission-complete-14')));
       await tester.pumpAndSettle();
-      expect(find.text('총 1개 완료'), findsOneWidget);
-      expect(find.textContaining('성향 프로필도 갱신'), findsOneWidget);
+      expect(find.byKey(const Key('mission-completed-card')), findsOneWidget);
+      expect(find.textContaining('행동 선호 경험'), findsWidgets);
     },
   );
 
@@ -96,7 +97,22 @@ void main() {
     expect(find.byKey(const Key('mission-retry')), findsOneWidget);
     await tester.tap(find.byKey(const Key('mission-retry')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('mission-today-screen')), findsOneWidget);
+    expect(find.byKey(const Key('mission-carousel')), findsOneWidget);
+  });
+
+  testWidgets('does not offer another candidate after today is completed', (
+    tester,
+  ) async {
+    final gateway = _FakeMissionGateway();
+    gateway.today = _today(
+      completed: 1,
+      remaining: 0,
+      candidates: [_mission(13)],
+    );
+    await _pump(tester, gateway);
+
+    expect(find.byKey(const Key('mission-completed-today')), findsOneWidget);
+    expect(find.byKey(const Key('mission-carousel')), findsNothing);
   });
 }
 
@@ -104,10 +120,13 @@ Future<void> _pump(WidgetTester tester, MissionGateway gateway) async {
   await tester.pumpWidget(
     MaterialApp(
       theme: buildNoveltyTheme(),
-      home: MissionExperienceScreen(
-        gateway: gateway,
-        userKey: 'cached-user-key',
-        onBackToProfile: () async {},
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: MissionDashboardSection(
+            gateway: gateway,
+            userKey: 'cached-user-key',
+          ),
+        ),
       ),
     ),
   );
@@ -296,6 +315,10 @@ UserMission _mission(int id, {String title = '새로운 길 걷기'}) => UserMis
   category: MissionCategory.outdoor,
   difficulty: 1,
   estimatedMinutes: 10,
+  indoorOutdoor: 1,
+  socialLevel: 0,
+  activityLevel: 1,
+  noveltyLevel: 2,
   status: MissionStatus.shown,
   personalityDistance: 0.8,
 );
@@ -308,6 +331,10 @@ UserMission _copy(UserMission source, MissionStatus status) => UserMission(
   category: source.category,
   difficulty: source.difficulty,
   estimatedMinutes: source.estimatedMinutes,
+  indoorOutdoor: source.indoorOutdoor,
+  socialLevel: source.socialLevel,
+  activityLevel: source.activityLevel,
+  noveltyLevel: source.noveltyLevel,
   status: status,
   personalityDistance: source.personalityDistance,
 );

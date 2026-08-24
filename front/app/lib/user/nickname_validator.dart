@@ -27,11 +27,26 @@ class NicknameValidator {
 
   static const String assetPath = 'assets/config/nickname_banned_words.txt';
   static final RegExp _nicknamePattern = RegExp(r'^[가-힣A-Za-z0-9]{1,12}$');
+  static Future<NicknameValidator>? _defaultLoad;
 
   final Set<String> _normalizedBannedWords;
 
-  static Future<NicknameValidator> load({AssetBundle? bundle}) async {
-    final contents = await (bundle ?? rootBundle).loadString(assetPath);
+  static Future<NicknameValidator> load({AssetBundle? bundle}) {
+    if (bundle != null) return _loadFrom(bundle);
+    return _defaultLoad ??= _loadDefault();
+  }
+
+  static Future<NicknameValidator> _loadDefault() async {
+    try {
+      return await _loadFrom(rootBundle);
+    } catch (_) {
+      _defaultLoad = null;
+      rethrow;
+    }
+  }
+
+  static Future<NicknameValidator> _loadFrom(AssetBundle bundle) async {
+    final contents = await bundle.loadString(assetPath);
     return NicknameValidator.fromContents(contents);
   }
 

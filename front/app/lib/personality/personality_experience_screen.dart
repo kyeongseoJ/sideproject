@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:novelty_app/api/mission_api.dart';
-import 'package:novelty_app/mission/mission_experience_screen.dart';
+import 'package:novelty_app/mission/behavior_preference_change.dart';
+import 'package:novelty_app/mission/mission_models.dart';
 import 'package:novelty_app/api/personality_api.dart';
 import 'package:novelty_app/personality/personality_form_screen.dart';
 import 'package:novelty_app/personality/personality_models.dart';
 import 'package:novelty_app/personality/submission_key.dart';
 import 'package:novelty_app/profile/personality_profile_screen.dart';
+import 'package:novelty_app/user/nickname_input.dart';
+import 'package:novelty_app/world/world_spike_screen.dart';
+import 'package:novelty_app/api/world_api.dart';
+import 'package:novelty_app/world/world_models.dart';
+import 'package:novelty_app/world/world_screen.dart';
+import 'package:novelty_app/world/world_name.dart';
 
 class PersonalityExperienceScreen extends StatefulWidget {
   const PersonalityExperienceScreen({
@@ -15,6 +22,7 @@ class PersonalityExperienceScreen extends StatefulWidget {
     required this.initialUser,
     this.missionGateway,
     this.submissionSession,
+    this.worldGateway,
   });
 
   final PersonalityGateway gateway;
@@ -22,6 +30,7 @@ class PersonalityExperienceScreen extends StatefulWidget {
   final UserProfile initialUser;
   final MissionGateway? missionGateway;
   final PersonalitySubmissionSession? submissionSession;
+  final WorldGateway? worldGateway;
 
   @override
   State<PersonalityExperienceScreen> createState() =>
@@ -32,23 +41,42 @@ class _PersonalityExperienceScreenState
     extends State<PersonalityExperienceScreen> {
   late UserProfile _user;
   late bool _showingForm;
+  late bool _showingNickname;
   AnalysisMode _analysisMode = AnalysisMode.initial;
-  bool _showingMissions = false;
+  bool _showingWorld = false;
+  WorldGrowth? _pendingWorldGrowth;
+  BehaviorPreferenceChange? _lastPreferenceChange;
 
   @override
   void initState() {
     super.initState();
     _user = widget.initialUser;
-    _showingForm = !_user.personalityCompleted;
+    _showingNickname = !_user.personalityCompleted;
+    _showingForm = false;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_showingMissions && widget.missionGateway != null) {
-      return MissionExperienceScreen(
-        gateway: widget.missionGateway!,
+    if (_showingWorld) {
+      final gateway = widget.worldGateway;
+      if (gateway == null) {
+        return WorldSpikeScreen(
+          onBack: () => setState(() => _showingWorld = false),
+        );
+      }
+      return WorldScreen(
+        gateway: gateway,
         userKey: widget.userKey,
-        onBackToProfile: _returnFromMissions,
+        worldName: personalityWorldName(_user.personality!),
+        baseCategoryCodes: personalityWorldCategories(_user.personality!),
+        pendingGrowth: _pendingWorldGrowth,
+        onBack: () => setState(() => _showingWorld = false),
+      );
+    }
+    if (_showingNickname) {
+      return NicknameSetupScreen(
+        initialNickname: _user.nickname,
+        onSubmit: _saveInitialNickname,
       );
     }
     if (_showingForm) {
@@ -69,22 +97,65 @@ class _PersonalityExperienceScreenState
     return PersonalityProfileScreen(
       user: _user,
       onReanalyze: _confirmReanalysis,
-      onOpenMissions: widget.missionGateway == null
-          ? null
-          : () => setState(() => _showingMissions = true),
+      onEditNickname: _editNickname,
+      onOpenWorld: () => setState(() => _showingWorld = true),
+      missionGateway: widget.missionGateway,
+      worldGateway: widget.worldGateway,
+      userKey: widget.userKey,
+      lastPreferenceChange: _lastPreferenceChange,
+      onWorldGrowth: (growth) => setState(() => _pendingWorldGrowth = growth),
+      onMissionCompleted: _handleMissionCompleted,
     );
   }
 
-  Future<void> _returnFromMissions() async {
+  Future<String> _saveInitialNickname(String nickname) async {
+    final saved = await widget.gateway.updateNickname(widget.userKey, nickname);
+    if (!mounted) return saved;
+    setState(() {
+      _user = UserProfile(
+        userId: _user.userId,
+        nickname: saved,
+        personalityCompleted: false,
+        personality: null,
+      );
+      _showingNickname = false;
+      _showingForm = true;
+    });
+    return saved;
+  }
+
+  Future<String> _editNickname(String nickname) async {
+    final saved = await widget.gateway.updateNickname(widget.userKey, nickname);
+    if (!mounted) return saved;
+    setState(() {
+      _user = UserProfile(
+        userId: _user.userId,
+        nickname: saved,
+        personalityCompleted: _user.personalityCompleted,
+        personality: _user.personality,
+      );
+    });
+    return saved;
+  }
+
+  void _handleMissionCompleted(MissionActionResult result) {
+    final profile = _user.personality;
+    if (profile == null) return;
+    setState(() {
+      _lastPreferenceChange = BehaviorPreferenceChange.fromMission(
+        result.mission,
+        profile,
+      );
+    });
+    if (result.personalityUpdated) _refreshUser();
+  }
+
+  Future<void> _refreshUser() async {
     try {
       final refreshed = await widget.gateway.getCurrentUser(widget.userKey);
-      if (!mounted) return;
-      setState(() {
-        _user = refreshed;
-        _showingMissions = false;
-      });
+      if (mounted) setState(() => _user = refreshed);
     } catch (_) {
-      if (mounted) setState(() => _showingMissions = false);
+      // 완료 결과는 유지하고 다음 앱 복원 시 최신 프로필을 다시 조회한다.
     }
   }
 
