@@ -162,7 +162,7 @@ Backend 전체 181개 테스트는 실패 0·환경조건부 12개 제외로 통
 | 계정·닉네임 | 자동 검증 완료 | 회원가입·로그인, PBKDF2 비밀번호 해시, 랜덤 초기 닉네임, 프로필 편집, 동일 Client 캐시 자동 복원 검증 |
 | Oracle Personality V2 Schema | 검증 완료 | 로컬 Oracle에 Phase 1 적용 및 재실행 성공. 기존 V1 설문 4건 보존 |
 | Oracle Mission·World 목표 Schema | 검증 완료 | World Table 3개·Object 8개·Level 40개 적용, 완료→EXP→Snapshot Rollback 통합 테스트 통과 |
-| Swagger UI | 검증 완료 | 공식 API 노출과 `/api/surveys`, `/api/missions/random`, `missionId` 직접 상태 변경 미노출 자동 검증. 기본 주소 `http://localhost:8080/swagger-ui.html` |
+| Swagger UI | 검증 완료 | 회원가입·로그인·사용자·성향·미션·World 공식 API 노출과 `/api/users/anonymous`, `/api/surveys`, `/api/missions/random`, `missionId` 직접 상태 변경 미노출 자동 검증. 기본 주소 `http://localhost:8080/swagger-ui.html` |
 | OpenAI 설정 | 진행 중 | API Key는 `OPENAI_API_KEY` 환경 변수로만 주입; 실제 연동 성공 검증 필요 |
 | Backend 자동 테스트 | 검증 완료 | 전체 회귀 188개 실행, 실패 0, 오류 0, 환경 조건부 12개 제외; 계정 Swagger 1개 별도 통과 및 Package 성공 |
 | Three.js Build | 검증 완료 | 8종×5레벨 GLB 40개 존재 및 Build 성공, 번들 612.36KB로 500KB 경고 존재 |
@@ -190,6 +190,7 @@ Backend 전체 181개 테스트는 실패 0·환경조건부 12개 제외로 통
 | 날짜 | 변경 내용 |
 |---|---|
 | 2026-08-24 | DESIGN.md 기준 Flutter 공통 Theme와 계정·설문·미션·프로필·World 화면을 재점검하고 CTA·입력·Card·Chip·상태·Utility Control 토큰을 통일 |
+| 2026-08-24 | World API 정상 Snapshot을 기준으로 빈 objects 오류 표시, 성향 필터 전체 fallback, Bridge objectCount 검증과 GLB 실패 asset 경로 표시를 구현하고 Flutter·Three.js 검증 완료 |
 | 2026-08-24 | 미션 매 완료 시 성향 네 축·유형 반영, 완료 응답 실제 변화량 표시, 5회 LLM 신규 미션의 다음 날짜 추천 후보 반영 계약과 World 도움말 5초 페이드 적용 |
 | 2026-08-24 | 계정 회원가입·로그인과 랜덤 닉네임 배정, PBKDF2 저장 및 Oracle 계정 컬럼·제약 적용, 성향 결과 Purple 카드, 미션 진행/완료 상태 패널, Web World 도움말 클릭 및 인라인·전체 World 8개 객체 5단계 즉시 성장 계약 보강 |
 | 2026-08-24 | `assets/ui` White 심볼·워드마크 기반 Web·Android 공통 애니메이션 스플래시 적용, 신규 사용자는 회원가입 화면으로 기본 진입하고 캐시 사용자는 기존 자동 복원 유지 |

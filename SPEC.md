@@ -85,7 +85,7 @@ Blender 또는 Asset 제작
 - 신규 사용자 시작 화면은 노벨티 효과와 매일 작은 새로운 행동을 돕는 서비스 목적을 설명한다.
 - Web과 Android는 `assets/ui`의 White 로고를 사용하는 공통 애니메이션 스플래시를 먼저 표시한다.
 - 캐시 사용자가 없는 경우 스플래시 다음 화면은 회원가입을 기본으로 열며 기존 사용자는 로그인으로 전환할 수 있다.
-- 분석 완료 후에는 프로필의 편집 아이콘으로 같은 닉네임 정책을 적용해 수정한다.
+- 닉네임 변경 API와 정책은 유지하지만, 현재 성향 프로필 화면에는 닉네임과 편집 버튼을 표시하지 않는다.
 
 ## 5. 사용자 식별과 캐시
 
@@ -286,9 +286,13 @@ COMPLETED
 - 상세 계약은 `docs/world-sdd-v1.md`를 기준으로 한다.
 - 성향 프로필 안에 회전·확대 가능한 World 미리보기를 표시하고 장면 또는 사물을 탭하면 전체 화면으로 이동한다.
 - 초기 World에는 성향 관심 Category의 Lv1 Object를 표시하고, 이후 완료 EXP가 있는 Category Object도 함께 표시한다.
+- `/api/world`의 `objects`가 비어 있으면 Flutter는 빈 방을 정상 상태로 표시하지 않고 `World 오브젝트 정보를 불러오지 못했습니다.`를 표시한다.
+- 성향 Category 필터 결과가 비어 있으면 전체 Snapshot Object를 fallback으로 사용해 빈 방을 방지한다.
+- `initializeWorld` Bridge payload는 `objectCount`와 실제 `objects.length`가 일치해야 하며, 1개 이상인 경우에만 전송한다.
+- GLB 로드 실패는 실패한 상대 asset 경로를 포함한 `rendererError`로 Flutter에 전달한다.
 - 전체 World 공간명은 현재 성향 유형에 맞는 이름을 사용한다.
 - 전체 World에서 Object를 Web 마우스·펜으로 가리키거나 Web·Android에서 탭하면 Object명, 연결된 성향 Category와 현재 성장 단계를 툴팁으로 표시한다.
-- 성향 완료 홈의 순서는 닉네임·성향명, 오늘의 미션, 프로필 요약, 관심 분야, 행동 선호, 3D World, 분석 메타 정보다.
+- 성향 완료 홈의 순서는 Novelty 워드마크·심볼, 성향명, 오늘의 미션, 프로필 요약, 관심 분야, 행동 선호, 3D World, 분석 메타 정보다.
 - 오늘의 미션은 시간 선택 후 후보를 가로 캐러셀로 표시하고, 선택 뒤에는 수행 중 미션 하나만 크게 표시한다.
 - 관심 분야와 행동 선호는 별도 영역으로 표시한다. 행동 선호의 네 축은 저장된 점수를 수치와 막대그래프로 표시한다.
 - 미션 완료 직후에는 Backend 완료 응답의 저장 전·후 네 축 차이 중 실제 변화가 있는 값만 프로필의 `성향 변동`으로 표시한다. Client가 미션 속성으로 변화량을 추정하지 않는다.
@@ -305,8 +309,8 @@ COMPLETED
 - Validation 오류, 중복, 찾을 수 없음, 상태 충돌과 Server 오류를 구분된 HTTP 상태와 오류 Body로 반환한다.
 - API는 springdoc-openapi에 노출하고 Swagger UI의 `Try it out`으로 정상·오류 사례를 시험할 수 있어야 한다.
 - 로컬 Swagger UI 주소는 `http://localhost:8080/swagger-ui.html`이다.
-- 공식 API는 사용자 생성·복원, `POST /api/personality-analyses`, `/api/missions/settings`, `/api/missions/today`, `/api/missions/today/recommendations`, `/api/user-missions/{userMissionId}/select|cancel|replace|complete`, `/api/missions/summary`, `GET /api/world`다.
-- 폐기된 `/api/surveys`, `/api/missions/random`, `PATCH /api/missions/{missionId}/status`는 Runtime과 Swagger에 노출하지 않는다.
+- 공식 API는 회원가입·로그인·사용자 복원·닉네임 변경, `POST /api/personality-analyses`, `/api/missions/settings`, `/api/missions/today`, `/api/missions/today/recommendations`, `/api/user-missions/{userMissionId}/select|cancel|replace|complete`, `/api/missions/summary`, `GET /api/world`다.
+- 폐기된 `/api/users/anonymous`, `/api/surveys`, `/api/missions/random`, `PATCH /api/missions/{missionId}/status`는 Runtime과 Swagger에 노출하지 않는다.
 - `userId`는 내부 사용자 식별자, `userKey`는 `X-User-Key` 인증·복원 값, `missionId`는 Catalog 식별자, `userMissionId`는 사용자 상태 변경 대상이다.
 
 ## 11. Database 규칙
@@ -380,6 +384,7 @@ COMPLETED
 | 날짜 | 변경 내용 |
 |---|---|
 | 2026-08-24 | DESIGN.md 전반 재점검: Noto Sans KR 공통 Theme, 44px CTA, 6px 버튼·입력·Badge, 16px 카드, 무그림자 hairline, 오류·성공 상태 색상과 World Utility Control 통일 |
+| 2026-08-24 | World Snapshot 빈 목록 오류 표시, 성향 필터 전체 fallback, initializeWorld objectCount 계약, GLB 실패 asset 경로 전달 정책 보강 |
 | 2026-08-24 | 매 미션 완료 시 성향 네 축·유형 갱신과 실제 전후 변화 응답, 5회 LLM 생성 미션의 다음 서비스 날짜 후보 반영, World 도움말 5초 페이드 정책 적용 |
 | 2026-08-24 | 계정 V1: 아이디·비밀번호 회원가입/로그인, PBKDF2 비밀번호 해시, 초기 랜덤 닉네임과 캐시 사용자 자동 복원 적용 |
 | 2026-08-24 | Web·Android 공통 White 로고 애니메이션 스플래시와 신규 사용자 회원가입 기본 진입 적용 |
