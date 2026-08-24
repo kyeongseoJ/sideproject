@@ -7,6 +7,9 @@ import java.time.OffsetDateTime;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -18,7 +21,9 @@ public class MissionRepository {
     private static final String MISSION_COLUMNS = """
             MISSION_ID, TITLE, DESCRIPTION, CATEGORY, DIFFICULTY,
             ESTIMATED_MINUTES, INDOOR_OUTDOOR, SOCIAL_LEVEL,
-            ACTIVITY_LEVEL, NOVELTY_LEVEL, ENABLED, SOURCE_TYPE
+            ACTIVITY_LEVEL, NOVELTY_LEVEL, ACTION_TYPE, CREATIVITY_LEVEL,
+            UNPREDICTABILITY_LEVEL, COMFORT_ZONE_DISTANCE, COST_LEVEL, TAGS,
+            ENABLED, SOURCE_TYPE
             """;
 
     private final JdbcTemplate jdbcTemplate;
@@ -56,15 +61,6 @@ public class MissionRepository {
         return jdbcTemplate.query(
                 "SELECT %s FROM MISSION WHERE ENABLED = 'Y'".formatted(MISSION_COLUMNS),
                 this::mapMission);
-    }
-
-    public Optional<Mission> findById(long missionId) {
-        return jdbcTemplate.query(
-                        "SELECT %s FROM MISSION WHERE MISSION_ID = ?".formatted(MISSION_COLUMNS),
-                        this::mapMission,
-                        missionId)
-                .stream()
-                .findFirst();
     }
 
     public List<Mission> findRecentCompleted(long userId, int limit) {
@@ -124,8 +120,10 @@ public class MissionRepository {
                 INSERT INTO MISSION (
                     MISSION_ID, TITLE, TITLE_NORMALIZED, DESCRIPTION, CATEGORY,
                     DIFFICULTY, ESTIMATED_MINUTES, INDOOR_OUTDOOR, SOCIAL_LEVEL,
-                    ACTIVITY_LEVEL, NOVELTY_LEVEL, ENABLED, SOURCE_TYPE, CONTENT_FINGERPRINT
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Y', 'LLM', ?)
+                    ACTIVITY_LEVEL, NOVELTY_LEVEL, ACTION_TYPE, CREATIVITY_LEVEL,
+                    UNPREDICTABILITY_LEVEL, COMFORT_ZONE_DISTANCE, COST_LEVEL, TAGS,
+                    ENABLED, SOURCE_TYPE, CONTENT_FINGERPRINT
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Y', 'LLM', ?)
                 """,
                 missionId,
                 generated.title(),
@@ -138,6 +136,12 @@ public class MissionRepository {
                 generated.socialLevel(),
                 generated.activityLevel(),
                 generated.noveltyLevel(),
+                generated.actionType().name(),
+                generated.creativityLevel(),
+                generated.unpredictabilityLevel(),
+                generated.comfortZoneDistance(),
+                generated.costLevel(),
+                serializeTags(generated.tags()),
                 fingerprint(generated.title(), generated.description()));
         return missionId;
     }
@@ -199,8 +203,28 @@ public class MissionRepository {
                 resultSet.getInt("SOCIAL_LEVEL"),
                 resultSet.getInt("ACTIVITY_LEVEL"),
                 resultSet.getInt("NOVELTY_LEVEL"),
+                MissionActionType.valueOf(resultSet.getString("ACTION_TYPE")),
+                resultSet.getInt("CREATIVITY_LEVEL"),
+                resultSet.getInt("UNPREDICTABILITY_LEVEL"),
+                resultSet.getInt("COMFORT_ZONE_DISTANCE"),
+                resultSet.getInt("COST_LEVEL"),
+                parseTags(resultSet.getString("TAGS")),
                 "Y".equals(resultSet.getString("ENABLED")),
                 MissionSourceType.valueOf(resultSet.getString("SOURCE_TYPE")));
+    }
+
+    static Set<String> parseTags(String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("mission tags are required.");
+        }
+        return Arrays.stream(value.split(","))
+                .map(String::trim)
+                .filter(tag -> !tag.isEmpty())
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    static String serializeTags(Set<String> tags) {
+        return tags.stream().sorted().collect(Collectors.joining(","));
     }
 
     private String fingerprint(String title, String description) {

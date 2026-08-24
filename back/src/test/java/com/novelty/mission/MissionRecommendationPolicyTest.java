@@ -2,6 +2,7 @@ package com.novelty.mission;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -13,6 +14,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.OptionalDouble;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +29,8 @@ class MissionRecommendationPolicyTest {
 
     @BeforeEach
     void setUp() {
-        policy = new MissionRecommendationPolicy(Clock.fixed(NOW, SEOUL));
+        policy = new MissionRecommendationPolicy(
+                Clock.fixed(NOW, SEOUL), (left, right) -> OptionalDouble.empty());
     }
 
     @Test
@@ -41,7 +45,10 @@ class MissionRecommendationPolicyTest {
         assertThat(result.personalityDistance()).isEqualTo(1.0);
         assertThat(result.categoryExplorationScore()).isEqualTo(0.25);
         assertThat(result.difficultyFitScore()).isZero();
-        assertThat(result.recommendationScore()).isEqualTo(0.75);
+        assertThat(result.noveltyScore()).isEqualTo(1.0);
+        assertThat(result.recentDiversityScore()).isEqualTo(1.0);
+        assertThat(result.explorationBonus()).isEqualTo(1.0);
+        assertThat(result.recommendationScore()).isCloseTo(0.8625, within(0.0001));
     }
 
     @Test
@@ -83,7 +90,7 @@ class MissionRecommendationPolicyTest {
                 event(5, MissionCategory.SOCIAL, MissionStatus.SHOWN, "2026-08-21T09:00:00+09:00"));
 
         assertThat(ids(recommend(missions, vector(0), AvailableTime.SHORT, Map.of(), history)))
-                .containsExactlyInAnyOrder(2L, 4L, 5L);
+                .containsExactlyInAnyOrder(2L, 5L);
     }
 
     @Test
@@ -101,7 +108,7 @@ class MissionRecommendationPolicyTest {
     }
 
     @Test
-    void returnsAtMostFiveCandidatesWithDistinctCategoriesFirst() {
+    void returnsAtMostThreeMutuallyDiverseCandidates() {
         List<Mission> missions = List.of(
                 mission(1, MissionCategory.MOVEMENT),
                 mission(2, MissionCategory.CREATIVE),
@@ -116,9 +123,9 @@ class MissionRecommendationPolicyTest {
         List<MissionRecommendation> results = recommend(
                 missions, vector(0), AvailableTime.SHORT, Map.of(), List.of());
 
-        assertThat(results).hasSize(5);
+        assertThat(results).hasSize(3);
         assertThat(results.stream().map(result -> result.mission().category()).distinct())
-                .hasSize(5);
+                .hasSize(3);
     }
 
     @Test
@@ -132,7 +139,7 @@ class MissionRecommendationPolicyTest {
         List<MissionRecommendation> results = recommend(
                 missions, vector(0), AvailableTime.SHORT, Map.of(), history);
 
-        assertThat(ids(results)).containsExactly(2L, 1L);
+        assertThat(scoreOf(results, 2L)).isGreaterThan(scoreOf(results, 1L));
     }
 
     @Test
@@ -151,7 +158,7 @@ class MissionRecommendationPolicyTest {
                 history,
                 new ZeroRandom());
 
-        assertThat(ids(results)).containsExactly(1L, 2L);
+        assertThat(scoreOf(results, 1L)).isEqualTo(scoreOf(results, 2L));
     }
 
     @Test
@@ -165,20 +172,20 @@ class MissionRecommendationPolicyTest {
         List<MissionRecommendation> results = recommend(
                 missions, vector(0), AvailableTime.SHORT, Map.of(), List.of());
 
-        assertThat(results).hasSize(4);
+        assertThat(results).hasSize(3);
         assertThat(results.get(0).mission().category())
                 .isNotEqualTo(results.get(1).mission().category());
     }
 
     @Test
-    void limitsWeightedRandomSelectionToTopTenRankedMissions() {
+    void limitsWeightedRandomSelectionToTopTwentyRankedMissions() {
         List<Mission> missions = new ArrayList<>();
-        for (long id = 1; id <= 10; id++) {
+        for (long id = 1; id <= 20; id++) {
             missions.add(mission(
                     id, MissionCategory.MOVEMENT, 1, 5, 1, 1, 2, 2, true, MissionSourceType.BASE));
         }
         missions.add(mission(
-                11, MissionCategory.MOVEMENT, 3, 5, -1, -1, 0, 0, true, MissionSourceType.BASE));
+                21, MissionCategory.MOVEMENT, 3, 5, -1, -1, 0, 0, true, MissionSourceType.BASE));
 
         assertThat(ids(recommend(
                         missions,
@@ -186,7 +193,7 @@ class MissionRecommendationPolicyTest {
                         AvailableTime.QUICK,
                         Map.of(MissionCategory.MOVEMENT, 100),
                         List.of())))
-                .doesNotContain(11L);
+                .doesNotContain(21L);
     }
 
     @Test
@@ -208,13 +215,149 @@ class MissionRecommendationPolicyTest {
     }
 
     @Test
-    void returnsAllEligibleMissionsWhenThereAreFewerThanFive() {
+    void returnsAllEligibleMissionsWhenThereAreFewerThanThree() {
         List<Mission> missions = List.of(
                 mission(1, MissionCategory.MOVEMENT),
                 mission(2, MissionCategory.FOOD));
 
         assertThat(ids(recommend(missions, vector(0), AvailableTime.SHORT, Map.of(), List.of())))
                 .containsExactlyInAnyOrder(1L, 2L);
+    }
+
+    @Test
+    void blocksPhraseVariantThatRepresentsTheSameRecentExperience() {
+        Mission completed = detailedMission(
+                90, "새로운 동네 카페를 찾아가 보기", "평소와 다른 카페에서 음료를 마셔 보세요.",
+                MissionCategory.OUTDOOR, MissionActionType.EXPLORE, 1, -1, 1, 0, 2, 2, 1,
+                Set.of("CAFE", "VISIT", "NEW_PLACE"));
+        Mission phraseVariant = detailedMission(
+                1, "처음 보는 카페 방문하기", "익숙하지 않은 카페 한 곳을 골라 음료를 주문하세요.",
+                MissionCategory.OUTDOOR, MissionActionType.EXPLORE, 1, -1, 1, 0, 2, 2, 1,
+                Set.of("CAFE", "VISIT", "NEW_PLACE"));
+        Mission different = detailedMission(
+                2, "오래 연락하지 않은 사람에게 안부 묻기", "짧은 메시지로 안부를 물어보세요.",
+                MissionCategory.SOCIAL, MissionActionType.CONNECT, 0, 1, 0, 0, 1, 1, 0,
+                Set.of("MESSAGE", "CONTACT"));
+
+        List<MissionRecommendation> results = recommend(
+                List.of(phraseVariant, different), vector(5), AvailableTime.SHORT, Map.of(),
+                List.of(completedEvent(900, completed, "2026-08-19T10:00:00+09:00")));
+
+        assertThat(ids(results)).containsExactly(2L);
+    }
+
+    @Test
+    void lowersScoreForRecentlyRepeatedCategoryAndPattern() {
+        Mission completed = detailedMission(
+                90, "계단 오르기", "가까운 계단을 천천히 올라 보세요.",
+                MissionCategory.MOVEMENT, MissionActionType.EXERCISE, 0, -1, 2, 0, 0, 1, 0,
+                Set.of("STAIRS", "EXERCISE"));
+        Mission repeated = detailedMission(
+                1, "새 동작 스트레칭", "처음 해보는 동작으로 몸을 풀어 보세요.",
+                MissionCategory.MOVEMENT, MissionActionType.PRACTICE, -1, -1, 1, 0, 1, 1, 0,
+                Set.of("STRETCH", "BODY"));
+        Mission unexplored = detailedMission(
+                2, "한 줄 그림 그리기", "펜을 떼지 않고 작은 그림을 그려 보세요.",
+                MissionCategory.CREATIVE, MissionActionType.CREATE, -1, -1, 0, 2, 1, 1, 0,
+                Set.of("DRAW", "ART"));
+        List<MissionRecommendation> results = recommend(
+                List.of(repeated, unexplored), vector(5), AvailableTime.SHORT, Map.of(),
+                List.of(completedEvent(900, completed, "2026-08-19T10:00:00+09:00")));
+
+        assertThat(scoreOf(results, 2L)).isGreaterThan(scoreOf(results, 1L));
+        assertThat(recommendationOf(results, 1L).repetitionPenalty()).isPositive();
+    }
+
+    @Test
+    void givesExplorationAdvantageToAnUnseenCategory() {
+        Mission movement = mission(1, MissionCategory.MOVEMENT);
+        Mission culture = mission(2, MissionCategory.CULTURE);
+
+        List<MissionRecommendation> results = recommend(
+                List.of(movement, culture), vector(5), AvailableTime.SHORT,
+                Map.of(MissionCategory.MOVEMENT, 8), List.of());
+
+        assertThat(scoreOf(results, 2L)).isGreaterThan(scoreOf(results, 1L));
+    }
+
+    @Test
+    void finalThreeAvoidOverlappingExperiencePatterns() {
+        Mission cafe = detailedMission(
+                1, "새 카페 방문", "가보지 않은 카페에 가세요.", MissionCategory.OUTDOOR,
+                MissionActionType.EXPLORE, 1, -1, 1, 0, 2, 2, 1, Set.of("CAFE", "VISIT"));
+        Mission restaurant = detailedMission(
+                2, "새 식당 방문", "가보지 않은 식당에 가세요.", MissionCategory.OUTDOOR,
+                MissionActionType.EXPLORE, 1, -1, 1, 0, 2, 2, 1, Set.of("RESTAURANT", "VISIT"));
+        Mission place = detailedMission(
+                3, "새 장소 방문", "익숙하지 않은 장소에 가세요.", MissionCategory.OUTDOOR,
+                MissionActionType.EXPLORE, 1, -1, 1, 0, 2, 2, 1, Set.of("PLACE", "VISIT"));
+        Mission contact = detailedMission(
+                4, "안부 연락", "오래 연락하지 않은 사람에게 안부를 물으세요.", MissionCategory.SOCIAL,
+                MissionActionType.CONNECT, 0, 1, 0, 0, 1, 1, 0, Set.of("MESSAGE", "CONTACT"));
+        Mission create = detailedMission(
+                5, "종이로 작은 모형 만들기", "종이를 접어 작은 모형을 만드세요.", MissionCategory.CREATIVE,
+                MissionActionType.CREATE, -1, -1, 0, 2, 1, 1, 0, Set.of("PAPER", "CRAFT"));
+
+        List<MissionRecommendation> results = policy.recommend(
+                List.of(cafe, restaurant, place, contact, create), vector(5), AvailableTime.SHORT,
+                Map.of(), List.of(), new ZeroRandom());
+
+        assertThat(results).hasSize(3);
+        assertThat(results.stream().map(result -> result.mission().category()).distinct()).hasSize(3);
+        assertThat(results.stream().map(result -> result.mission().actionType()).distinct()).hasSize(3);
+    }
+
+    @Test
+    void preservesPersonalityDistanceAsARecommendationSignal() {
+        UserMissionVector user = new UserMissionVector(-1, -1, 0, 0, 5);
+        Mission far = mission(1, MissionCategory.CREATIVE, 1, 5, 1, 1, 2, 2, true, MissionSourceType.BASE);
+        Mission near = mission(2, MissionCategory.MOVEMENT, 1, 5, -1, -1, 0, 0, true, MissionSourceType.BASE);
+
+        List<MissionRecommendation> results = recommend(
+                List.of(far, near), user, AvailableTime.QUICK, Map.of(), List.of());
+
+        assertThat(recommendationOf(results, 1L).personalityDistance())
+                .isGreaterThan(recommendationOf(results, 2L).personalityDistance());
+        assertThat(scoreOf(results, 1L)).isGreaterThan(scoreOf(results, 2L));
+    }
+
+    @Test
+    void appliesMoreSimilarityPenaltyToMoreRecentExperience() {
+        Mission completed = detailedMission(
+                90, "공원 식물 관찰", "공원에서 식물을 관찰하세요.", MissionCategory.OUTDOOR,
+                MissionActionType.OBSERVE, 1, -1, 1, 1, 1, 1, 0, Set.of("NATURE", "OBSERVE"));
+        Mission candidate = detailedMission(
+                1, "거리 간판 관찰", "거리에서 낯선 간판을 관찰하세요.", MissionCategory.OUTDOOR,
+                MissionActionType.OBSERVE, 1, -1, 0, 0, 2, 2, 0, Set.of("SIGN", "STREET"));
+
+        MissionRecommendation recent = recommendationOf(recommend(
+                List.of(candidate), vector(5), AvailableTime.SHORT, Map.of(),
+                List.of(completedEvent(900, completed, "2026-08-20T09:00:00+09:00"))), 1L);
+        MissionRecommendation older = recommendationOf(recommend(
+                List.of(candidate), vector(5), AvailableTime.SHORT, Map.of(),
+                List.of(completedEvent(901, completed, "2026-08-14T09:00:00+09:00"))), 1L);
+
+        assertThat(recent.similarityPenalty()).isGreaterThan(older.similarityPenalty());
+        assertThat(recent.recommendationScore()).isLessThan(older.recommendationScore());
+    }
+
+    @Test
+    void repeatedSkippedPatternsLowerFrequencyWithoutHardRemoval() {
+        Mission skipped = detailedMission(
+                90, "직원에게 추천 묻기", "직원에게 추천을 물으세요.", MissionCategory.SOCIAL,
+                MissionActionType.ASK, 1, 1, 0, 0, 2, 2, 1, Set.of("ASK", "SHOP"));
+        Mission candidate = detailedMission(
+                1, "낯선 사람에게 길 묻기", "안전한 장소에서 길을 물으세요.", MissionCategory.SOCIAL,
+                MissionActionType.ASK, 1, 1, 0, 0, 2, 2, 1, Set.of("ASK", "DIRECTION"));
+        List<MissionStatusEvent> history = List.of(
+                shownEvent(900, skipped, "2026-08-19T09:00:00+09:00"),
+                shownEvent(901, skipped, "2026-08-18T09:00:00+09:00"));
+
+        MissionRecommendation result = recommendationOf(recommend(
+                List.of(candidate), vector(5), AvailableTime.SHORT, Map.of(), history), 1L);
+
+        assertThat(result.rejectionPenalty()).isPositive();
+        assertThat(result.recommendationScore()).isPositive();
     }
 
     @Test
@@ -331,6 +474,27 @@ class MissionRecommendationPolicyTest {
                 sourceType);
     }
 
+    private Mission detailedMission(
+            long id,
+            String title,
+            String description,
+            MissionCategory category,
+            MissionActionType actionType,
+            int indoorOutdoor,
+            int socialLevel,
+            int activityLevel,
+            int creativityLevel,
+            int unpredictabilityLevel,
+            int comfortZoneDistance,
+            int costLevel,
+            Set<String> tags) {
+        return new Mission(
+                id, title, description, category, 1, 10,
+                indoorOutdoor, socialLevel, activityLevel, 2,
+                actionType, creativityLevel, unpredictabilityLevel,
+                comfortZoneDistance, costLevel, tags, true, MissionSourceType.BASE);
+    }
+
     private MissionStatusEvent event(
             long missionId,
             MissionCategory category,
@@ -341,6 +505,37 @@ class MissionRecommendationPolicyTest {
                 category.name(),
                 status,
                 OffsetDateTime.parse(occurredAt));
+    }
+
+    private MissionStatusEvent completedEvent(
+            long userMissionId,
+            Mission mission,
+            String occurredAt) {
+        return new MissionStatusEvent(
+                mission.id(), mission.category().name(), mission, userMissionId,
+                MissionStatus.COMPLETED, OffsetDateTime.parse(occurredAt));
+    }
+
+    private MissionStatusEvent shownEvent(
+            long userMissionId,
+            Mission mission,
+            String occurredAt) {
+        return new MissionStatusEvent(
+                mission.id(), mission.category().name(), mission, userMissionId,
+                MissionStatus.SHOWN, OffsetDateTime.parse(occurredAt));
+    }
+
+    private MissionRecommendation recommendationOf(
+            List<MissionRecommendation> recommendations,
+            long missionId) {
+        return recommendations.stream()
+                .filter(result -> result.mission().id() == missionId)
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private double scoreOf(List<MissionRecommendation> recommendations, long missionId) {
+        return recommendationOf(recommendations, missionId).recommendationScore();
     }
 
     private List<Long> ids(List<MissionRecommendation> recommendations) {

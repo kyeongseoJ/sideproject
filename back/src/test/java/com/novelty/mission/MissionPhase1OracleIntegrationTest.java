@@ -274,8 +274,11 @@ class MissionPhase1OracleIntegrationTest {
                 INSERT INTO MISSION (
                     MISSION_ID, TITLE, TITLE_NORMALIZED, DESCRIPTION, CATEGORY,
                     DIFFICULTY, ESTIMATED_MINUTES, INDOOR_OUTDOOR, SOCIAL_LEVEL,
-                    ACTIVITY_LEVEL, NOVELTY_LEVEL, ENABLED, SOURCE_TYPE, CONTENT_FINGERPRINT
-                ) VALUES (?, ?, ?, 'Phase 1 verification mission', ?, 1, 5, 0, 0, 1, 1, 'Y', 'BASE', ?)
+                    ACTIVITY_LEVEL, NOVELTY_LEVEL, ACTION_TYPE, CREATIVITY_LEVEL,
+                    UNPREDICTABILITY_LEVEL, COMFORT_ZONE_DISTANCE, COST_LEVEL, TAGS,
+                    ENABLED, SOURCE_TYPE, CONTENT_FINGERPRINT
+                ) VALUES (?, ?, ?, 'Phase 1 verification mission', ?, 1, 5, 0, 0, 1, 1,
+                          'EXPLORE', 0, 1, 1, 0, 'PHASE1', 'Y', 'BASE', ?)
                 """)) {
             statement.setLong(1, missionId);
             statement.setString(2, title);

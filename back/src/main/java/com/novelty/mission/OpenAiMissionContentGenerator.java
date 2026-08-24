@@ -26,6 +26,7 @@ public class OpenAiMissionContentGenerator implements MissionContentGenerator {
             한국어 미션 하나를 만드세요. 의료·치료 효과를 약속하거나 위험, 금전 결제,
             개인정보 공개, 타인에게 부담을 주는 행동을 포함하지 마세요.
             기존 미션과 제목이나 행동 핵심이 겹치지 않아야 합니다.
+            actionType과 tags는 문구가 아니라 실제 행동 패턴을 구분할 수 있게 작성하세요.
             """;
 
     private final ObjectMapper objectMapper;
@@ -117,19 +118,35 @@ public class OpenAiMissionContentGenerator implements MissionContentGenerator {
                 "additionalProperties", false,
                 "required", List.of(
                         "title", "description", "category", "difficulty", "estimatedMinutes",
-                        "indoorOutdoor", "socialLevel", "activityLevel", "noveltyLevel"),
-                "properties", Map.of(
-                        "title", Map.of("type", "string", "maxLength", 100),
-                        "description", Map.of("type", "string", "maxLength", 500),
-                        "category", Map.of("type", "string", "enum", List.of(
+                        "indoorOutdoor", "socialLevel", "activityLevel", "noveltyLevel",
+                        "actionType", "creativityLevel", "unpredictabilityLevel",
+                        "comfortZoneDistance", "costLevel", "tags"),
+                "properties", Map.ofEntries(
+                        Map.entry("title", Map.of("type", "string", "maxLength", 100)),
+                        Map.entry("description", Map.of("type", "string", "maxLength", 500)),
+                        Map.entry("category", Map.of("type", "string", "enum", List.of(
                                 "MOVEMENT", "CREATIVE", "FOOD", "LEARNING",
-                                "SOCIAL", "OUTDOOR", "ORGANIZING", "CULTURE")),
-                        "difficulty", Map.of("type", "integer", "minimum", 1, "maximum", 3),
-                        "estimatedMinutes", Map.of("type", "integer", "minimum", 1, "maximum", 180),
-                        "indoorOutdoor", Map.of("type", "integer", "minimum", -1, "maximum", 1),
-                        "socialLevel", Map.of("type", "integer", "minimum", -1, "maximum", 1),
-                        "activityLevel", Map.of("type", "integer", "minimum", 0, "maximum", 2),
-                        "noveltyLevel", Map.of("type", "integer", "minimum", 0, "maximum", 2)));
+                                "SOCIAL", "OUTDOOR", "ORGANIZING", "CULTURE"))),
+                        Map.entry("difficulty", Map.of("type", "integer", "minimum", 1, "maximum", 3)),
+                        Map.entry("estimatedMinutes", Map.of("type", "integer", "minimum", 1, "maximum", 180)),
+                        Map.entry("indoorOutdoor", Map.of("type", "integer", "minimum", -1, "maximum", 1)),
+                        Map.entry("socialLevel", Map.of("type", "integer", "minimum", -1, "maximum", 1)),
+                        Map.entry("activityLevel", Map.of("type", "integer", "minimum", 0, "maximum", 2)),
+                        Map.entry("noveltyLevel", Map.of("type", "integer", "minimum", 0, "maximum", 2)),
+                        Map.entry("actionType", Map.of("type", "string", "enum", List.of(
+                                "EXPLORE", "OBSERVE", "CREATE", "CONNECT", "ORGANIZE",
+                                "EXERCISE", "ASK", "PRACTICE", "TASTE", "LISTEN"))),
+                        Map.entry("creativityLevel", Map.of("type", "integer", "minimum", 0, "maximum", 2)),
+                        Map.entry("unpredictabilityLevel", Map.of("type", "integer", "minimum", 0, "maximum", 2)),
+                        Map.entry("comfortZoneDistance", Map.of("type", "integer", "minimum", 0, "maximum", 2)),
+                        Map.entry("costLevel", Map.of("type", "integer", "minimum", 0, "maximum", 2)),
+                        Map.entry("tags", Map.of(
+                                "type", "array",
+                                "minItems", 1,
+                                "maxItems", 10,
+                                "items", Map.of(
+                                        "type", "string",
+                                        "pattern", "^[A-Z0-9_]{1,30}$")))));
         Map<String, Object> body = Map.of(
                 "model", model,
                 "store", false,
