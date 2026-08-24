@@ -7,18 +7,24 @@ import 'package:novelty_app/world/world_models.dart';
 import 'package:novelty_app/world/world_screen.dart';
 
 class _FakeWorldGateway implements WorldGateway {
+  _FakeWorldGateway({this.snapshot});
+
+  final WorldSnapshot? snapshot;
+
   @override
-  Future<WorldSnapshot> getSnapshot(String userKey) async => WorldSnapshot([
-    const WorldObjectProgress(
-      objectCode: 'BOOKSHELF',
-      categoryCode: 'LEARNING',
-      displayName: '책장',
-      level: 2,
-      exp: 60,
-      nextLevelRequiredExp: 120,
-      maxLevel: 5,
-    ),
-  ]);
+  Future<WorldSnapshot> getSnapshot(String userKey) async =>
+      snapshot ??
+      WorldSnapshot([
+        const WorldObjectProgress(
+          objectCode: 'BOOKSHELF',
+          categoryCode: 'LEARNING',
+          displayName: '책장',
+          level: 2,
+          exp: 60,
+          nextLevelRequiredExp: 120,
+          maxLevel: 5,
+        ),
+      ]);
 }
 
 void main() {
@@ -183,5 +189,79 @@ void main() {
     );
     expect((levelMessage['payload'] as Map<String, Object?>)['level'], 2);
     expect(find.text('BOOKSHELF Lv.2 달성!'), findsOneWidget);
+  });
+
+  testWidgets('shows an error when the world snapshot has no objects', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WorldScreen(
+          gateway: _FakeWorldGateway(snapshot: WorldSnapshot(const [])),
+          userKey: 'user-key',
+          worldName: '빈 공간',
+          onBack: () {},
+          rendererBuilder: (controller, onMessage) =>
+              const ColoredBox(color: Colors.white),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('World 오브젝트 정보를 불러오지 못했습니다.'), findsOneWidget);
+  });
+
+  testWidgets('falls back to all objects when personality filtering is empty', (
+    tester,
+  ) async {
+    final messages = <Map<String, Object?>>[];
+    var readySent = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WorldScreen(
+          gateway: _FakeWorldGateway(
+            snapshot: WorldSnapshot([
+              const WorldObjectProgress(
+                objectCode: 'BOOKSHELF',
+                categoryCode: 'LEARNING',
+                displayName: '책장',
+                level: 1,
+                exp: 0,
+                nextLevelRequiredExp: 50,
+                maxLevel: 5,
+              ),
+            ]),
+          ),
+          userKey: 'user-key',
+          worldName: '테스트 공간',
+          baseCategoryCodes: const {'CULTURE'},
+          onBack: () {},
+          rendererBuilder: (controller, onMessage) {
+            controller.attach((raw) async {
+              messages.add(jsonDecode(raw) as Map<String, Object?>);
+            });
+            if (!readySent) {
+              readySent = true;
+              Future.microtask(
+                () => onMessage({
+                  'version': 1,
+                  'type': 'rendererReady',
+                  'payload': <String, Object?>{},
+                }),
+              );
+            }
+            return const ColoredBox(color: Colors.white);
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final initialize = messages.singleWhere(
+      (message) => message['type'] == 'initializeWorld',
+    );
+    final payload = initialize['payload'] as Map<String, Object?>;
+    expect(payload['objectCount'], 1);
+    expect((payload['objects'] as List<Object?>).length, 1);
   });
 }

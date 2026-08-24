@@ -61,6 +61,7 @@ GLB URI와 Position·Rotation·Scale은 `front/world3d`의 Manifest가 소유한
 Flutter → Three.js:
 
 - `initializeWorld`: 전체 Snapshot
+  - `payload.objects`는 1개 이상이어야 하며 `payload.objectCount`와 배열 길이가 일치해야 한다.
 - `updateObjectLevel`: 한 Object 변경
 - `playLevelUp`: Level Up Animation
 - `dispose`: Renderer 정리
@@ -86,6 +87,7 @@ Android는 WebView JavaScript Channel `NoveltyWorldBridge`, Web은 same-origin i
 - 교체·종료 시 Geometry·Material·Texture·AnimationMixer 해제
 - 종료·재진입과 Background·Foreground 복원
 - GLB 실패 시 `rendererError`와 Flutter 대체 UI
+- GLB 실패 메시지는 실패한 상대 asset 경로를 포함한다. Snapshot이 비어 있거나 성향 필터 결과가 비면 Flutter가 오류를 표시하거나 전체 Object Snapshot으로 fallback한다.
 
 ## 10. Phase 0~9
 

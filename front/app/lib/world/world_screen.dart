@@ -54,6 +54,13 @@ class _WorldScreenState extends State<WorldScreen> {
     try {
       final snapshot = await widget.gateway.getSnapshot(widget.userKey);
       if (!mounted) return;
+      if (snapshot.objects.isEmpty) {
+        setState(() {
+          _snapshot = snapshot;
+          _error = 'World 오브젝트 정보를 불러오지 못했습니다.';
+        });
+        return;
+      }
       setState(() => _snapshot = snapshot);
       await _initializeRenderer();
     } on WorldApiException catch (error) {
@@ -66,13 +73,26 @@ class _WorldScreenState extends State<WorldScreen> {
   Future<void> _initializeRenderer() async {
     final snapshot = _snapshot;
     if (!_rendererReady || snapshot == null) return;
-    final visibleObjects = snapshot.objects.where(
-      (object) =>
-          object.exp > 0 ||
-          widget.baseCategoryCodes.isEmpty ||
-          widget.baseCategoryCodes.contains(object.categoryCode),
-    );
+    final filteredObjects = snapshot.objects
+        .where(
+          (object) =>
+              object.exp > 0 ||
+              widget.baseCategoryCodes.isEmpty ||
+              widget.baseCategoryCodes.contains(object.categoryCode),
+        )
+        .toList();
+    // 성향 필터가 모든 오브젝트를 제외하면 전체 목록을 사용해 빈 방을 방지한다.
+    final visibleObjects = filteredObjects.isEmpty
+        ? snapshot.objects
+        : filteredObjects;
+    if (visibleObjects.isEmpty) {
+      if (mounted) {
+        setState(() => _error = 'World 오브젝트 정보를 불러오지 못했습니다.');
+      }
+      return;
+    }
     await _controller.send('initializeWorld', {
+      'objectCount': visibleObjects.length,
       'objects': visibleObjects.map((object) => object.toBridgeJson()).toList(),
     });
     final growth = widget.pendingGrowth;

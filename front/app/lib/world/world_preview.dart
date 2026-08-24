@@ -88,6 +88,13 @@ class _WorldPreviewState extends State<WorldPreview> {
     try {
       final snapshot = await widget.gateway.getSnapshot(widget.userKey);
       if (!mounted) return;
+      if (snapshot.objects.isEmpty) {
+        setState(() {
+          _snapshot = snapshot;
+          _error = 'World 오브젝트 정보를 불러오지 못했습니다.';
+        });
+        return;
+      }
       setState(() {
         _snapshot = snapshot;
         _error = null;
@@ -103,10 +110,16 @@ class _WorldPreviewState extends State<WorldPreview> {
   Future<void> _initialize() async {
     final snapshot = _snapshot;
     if (!_rendererReady || snapshot == null) return;
+    final objects = _visibleObjects(snapshot);
+    if (objects.isEmpty) {
+      if (mounted) {
+        setState(() => _error = 'World 오브젝트 정보를 불러오지 못했습니다.');
+      }
+      return;
+    }
     await _controller.send('initializeWorld', {
-      'objects': _visibleObjects(
-        snapshot,
-      ).map((object) => object.toBridgeJson()).toList(),
+      'objectCount': objects.length,
+      'objects': objects.map((object) => object.toBridgeJson()).toList(),
     });
     await _applyPendingGrowth();
   }
