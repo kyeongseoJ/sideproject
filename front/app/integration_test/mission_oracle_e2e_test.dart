@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:novelty_app/api/mission_api.dart';
 import 'package:novelty_app/api/personality_api.dart';
 import 'package:novelty_app/mission/mission_experience_screen.dart';
@@ -12,8 +11,6 @@ const String _apiBaseUrl = String.fromEnvironment('API_BASE_URL');
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  GoogleFonts.config.allowRuntimeFetching = false;
-
   testWidgets(
     'Flutter REST Spring Boot Oracle mission normal and failure flow',
     (tester) async {

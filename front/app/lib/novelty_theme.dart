@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 abstract final class NoveltyColors {
   static const primary = Color(0xFF7234E0);
@@ -81,9 +80,14 @@ abstract final class NoveltyDecorations {
 }
 
 ThemeData buildNoveltyTheme({TextTheme? baseTextTheme}) {
-  final baseTheme = ThemeData(brightness: Brightness.light, useMaterial3: true);
-  final fontTextTheme =
-      baseTextTheme ?? GoogleFonts.notoSansKrTextTheme(baseTheme.textTheme);
+  final baseTheme = ThemeData(
+    brightness: Brightness.light,
+    useMaterial3: true,
+    fontFamily: 'Noto Sans KR',
+  );
+  final fontTextTheme = (baseTextTheme ?? baseTheme.textTheme).apply(
+    fontFamily: 'Noto Sans KR',
+  );
   final textTheme = fontTextTheme
       .apply(bodyColor: NoveltyColors.ink, displayColor: NoveltyColors.ink)
       .copyWith(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:novelty_app/api/mission_api.dart';
 import 'package:novelty_app/api/personality_api.dart';
@@ -15,7 +17,7 @@ void main() {
   runApp(const NoveltyApp());
 }
 
-class NoveltyApp extends StatelessWidget {
+class NoveltyApp extends StatefulWidget {
   const NoveltyApp({
     super.key,
     this.personalityGateway,
@@ -30,6 +32,23 @@ class NoveltyApp extends StatelessWidget {
   final WorldGateway? worldGateway;
 
   @override
+  State<NoveltyApp> createState() => _NoveltyAppState();
+}
+
+class _NoveltyAppState extends State<NoveltyApp> {
+  late final Completer<void> _bootstrapReady;
+
+  @override
+  void initState() {
+    super.initState();
+    _bootstrapReady = Completer<void>();
+  }
+
+  void _markBootstrapReady() {
+    if (!_bootstrapReady.isCompleted) _bootstrapReady.complete();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Novelty',
@@ -40,11 +59,13 @@ class NoveltyApp extends StatelessWidget {
           : _worldSpikeMode
           ? WorldSpikeScreen(onBack: () {})
           : NoveltySplashGate(
+              readiness: _bootstrapReady.future,
               child: PersonalityBootstrapScreen(
-                gateway: personalityGateway,
-                missionGateway: missionGateway,
-                userKeyStore: userKeyStore,
-                worldGateway: worldGateway,
+                gateway: widget.personalityGateway,
+                missionGateway: widget.missionGateway,
+                userKeyStore: widget.userKeyStore,
+                worldGateway: widget.worldGateway,
+                onReady: _markBootstrapReady,
               ),
             ),
     );

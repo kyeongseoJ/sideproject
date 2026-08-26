@@ -7,11 +7,11 @@ class NoveltySplashGate extends StatefulWidget {
   const NoveltySplashGate({
     super.key,
     required this.child,
-    this.duration = const Duration(milliseconds: 1600),
+    required this.readiness,
   });
 
   final Widget child;
-  final Duration duration;
+  final Future<void> readiness;
 
   @override
   State<NoveltySplashGate> createState() => _NoveltySplashGateState();
@@ -22,7 +22,6 @@ class _NoveltySplashGateState extends State<NoveltySplashGate>
   late final AnimationController _controller;
   late final Animation<double> _fade;
   late final Animation<double> _scale;
-  Timer? _timer;
   bool _showSplash = true;
 
   @override
@@ -49,23 +48,30 @@ class _NoveltySplashGateState extends State<NoveltySplashGate>
       begin: 0.94,
       end: 1,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
-    _timer = Timer(widget.duration, () {
-      if (mounted) {
-        _controller.stop();
-        setState(() => _showSplash = false);
-      }
-    });
+    unawaited(_waitForReadiness());
+  }
+
+  Future<void> _waitForReadiness() async {
+    await widget.readiness;
+    if (!mounted) return;
+    _controller.stop();
+    setState(() => _showSplash = false);
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => AnimatedSwitcher(
+  Widget build(BuildContext context) => Stack(
+    children: [
+      KeyedSubtree(
+        key: const Key('novelty-app-content'),
+        child: widget.child,
+      ),
+      AnimatedSwitcher(
     duration: NoveltyMotion.slow,
     switchInCurve: Curves.easeOutCubic,
     switchOutCurve: Curves.easeInCubic,
@@ -103,9 +109,8 @@ class _NoveltySplashGateState extends State<NoveltySplashGate>
               ),
             ),
           )
-        : KeyedSubtree(
-            key: const Key('novelty-app-content'),
-            child: widget.child,
-          ),
+        : const SizedBox.shrink(key: Key('novelty-splash-hidden')),
+      ),
+    ],
   );
 }

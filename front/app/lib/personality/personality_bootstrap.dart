@@ -100,12 +100,14 @@ class PersonalityBootstrapScreen extends StatefulWidget {
     this.missionGateway,
     this.userKeyStore,
     this.worldGateway,
+    this.onReady,
   });
 
   final PersonalityGateway? gateway;
   final MissionGateway? missionGateway;
   final UserKeyStore? userKeyStore;
   final WorldGateway? worldGateway;
+  final VoidCallback? onReady;
 
   @override
   State<PersonalityBootstrapScreen> createState() =>
@@ -158,10 +160,12 @@ class _PersonalityBootstrapScreenState
       final result = await _service.load();
       if (!mounted) return;
       setState(() => _result = result);
+      widget.onReady?.call();
     } on PersonalityBootstrapException catch (exception) {
       if (!mounted) return;
       if (exception.kind == PersonalityBootstrapFailureKind.signInRequired) {
         setState(() => _showAccount = true);
+        widget.onReady?.call();
       } else if (exception.apiError?.code ==
           PersonalityApiErrorCode.invalidUserKey) {
         try {
@@ -169,11 +173,16 @@ class _PersonalityBootstrapScreenState
         } catch (_) {
           if (!mounted) return;
           setState(() => _error = exception);
+          widget.onReady?.call();
           return;
         }
-        if (mounted) setState(() => _showAccount = true);
+        if (mounted) {
+          setState(() => _showAccount = true);
+          widget.onReady?.call();
+        }
       } else {
         setState(() => _error = exception);
+        widget.onReady?.call();
       }
     }
   }
@@ -194,6 +203,7 @@ class _PersonalityBootstrapScreenState
           userKey: account.userKey,
         );
       });
+      widget.onReady?.call();
     } catch (_) {
       if (!mounted) return;
       setState(
@@ -202,6 +212,7 @@ class _PersonalityBootstrapScreenState
           message: '로그인 정보를 기기에 저장하지 못했습니다.',
         ),
       );
+      widget.onReady?.call();
     }
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:novelty_app/app_splash_screen.dart';
@@ -6,10 +8,11 @@ void main() {
   testWidgets('shows the branded splash and then reveals app content', (
     tester,
   ) async {
+    final readiness = Completer<void>();
     await tester.pumpWidget(
-      const MaterialApp(
+      MaterialApp(
         home: NoveltySplashGate(
-          duration: Duration(milliseconds: 100),
+          readiness: readiness.future,
           child: Text('회원가입 화면'),
         ),
       ),
@@ -17,9 +20,10 @@ void main() {
 
     expect(find.byKey(const Key('novelty-splash')), findsOneWidget);
     expect(find.byType(Image), findsNWidgets(2));
-    expect(find.text('회원가입 화면'), findsNothing);
+    expect(find.text('회원가입 화면'), findsOneWidget);
 
-    await tester.pump(const Duration(milliseconds: 101));
+    readiness.complete();
+    await tester.pump();
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('novelty-splash')), findsNothing);
