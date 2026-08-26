@@ -61,11 +61,11 @@ public class UserMissionService {
                 throw new InvalidMissionTransitionException();
             }
             if (userMissionRepository.countOccupiedSlots(userId, context.serviceDate())
-                    >= context.settings().dailyMissionLimit()) {
+                    >= MissionService.dailyMissionLimit()) {
                 throw new DailyLimitReachedException();
             }
             int slot = userMissionRepository.firstAvailableSlot(
-                    userId, context.serviceDate(), context.settings().dailyMissionLimit());
+                    userId, context.serviceDate(), MissionService.dailyMissionLimit());
             OffsetDateTime occurredAt = OffsetDateTime.now(clock);
             userMissionRepository.markSelected(userMissionId, slot, occurredAt);
             appendLog(userId, target, MissionStatus.SELECTED, "USER_SELECTED", occurredAt);
@@ -207,9 +207,7 @@ public class UserMissionService {
 
     private LockedContext lockContext(long userId) {
         userMissionRepository.lockUser(userId);
-        MissionSettingsResponse settings = userMissionRepository.findSettingsForUpdate(userId)
-                .orElseThrow(MissionSettingsRequiredException::new);
-        return new LockedContext(LocalDate.now(clock), settings);
+        return new LockedContext(LocalDate.now(clock));
     }
 
     private UserMissionState requireOwned(long userId, long userMissionId) {
@@ -258,7 +256,7 @@ public class UserMissionService {
                 .orElseThrow(UserMissionNotFoundException::new);
         return new UserMissionActionResponse(
                 mission,
-                missionService.buildToday(userId, context.serviceDate(), context.settings()),
+                missionService.buildToday(userId, context.serviceDate()),
                 idempotent,
                 completion);
     }
@@ -283,9 +281,7 @@ public class UserMissionService {
         }
     }
 
-    private record LockedContext(
-            LocalDate serviceDate,
-            MissionSettingsResponse settings) {
+    private record LockedContext(LocalDate serviceDate) {
     }
 
     private record CompletionTransactionResult(

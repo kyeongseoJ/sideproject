@@ -20,7 +20,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @RequestMapping("/api/personality-analyses")
 @CrossOrigin(originPatterns = {"http://localhost:*", "http://127.0.0.1:*"})
-@Tag(name = "Personality", description = "최초 성향 분석과 재분석 API")
+@Tag(name = "성향", description = "최초 성향 분석과 재분석 API")
 public class PersonalityController {
 
     private final PersonalityService personalityService;

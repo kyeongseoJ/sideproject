@@ -31,7 +31,6 @@ public class MissionExceptionHandler {
 
     @ExceptionHandler({
             PersonalityRequiredException.class,
-            MissionSettingsRequiredException.class,
             DailyLimitReachedException.class,
             ReplacementNotAvailableException.class,
             NoMissionAvailableException.class,

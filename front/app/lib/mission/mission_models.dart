@@ -1,16 +1,5 @@
 import 'package:novelty_app/world/world_models.dart';
 
-enum AvailableTime {
-  quick('QUICK', '5분'),
-  short('SHORT', '15분'),
-  medium('MEDIUM', '30분'),
-  long('LONG', '60분');
-
-  const AvailableTime(this.code, this.label);
-  final String code;
-  final String label;
-}
-
 enum MissionStatus {
   generated('GENERATED'),
   shown('SHOWN'),
@@ -43,32 +32,6 @@ enum MissionCategory {
   const MissionCategory(this.code, this.label);
   final String code;
   final String label;
-}
-
-class MissionSettings {
-  const MissionSettings({
-    required this.availableTime,
-    required this.dailyLimit,
-  });
-
-  final AvailableTime availableTime;
-  final int dailyLimit;
-
-  factory MissionSettings.fromJson(Map<String, Object?> json) {
-    final limit = json['dailyMissionLimit'];
-    if (limit is! int || limit < 1 || limit > 3) {
-      throw const FormatException('Invalid daily mission limit.');
-    }
-    return MissionSettings(
-      availableTime: _enumByCode(AvailableTime.values, json['availableTime']),
-      dailyLimit: limit,
-    );
-  }
-
-  Map<String, Object> toJson() => {
-    'availableTime': availableTime.code,
-    'dailyMissionLimit': dailyLimit,
-  };
 }
 
 class UserMission {
@@ -165,39 +128,28 @@ class UserMission {
 class MissionToday {
   MissionToday({
     required this.serviceDate,
-    required this.settings,
     required this.completedToday,
-    required this.remainingSlots,
     required List<UserMission> activeMissions,
     required List<UserMission> candidates,
   }) : activeMissions = List.unmodifiable(activeMissions),
        candidates = List.unmodifiable(candidates);
 
   final DateTime serviceDate;
-  final MissionSettings settings;
   final int completedToday;
-  final int remainingSlots;
   final List<UserMission> activeMissions;
   final List<UserMission> candidates;
 
   factory MissionToday.fromJson(Map<String, Object?> json) {
     final date = DateTime.tryParse(_string(json, 'serviceDate'));
-    final settings = json['settings'];
     final completed = json['completedToday'];
-    final remaining = json['remainingSlots'];
     if (date == null ||
-        settings is! Map<String, Object?> ||
         completed is! int ||
-        completed < 0 ||
-        remaining is! int ||
-        remaining < 0) {
+        completed < 0) {
       throw const FormatException('Invalid mission today response.');
     }
     return MissionToday(
       serviceDate: date,
-      settings: MissionSettings.fromJson(settings),
       completedToday: completed,
-      remainingSlots: remaining,
       activeMissions: _missionList(json['activeMissions']),
       candidates: _missionList(json['candidates']),
     );
@@ -411,7 +363,6 @@ T _enumByCode<T>(List<T> values, Object? raw) {
   if (raw is! String) throw const FormatException('Invalid enum.');
   for (final value in values) {
     final code = switch (value) {
-      AvailableTime item => item.code,
       MissionStatus item => item.code,
       MissionCategory item => item.code,
       _ => throw StateError('Unsupported mission enum.'),

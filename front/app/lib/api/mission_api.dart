@@ -6,11 +6,6 @@ import 'package:novelty_app/api/api_base_url.dart';
 import 'package:novelty_app/mission/mission_models.dart';
 
 abstract interface class MissionGateway {
-  Future<MissionSettings> getSettings(String userKey);
-  Future<MissionSettings> saveSettings(
-    String userKey,
-    MissionSettings settings,
-  );
   Future<MissionToday> getToday(String userKey);
   Future<MissionToday> recommendToday(String userKey);
   Future<MissionSummary> getSummary(String userKey);
@@ -53,25 +48,6 @@ class MissionApi implements MissionGateway {
   final http.Client _client;
   final String _baseUrl;
   final Duration _timeout;
-
-  @override
-  Future<MissionSettings> getSettings(String key) => _object(
-    () => _client.get(_uri('/api/missions/settings'), headers: _headers(key)),
-    {200},
-    MissionSettings.fromJson,
-  );
-
-  @override
-  Future<MissionSettings> saveSettings(String key, MissionSettings settings) =>
-      _object(
-        () => _client.put(
-          _uri('/api/missions/settings'),
-          headers: _headers(key, json: true),
-          body: jsonEncode(settings.toJson()),
-        ),
-        {200},
-        MissionSettings.fromJson,
-      );
 
   @override
   Future<MissionToday> getToday(String key) => _object(

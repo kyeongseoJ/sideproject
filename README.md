@@ -15,7 +15,7 @@ Novelty는 사용자의 성향을 바탕으로 평소와 다른 행동을 제안
 - Three.js는 Flutter가 전달한 성향 룸만 로드하며, GLB URI 캐시와 중복 초기화 방지를 적용합니다.
 - 운영 빌드에는 `WORLD_TEST=true` 테스트 진입 경로가 포함되지 않습니다.
 
-최근 검증 기준은 `flutter analyze`, `flutter test` 93개 통과, `flutter build web`, `npm.cmd run build` 성공입니다. Three.js 번들은 500KB 초과 청크 경고가 있으나 빌드는 성공합니다.
+최근 검증 기준은 `flutter analyze`, `flutter test` 88개 통과(1개 skip), `flutter build web`, `npm.cmd run build` 성공입니다. Three.js 번들은 500KB 초과 청크 경고가 있으나 빌드는 성공합니다.
 
 ## 한눈에 보기
 
@@ -216,7 +216,7 @@ npm.cmd run dev
 |---|---|
 | 회원가입·로그인·사용자 복원 | `/api/users/**` |
 | 성향 분석 제출 | `POST /api/personality-analyses` |
-| 미션 설정·오늘 조회·추천 | `/api/missions/settings`, `/api/missions/today`, `/api/missions/today/recommendations` |
+| 오늘 조회·추천 | `/api/missions/today`, `/api/missions/today/recommendations` |
 | 미션 선택·취소·교체·완료 | `/api/user-missions/{userMissionId}/select|cancel|replace|complete` |
 | 미션 통계 | `GET /api/missions/summary` |
 | World 전체 Snapshot | `GET /api/world` |
@@ -305,3 +305,10 @@ Oracle 연동 테스트는 레거시 검증용으로만 유지하며, 운영 기
 - [성향 분석 SDD](docs/personality-sdd-v2.md)
 - [미션 SDD](docs/mission-sdd-v1.md)
 - [3D World SDD](docs/world-sdd-v1.md)
+### Mission API current contract
+
+The mission API no longer accepts or returns user-selected available time or
+daily mission count. `GET /api/missions/today` and
+`POST /api/missions/today/recommendations` use the fixed policy of one daily
+mission and return up to five candidates. `estimatedMinutes` remains mission
+catalog metadata and is displayed as information only.

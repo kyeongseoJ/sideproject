@@ -22,7 +22,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @RequestMapping("/api/users")
 @CrossOrigin(originPatterns = {"http://localhost:*", "http://127.0.0.1:*"})
-@Tag(name = "User", description = "회원가입 없는 익명 사용자와 닉네임 API")
+@Tag(name = "사용자", description = "회원가입, 로그인, 사용자 정보와 닉네임 API")
 public class UserController {
 
     private final UserService userService;

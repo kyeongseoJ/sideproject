@@ -36,23 +36,6 @@ void main() {
     expect(MissionStatus.completed.label, '완료');
   });
 
-  test('rejects out-of-range values and unknown enums', () {
-    expect(
-      () => MissionSettings.fromJson({
-        'availableTime': 'SHORT',
-        'dailyMissionLimit': 4,
-      }),
-      throwsFormatException,
-    );
-    expect(
-      () => MissionSettings.fromJson({
-        'availableTime': 'UNKNOWN',
-        'dailyMissionLimit': 1,
-      }),
-      throwsFormatException,
-    );
-  });
-
   test('parses persisted personality change values from completion response', () {
     final change = MissionPersonalityChange.fromJson({
       'previousIndoorOutdoor': -1,

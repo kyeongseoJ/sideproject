@@ -22,46 +22,6 @@ public class UserMissionRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public Optional<MissionSettingsResponse> findSettings(long userId) {
-        return jdbcTemplate.query("""
-                SELECT AVAILABLE_TIME, DAILY_MISSION_LIMIT
-                  FROM USER_MISSION_SETTING
-                 WHERE USER_ID = ?
-                """, (resultSet, rowNumber) -> new MissionSettingsResponse(
-                        AvailableTime.valueOf(resultSet.getString("AVAILABLE_TIME")),
-                        resultSet.getInt("DAILY_MISSION_LIMIT")), userId)
-                .stream()
-                .findFirst();
-    }
-
-    public Optional<MissionSettingsResponse> findSettingsForUpdate(long userId) {
-        return jdbcTemplate.query("""
-                SELECT AVAILABLE_TIME, DAILY_MISSION_LIMIT
-                  FROM USER_MISSION_SETTING
-                 WHERE USER_ID = ?
-                   FOR UPDATE
-                """, (resultSet, rowNumber) -> new MissionSettingsResponse(
-                        AvailableTime.valueOf(resultSet.getString("AVAILABLE_TIME")),
-                        resultSet.getInt("DAILY_MISSION_LIMIT")), userId)
-                .stream()
-                .findFirst();
-    }
-
-    public MissionSettingsResponse saveSettings(
-            long userId,
-            MissionSettingsResponse settings) {
-        jdbcTemplate.update("""
-                INSERT INTO USER_MISSION_SETTING (
-                    USER_ID, AVAILABLE_TIME, DAILY_MISSION_LIMIT
-                ) VALUES (?, ?, ?)
-                ON CONFLICT (USER_ID) DO UPDATE SET
-                    AVAILABLE_TIME = EXCLUDED.AVAILABLE_TIME,
-                    DAILY_MISSION_LIMIT = EXCLUDED.DAILY_MISSION_LIMIT,
-                    UPDATED_AT = CURRENT_TIMESTAMP
-                """, userId, settings.availableTime().name(), settings.dailyMissionLimit());
-        return settings;
-    }
-
     public void lockUser(long userId) {
         jdbcTemplate.queryForObject(
                 "SELECT USER_ID FROM NOVELTY_USER WHERE USER_ID = ? FOR UPDATE",
@@ -85,7 +45,6 @@ public class UserMissionRepository {
     public long insertRecommendation(
             long userId,
             LocalDate serviceDate,
-            AvailableTime availableTime,
             String offerBatchId,
             MissionRecommendation recommendation,
             OffsetDateTime shownAt) {
@@ -96,15 +55,14 @@ public class UserMissionRepository {
         }
         jdbcTemplate.update("""
                 INSERT INTO USER_MISSION (
-                    USER_MISSION_ID, USER_ID, MISSION_ID, STATUS, AVAILABLE_TIME,
+                    USER_MISSION_ID, USER_ID, MISSION_ID, STATUS,
                     SERVICE_DATE, OFFER_BATCH_ID, PERSONALITY_DISTANCE,
                     RECOMMENDATION_SCORE, SHOWN_AT
-                ) VALUES (?, ?, ?, 'SHOWN', ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, 'SHOWN', ?, ?, ?, ?, ?)
                 """,
                 userMissionId,
                 userId,
                 recommendation.mission().id(),
-                availableTime.name(),
                 Date.valueOf(serviceDate),
                 offerBatchId,
                 recommendation.personalityDistance(),

@@ -5,8 +5,8 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.random.RandomGenerator;
 import java.util.UUID;
+import java.util.random.RandomGenerator;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,6 +16,9 @@ import com.novelty.user.UserService;
 
 @Service
 public class MissionService {
+
+    private static final int DAILY_MISSION_LIMIT = 1;
+    private static final int MAX_MISSION_MINUTES = 180;
 
     private final UserService userService;
     private final MissionRepository missionRepository;
@@ -65,63 +68,29 @@ public class MissionService {
         this.random = random;
     }
 
-    public MissionSettingsResponse getSettings(String userKey) {
-        long userId = userService.requireUserId(userKey);
-        return userMissionRepository.findSettings(userId)
-                .orElseThrow(MissionSettingsRequiredException::new);
-    }
-
-    public MissionSettingsResponse saveSettings(
-            String userKey,
-            MissionSettingsRequest request) {
-        if (request == null
-                || request.availableTime() == null
-                || request.dailyMissionLimit() < 1
-                || request.dailyMissionLimit() > 3) {
-            throw new InvalidMissionRequestException("사용 가능 시간과 하루 미션 수(1~3)를 확인해 주세요.");
-        }
-        long userId = userService.requireUserId(userKey);
-        MissionSettingsResponse settings = new MissionSettingsResponse(
-                request.availableTime(), request.dailyMissionLimit());
-        return transactionTemplate.execute(status -> {
-            userMissionRepository.lockUser(userId);
-            int occupiedSlots = userMissionRepository.countOccupiedSlots(
-                    userId, LocalDate.now(clock));
-            if (settings.dailyMissionLimit() < occupiedSlots) {
-                throw new DailyLimitReachedException();
-            }
-            return userMissionRepository.saveSettings(userId, settings);
-        });
-    }
-
     public MissionTodayResponse getToday(String userKey) {
         long userId = userService.requireUserId(userKey);
-        MissionSettingsResponse settings = userMissionRepository.findSettings(userId)
-                .orElseThrow(MissionSettingsRequiredException::new);
-        return buildToday(userId, LocalDate.now(clock), settings);
+        return buildToday(userId, LocalDate.now(clock));
     }
 
     public MissionRecommendationBatchResult recommendToday(String userKey) {
         long userId = userService.requireUserId(userKey);
         MissionRecommendationBatchResult result = transactionTemplate.execute(status -> {
             userMissionRepository.lockUser(userId);
-            MissionSettingsResponse settings = userMissionRepository.findSettings(userId)
-                    .orElseThrow(MissionSettingsRequiredException::new);
             LocalDate serviceDate = LocalDate.now(clock);
             if (!userMissionRepository.findToday(userId, serviceDate).isEmpty()) {
                 return new MissionRecommendationBatchResult(
-                        buildToday(userId, serviceDate, settings), false);
+                        buildToday(userId, serviceDate), false);
             }
 
             UserMissionVector vector = missionRepository.findUserVector(userId)
                     .orElseThrow(PersonalityRequiredException::new);
             List<Mission> candidates = missionRepository.findCandidates(
-                    settings.availableTime().maximumMinutes(),
+                    MAX_MISSION_MINUTES,
                     vector.completedMissionCount() >= 5);
             List<MissionRecommendation> recommendations = recommendationPolicy.recommend(
                     candidates,
                     vector,
-                    settings.availableTime(),
                     userMissionRepository.findCategoryCompletionCounts(userId),
                     statusLogRepository.findAll(userId),
                     random);
@@ -135,7 +104,6 @@ public class MissionService {
                 long userMissionId = userMissionRepository.insertRecommendation(
                         userId,
                         serviceDate,
-                        settings.availableTime(),
                         offerBatchId,
                         recommendation,
                         shownAt);
@@ -149,7 +117,7 @@ public class MissionService {
                         "DAILY_RECOMMENDATION", shownAt);
             }
             return new MissionRecommendationBatchResult(
-                    buildToday(userId, serviceDate, settings), true);
+                    buildToday(userId, serviceDate), true);
         });
         if (result == null) {
             throw new IllegalStateException("Mission recommendation transaction returned no result.");
@@ -157,17 +125,10 @@ public class MissionService {
         return result;
     }
 
-    MissionTodayResponse buildToday(
-            long userId,
-            LocalDate serviceDate,
-            MissionSettingsResponse settings) {
+    MissionTodayResponse buildToday(long userId, LocalDate serviceDate) {
         List<UserMissionResponse> today = userMissionRepository.findToday(userId, serviceDate);
         int completedToday = (int) today.stream()
                 .filter(mission -> mission.status() == MissionStatus.COMPLETED)
-                .count();
-        int occupiedSlots = (int) today.stream()
-                .filter(mission -> mission.status() == MissionStatus.SELECTED
-                        || mission.status() == MissionStatus.COMPLETED)
                 .count();
         List<UserMissionResponse> active = today.stream()
                 .filter(mission -> mission.status() == MissionStatus.SELECTED)
@@ -176,13 +137,10 @@ public class MissionService {
                 .filter(mission -> mission.status() == MissionStatus.SHOWN
                         || mission.status() == MissionStatus.CANCELLED)
                 .toList();
-        return new MissionTodayResponse(
-                serviceDate,
-                settings,
-                completedToday,
-                Math.max(0, settings.dailyMissionLimit() - occupiedSlots),
-                active,
-                candidates);
+        return new MissionTodayResponse(serviceDate, completedToday, active, candidates);
     }
 
+    static int dailyMissionLimit() {
+        return DAILY_MISSION_LIMIT;
+    }
 }

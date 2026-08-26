@@ -14,7 +14,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("Novelty API")
-                        .description("노벨티 Frontend와 Backend 사이의 REST API")
+                        .description("노벨티 프로젝트 REST API")
                         .version("v1"));
     }
 }

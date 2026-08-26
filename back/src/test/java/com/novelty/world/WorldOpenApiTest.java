@@ -11,9 +11,9 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest(properties = {
-        "spring.datasource.url=jdbc:oracle:thin:@localhost:1521:XE",
-        "spring.datasource.username=openapi-test",
-        "spring.datasource.password=openapi-test"
+        "spring.datasource.url=${DB_URL:jdbc:postgresql://localhost:5432/postgres}",
+        "spring.datasource.username=${DB_USERNAME:test}",
+        "spring.datasource.password=${DB_PASSWORD:test}"
 })
 @AutoConfigureMockMvc
 class WorldOpenApiTest {

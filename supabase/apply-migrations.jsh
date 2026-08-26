@@ -15,7 +15,9 @@ connection.setAutoCommit(false);
 
 for (var migration : List.of(
         "supabase/migrations/001_initial_schema.sql",
-        "supabase/migrations/002_seed_missions.sql")) {
+        "supabase/migrations/002_seed_missions.sql",
+        "supabase/migrations/003_remove_mission_settings.sql",
+        "supabase/migrations/004_fix_personality_analysis_mode.sql")) {
     var sql = Files.readString(Path.of(migration), StandardCharsets.UTF_8);
     var statements = sql.split(";\\s*(?=--|CREATE|INSERT|SELECT|ALTER|DROP|$)");
     var executed = 0;

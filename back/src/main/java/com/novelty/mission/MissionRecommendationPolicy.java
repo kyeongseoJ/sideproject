@@ -57,11 +57,10 @@ public class MissionRecommendationPolicy {
     public List<MissionRecommendation> recommend(
             List<Mission> missions,
             UserMissionVector userVector,
-            AvailableTime availableTime,
             Map<MissionCategory, Integer> categoryCompletionCounts,
             List<MissionStatusEvent> history,
             RandomGenerator random) {
-        validateInputs(missions, userVector, availableTime, categoryCompletionCounts, history, random);
+        validateInputs(missions, userVector, categoryCompletionCounts, history, random);
 
         Set<Long> recentlyCompletedIds = missionIdsWithinMaximumAge(
                 history, MissionStatus.COMPLETED, COMPLETED_HARD_BLOCK_MAX_AGE_DAYS);
@@ -72,7 +71,6 @@ public class MissionRecommendationPolicy {
 
         List<MissionRecommendation> rankedPool = missions.stream()
                 .filter(Mission::enabled)
-                .filter(mission -> mission.estimatedMinutes() <= availableTime.maximumMinutes())
                 .filter(mission -> userVector.completedMissionCount() >= 5
                         || mission.sourceType() == MissionSourceType.BASE)
                 .filter(mission -> !recentlyCompletedIds.contains(mission.id()))
@@ -81,7 +79,6 @@ public class MissionRecommendationPolicy {
                 .map(mission -> score(
                         mission,
                         userVector,
-                        availableTime,
                         categoryCompletionCounts,
                         history,
                         recentCompleted,
@@ -115,7 +112,6 @@ public class MissionRecommendationPolicy {
     private MissionRecommendation score(
             Mission mission,
             UserMissionVector userVector,
-            AvailableTime availableTime,
             Map<MissionCategory, Integer> categoryCompletionCounts,
             List<MissionStatusEvent> history,
             List<WeightedExperience> recentCompleted,
@@ -125,7 +121,7 @@ public class MissionRecommendationPolicy {
         int categoryCompletedCount = categoryCompletionCounts.getOrDefault(mission.category(), 0);
         double categoryExplorationScore = 1.0 / (1.0 + categoryCompletedCount);
         double difficultyFitScore = difficultyFit(mission, userVector);
-        double contextFitScore = (difficultyFitScore + durationFit(mission, availableTime)) / 2.0;
+        double contextFitScore = difficultyFitScore;
 
         double recentSimilarity = maximumRecentSimilarity(mission, recentCompleted);
         double repeatedPattern = maximumRepeatedPattern(mission, recentCompleted);
@@ -359,11 +355,6 @@ public class MissionRecommendationPolicy {
         return 1.0 - Math.abs(mission.difficulty() - preferredDifficulty) / 2.0;
     }
 
-    private double durationFit(Mission mission, AvailableTime availableTime) {
-        double target = Math.max(5.0, availableTime.maximumMinutes() * 0.75);
-        return clamp(1.0 - Math.abs(mission.estimatedMinutes() - target) / target);
-    }
-
     private double recencyWeight(MissionStatusEvent event, LocalDate serviceDate) {
         long days = ChronoUnit.DAYS.between(eventDate(event), serviceDate);
         return Math.pow(RECENCY_DECAY, Math.max(0, days));
@@ -434,13 +425,11 @@ public class MissionRecommendationPolicy {
     private void validateInputs(
             List<Mission> missions,
             UserMissionVector userVector,
-            AvailableTime availableTime,
             Map<MissionCategory, Integer> categoryCompletionCounts,
             List<MissionStatusEvent> history,
             RandomGenerator random) {
         Objects.requireNonNull(missions, "missions are required.");
         Objects.requireNonNull(userVector, "userVector is required.");
-        Objects.requireNonNull(availableTime, "availableTime is required.");
         Objects.requireNonNull(categoryCompletionCounts, "categoryCompletionCounts are required.");
         Objects.requireNonNull(history, "history is required.");
         Objects.requireNonNull(random, "random is required.");

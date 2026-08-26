@@ -26,12 +26,6 @@ final class PersonalityRequiredException extends MissionDomainException {
     }
 }
 
-final class MissionSettingsRequiredException extends MissionDomainException {
-    MissionSettingsRequiredException() {
-        super("MISSION_SETTINGS_REQUIRED", "미션을 받기 전에 사용 가능 시간과 하루 한도를 설정해 주세요.");
-    }
-}
-
 final class MissionNotFoundException extends MissionDomainException {
     MissionNotFoundException() {
         super("MISSION_NOT_FOUND", "미션을 찾을 수 없습니다.");

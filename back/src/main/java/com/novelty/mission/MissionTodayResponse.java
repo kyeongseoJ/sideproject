@@ -5,9 +5,7 @@ import java.util.List;
 
 public record MissionTodayResponse(
         LocalDate serviceDate,
-        MissionSettingsResponse settings,
         int completedToday,
-        int remainingSlots,
         List<UserMissionResponse> activeMissions,
         List<UserMissionResponse> candidates) {
 

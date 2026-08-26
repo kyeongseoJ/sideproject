@@ -32,7 +32,7 @@
 - Noto Sans KR Regular·Medium·Bold를 Flutter 번들에 포함하고 `google_fonts` 런타임 의존성을 제거했다.
 - Three.js는 기본 placeholder 룸을 선행 로드하지 않고 Flutter가 지정한 성향 룸만 로드한다.
 - GLB URI 캐시와 Bridge 초기화 중복 방지를 적용했다.
-- `flutter analyze`, Flutter 전체 테스트 93개, `flutter build web`, `npm.cmd run build`를 통과했다. Three.js 번들 500KB 초과 경고는 남아 있다.
+- `flutter analyze`, Flutter 전체 테스트 88개 통과(1개 skip), `flutter build web`, `npm.cmd run build`를 통과했다. Three.js 번들 500KB 초과 경고는 남아 있다.
 
 ## 핵심 기능 요약
 
@@ -184,7 +184,7 @@ Backend 전체 181개 테스트는 실패 0·환경조건부 12개 제외로 통
 | OpenAI 설정 | 진행 중 | API Key는 `OPENAI_API_KEY` 환경 변수로만 주입; 실제 연동 성공 검증 필요 |
 | Backend 자동 테스트 | 검증 완료 | 전체 회귀 188개 실행, 실패 0, 오류 0, 환경 조건부 12개 제외; 계정 Swagger 1개 별도 통과 및 Package 성공 |
 | Three.js Build | 검증 완료 | 성향별 룸 GLB 9종과 fallback·Spike 테스트 모델만 존재, Build 성공, 번들 500KB 경고 존재 |
-| Flutter 자동 테스트 | 검증 완료 | 전체 93개 통과; Analyze 무결점과 Web build 성공 |
+| Flutter 자동 테스트 | 검증 완료 | 88개 통과, 1개 skip; Analyze 무결점과 Web build 성공 |
 | Flutter Android 기반 | 검증 완료 | Debug APK Build, WebView Renderer Ready, GLB 표시·교체, Background/Foreground 복귀 성공 |
 | Flutter 성향 분석 흐름 | 검증 완료 | 최초 분석·복원·멱등 재시도·재분석과 PostgreSQL API 흐름 검증 |
 | 로컬 환경 설정 | 검증 완료 | Git 제외 `.env`, 추적 가능한 `.env.example`, Spring Boot 자동 import와 Oracle Connection 생성 확인. OpenAI Key는 유효한 값을 별도 입력해야 함 |
@@ -209,7 +209,7 @@ Backend 전체 181개 테스트는 실패 0·환경조건부 12개 제외로 통
 
 | 날짜 | 변경 내용 |
 |---|---|
-| 2026-08-26 | 미션 사용자 플로우에서 시간 선택 단계를 제거하고 기존 `availableTime`은 `LONG` 기본값으로 내부 정규화, 추천 후보 상한을 5개로 확장 |
+| 2026-08-26 | 미션 사용자 플로우에서 시간·미션 수 설정 API를 제거하고 하루 1개 고정 정책 및 추천 후보 상한 5개를 적용 |
 | 2026-08-26 | 기준 `DB.sql`과 Backend Schema mirror에 BASE 미션 100건을 fingerprint·제목 기준 멱등 seed로 추가 |
 | 2026-08-26 | 오늘의 미션 UI를 Spotlight 카드 중심으로 개편하고 완료 수 배지, 카테고리 아이콘, 메타데이터와 명확한 선택 CTA를 추가 |
 | 2026-08-26 | 9개 성향 타입별 기본 룸 에셋 코드 매핑을 등록하고 GLB 추가 전까지 공통 `room.glb` fallback 정책을 유지 |
@@ -248,3 +248,9 @@ Backend 전체 181개 테스트는 실패 0·환경조건부 12개 제외로 통
 | 2026-08-19 | 사용자 성향 분석 V2 Phase 0 정상·실패 계약과 기존 회귀 테스트 검증 완료 |
 | 2026-08-19 | 사용자 성향 분석을 `PERSONALITY_V2`로 재정의하고 Phase 0 완료·Phase 1~7 미착수로 재설정 |
 | 2026-08-19 | 최초 작성. 현재 구현과 SDD 기록을 활성 사양 기준으로 재분류 |
+## 2026-08-26 Mission API cleanup
+
+- Removed the Flutter calls and response fields for available time and daily mission count.
+- Removed the current Backend settings endpoints and fixed the daily limit to one mission.
+- Added `supabase/migrations/003_remove_mission_settings.sql` to remove the obsolete settings table and `user_mission.available_time` column while preserving mission history.
+- Mission recommendations still return up to five candidates; `estimatedMinutes` remains catalog metadata.

@@ -50,28 +50,6 @@ class _MissionDashboardSectionState extends State<MissionDashboardSection> {
       _error = null;
     });
     try {
-      MissionSettings settings;
-      try {
-        settings = await widget.gateway.getSettings(widget.userKey);
-      } on MissionApiException catch (exception) {
-        if (exception.code != 'MISSION_SETTINGS_REQUIRED') rethrow;
-        settings = await widget.gateway.saveSettings(
-          widget.userKey,
-          const MissionSettings(
-            availableTime: AvailableTime.long,
-            dailyLimit: 1,
-          ),
-        );
-      }
-      if (settings.availableTime != AvailableTime.long) {
-        settings = await widget.gateway.saveSettings(
-          widget.userKey,
-          MissionSettings(
-            availableTime: AvailableTime.long,
-            dailyLimit: settings.dailyLimit,
-          ),
-        );
-      }
       var today = await widget.gateway.getToday(widget.userKey);
       if (today.activeMissions.isEmpty &&
           today.candidates.isEmpty &&
@@ -85,17 +63,10 @@ class _MissionDashboardSectionState extends State<MissionDashboardSection> {
       });
     } on MissionApiException catch (exception) {
       if (!mounted) return;
-      if (exception.code == 'MISSION_SETTINGS_REQUIRED') {
-        setState(() {
-          _today = null;
-          _loading = false;
-        });
-      } else {
-        setState(() {
-          _error = exception.message;
-          _loading = false;
-        });
-      }
+      setState(() {
+        _error = exception.message;
+        _loading = false;
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -292,7 +263,7 @@ class _MissionStartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    key: const Key('mission-settings-form'),
+    key: const Key('mission-start-card'),
     padding: const EdgeInsets.all(24),
     decoration: BoxDecoration(
       color: NoveltyColors.primaryFaint,

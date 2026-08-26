@@ -33,7 +33,7 @@ Flutter
 
 ### 포함
 
-- 기존 `availableTime`·`dailyMissionLimit` 호환 설정 계약 유지와 하루 수행 한도 정책
+- 기존 단계의 `availableTime`·`dailyMissionLimit` 설정 계약은 폐기되었으며 현재 Backend는 하루 1개 미션 정책을 적용한다.
 - 검수된 기본 미션과 사용 가능한 공유 LLM 미션 조회
 - 성향 거리, 최근 행동 다양성, 탐색 보너스와 현재 조건 적합도를 반영한 후보 생성
 - 서로 다른 경험 패턴의 하루 후보 최대 5개 저장 및 복원
@@ -285,8 +285,8 @@ Phase 1에서 nullable `USER_MISSION_ID`, `PREVIOUS_STATUS`, `CHANGE_REASON`을 
 
 | Method | Path | 목적 |
 |---|---|---|
-| GET | `/api/missions/settings` | 사용자 미션 설정 조회 |
-| PUT | `/api/missions/settings` | 시간과 하루 한도 저장 |
+| GET | `/api/missions/today` | 오늘의 미션 상태 조회 |
+| POST | `/api/missions/today/recommendations` | 최대 5개 후보 생성 |
 | GET | `/api/missions/today` | 설정, 수행 중, 완료 수, 기존 후보 조회 |
 | POST | `/api/missions/today/recommendations` | 오늘 후보를 최초 생성하거나 기존 후보 반환 |
 | POST | `/api/user-missions/{userMissionId}/select` | 후보 선택 |
@@ -411,3 +411,9 @@ docs/mission-phase*-verification.md
 9. 2026-08-24 V1.1: 추천 다양성 개정과 Oracle 메타데이터를 적용하고 집중 22개, 실제 Oracle 1개, Backend 전체 179개와 Flutter 81개 회귀 테스트를 통과했다.
 10. 2026-08-24 V1.2: 기본 Catalog를 M001~M200으로 교체하고 동일 완료 Mission의 4~30일 장기 재노출 감점을 추가했다. 실제 Oracle에서 활성 200개·Category별 24~26개와 30일 매일 3개 추천을 검증했다.
 11. 2026-08-26: 시간 선택 UI를 제거하고 `LONG` 호환값을 내부 저장하도록 Flutter 흐름을 개정했으며, 기준 seed에 30~150분 중심 BASE 미션 100개를 멱등 방식으로 추가했다.
+## Current contract update (2026-08-26)
+
+The legacy `GET/PUT /api/missions/settings` contract is no longer active.
+Available time and daily mission count are not user inputs or response fields.
+The current flow stores one daily mission policy in Backend code, returns up
+to five candidates, and keeps `estimatedMinutes` as mission metadata only.

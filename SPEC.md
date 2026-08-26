@@ -82,7 +82,7 @@ Blender 또는 Asset 제작
 - 성향 분석은 기본적으로 사용자당 최초 1회만 진행한다.
 - 재접속 시 브라우저 또는 앱 캐시에 저장된 사용자 키로 사용자를 복원하고, 캐시가 없으면 아이디·비밀번호 로그인을 제공한다.
 - 사용자가 원하면 `성향 분석 다시하기` 버튼으로 다시 진행할 수 있다.
-- 현재 Flutter 사용자 흐름에서는 할애 가능 시간 질문을 표시하지 않는다. 기존 `availableTime` 저장 필드는 하위 호환을 위해 `LONG`으로 내부 정규화한다.
+- 현재 Flutter 사용자 흐름에서는 할애 가능 시간과 수행 미션 수를 묻지 않는다. Backend는 하루 1개 미션 정책을 적용한다.
 - 닉네임은 회원가입 시 초기 랜덤값을 자동 배정하고 사용자가 추후 변경할 수 있다.
 - 최초 미분석 사용자는 회원가입 직후 닉네임 입력을 반복하지 않고 선택폼을 시작한다.
 - 신규 사용자 시작 화면은 노벨티 효과와 매일 작은 새로운 행동을 돕는 서비스 목적을 설명한다.
@@ -163,7 +163,7 @@ Blender 또는 Asset 제작
 ### 할애 가능 시간
 
 - 현재 사용자 플로우에서는 성향 결과 이후에도 별도의 시간 선택지를 노출하지 않는다.
-- 기존 `availableTime` 저장 필드와 API는 하위 호환을 위해 유지하며, Client는 기본값 `LONG`을 내부적으로 저장한다.
+- 기존 `availableTime` 및 `dailyMissionLimit` 설정 API는 제거했다. 미션의 `estimatedMinutes`는 Catalog 메타데이터로만 사용한다.
 - 추천 화면에서는 사용자가 시간 대신 서로 다른 경험의 미션 후보를 최대 5개까지 비교하고 하나를 선택한다.
 
 ## 8. 미션 사양
@@ -242,8 +242,7 @@ COMPLETED
 - 같은 사용자가 같은 미션 완료 요청을 중복 전송해도 완료 횟수와 보상이 중복 반영되지 않아야 한다.
 - 사용자는 서로 다른 경험으로 구성된 하루 최대 5개의 추천 후보 중 수행할 미션을 선택한다. 필터를 통과한 후보가 부족하면 가능한 개수만 반환한다.
 - 현재 Flutter UI의 하루 수행 미션 수는 1개로 고정한다. 사용자는 매일 미션을 시작할 때 추천 후보 중 하나를 선택한다.
-- 기존 REST/DB의 `availableTime`, `dailyMissionLimit` 필드는 호환을 위해 유지하되 Flutter는 `LONG`, `1`을 내부적으로 저장하며 두 설정 UI를 제공하지 않는다.
-- 오늘의 `SELECTED + COMPLETED` 수보다 낮게 하루 한도를 줄일 수 없다.
+- `USER_MISSION_SETTING`과 `USER_MISSION.AVAILABLE_TIME`은 `003_remove_mission_settings.sql`에서 제거한다. 기존 미션 수행 이력은 보존한다.
 - 수행 중인 미션은 목록 상단에 표시한다.
 - Flutter Web UI는 수행 중인 미션에 `완료`와 `취소`만 제공하고 직접 `변경` 버튼은 표시하지 않는다.
 - 다른 미션을 수행하려면 현재 미션을 취소한 뒤 같은 날의 기존 추천 캐러셀에서 다시 선택한다.
@@ -317,7 +316,7 @@ COMPLETED
 - Validation 오류, 중복, 찾을 수 없음, 상태 충돌과 Server 오류를 구분된 HTTP 상태와 오류 Body로 반환한다.
 - API는 springdoc-openapi에 노출하고 Swagger UI의 `Try it out`으로 정상·오류 사례를 시험할 수 있어야 한다.
 - 로컬 Swagger UI 주소는 `http://localhost:8080/swagger-ui.html`이다.
-- 공식 API는 회원가입·로그인·사용자 복원·닉네임 변경, `POST /api/personality-analyses`, `/api/missions/settings`, `/api/missions/today`, `/api/missions/today/recommendations`, `/api/user-missions/{userMissionId}/select|cancel|replace|complete`, `/api/missions/summary`, `GET /api/world`다.
+- 공식 API는 회원가입·로그인·사용자 복원·닉네임 변경, `POST /api/personality-analyses`, `/api/missions/today`, `/api/missions/today/recommendations`, `/api/user-missions/{userMissionId}/select|cancel|replace|complete`, `/api/missions/summary`, `GET /api/world`다.
 - 폐기된 `/api/users/anonymous`, `/api/surveys`, `/api/missions/random`, `PATCH /api/missions/{missionId}/status`는 Runtime과 Swagger에 노출하지 않는다.
 - `userId`는 내부 사용자 식별자, `userKey`는 `X-User-Key` 인증·복원 값, `missionId`는 Catalog 식별자, `userMissionId`는 사용자 상태 변경 대상이다.
 
@@ -417,3 +416,9 @@ COMPLETED
 | 2026-08-19 | Mission V1 Phase 0 확정: 후보 5개, 하루 1~3개, 서울 달력 날짜 경계, 추천 점수, 취소·변경·상태·REST·Oracle 계약 정의 |
 | 2026-08-19 | 성향 분석을 `PERSONALITY_V2`로 재정의: 실내·실외와 신체 활동 분리, 여섯 문항, Mission 범위 분리 |
 | 2026-08-19 | 최초 작성. 현재까지 정의된 사용자, 성향, 미션, World, REST, DB, 디자인, 보안 정책 통합 |
+## Mission API update (2026-08-26)
+
+User mission settings for available time and daily mission count are removed
+from the current contract. The Backend always limits a user to one selected
+mission per service date and returns up to five recommendations. Mission
+`estimatedMinutes` remains catalog metadata, not a user preference.

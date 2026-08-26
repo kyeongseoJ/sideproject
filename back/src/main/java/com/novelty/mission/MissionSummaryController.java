@@ -15,7 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @RestController
 @RequestMapping("/api/missions")
 @CrossOrigin(originPatterns = {"http://localhost:*", "http://127.0.0.1:*"})
-@Tag(name = "Mission", description = "성향 벡터 기반 미션 추천과 수행 상태 API")
+@Tag(name = "미션", description = "성향 기반 미션 추천과 수행 상태 API")
 public class MissionSummaryController {
 
     private final UserMissionService userMissionService;

@@ -10,7 +10,7 @@ var tables = List.of(
         "novelty_user", "nickname_banned_word", "survey_response", "survey_interest",
         "user_personality_profile", "user_profile_interest", "mission",
         "mission_llm_generation", "mission_status_log", "user_mission",
-        "user_mission_setting", "user_mission_category_stat", "world_object",
+        "user_mission_category_stat", "world_object",
         "world_object_level", "user_world_object");
 for (var table : tables) {
     try (var statement = connection.createStatement();
@@ -33,6 +33,18 @@ for (var check : checks) {
         result.next();
         System.out.println(name + "=" + result.getLong(1));
     }
+}
+try (var statement = connection.createStatement();
+        var result = statement.executeQuery("""
+                SELECT pg_get_constraintdef(oid)
+                  FROM pg_constraint
+                 WHERE conrelid = 'survey_response'::regclass
+                   AND conname = 'ck_survey_response_analysis_mode'
+                """)) {
+    if (!result.next()) {
+        throw new IllegalStateException("Missing ck_survey_response_analysis_mode constraint.");
+    }
+    System.out.println("analysis_mode_constraint=" + result.getString(1));
 }
 try (var statement = connection.createStatement();
         var result = statement.executeQuery("SELECT sequencename, last_value FROM pg_sequences WHERE schemaname = 'public' ORDER BY sequencename")) {

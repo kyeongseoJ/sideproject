@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS survey_response (
     physical_activity_level varchar(10) CHECK (physical_activity_level IN ('LOW', 'MEDIUM', 'HIGH')),
     novelty_tolerance varchar(10) NOT NULL CHECK (novelty_tolerance IN ('LOW', 'MEDIUM', 'HIGH')),
     execution_style varchar(16) CHECK (execution_style IN ('PLANNED', 'FLEXIBLE', 'SPONTANEOUS')),
-    analysis_mode varchar(12) CHECK (analysis_mode IN ('RULE', 'LLM')),
+    analysis_mode varchar(12) CHECK (analysis_mode IN ('INITIAL', 'REANALYSIS')),
     analysis_version varchar(24),
     energy_level varchar(10) CHECK (energy_level IN ('LOW', 'MEDIUM', 'HIGH')),
     created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
