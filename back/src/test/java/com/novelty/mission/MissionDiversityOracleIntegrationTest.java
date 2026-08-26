@@ -131,7 +131,7 @@ class MissionDiversityOracleIntegrationTest {
 
             assertThat(recommendations)
                     .as("day %s recommendations", day + 1)
-                    .hasSize(3);
+                    .hasSize(5);
 
             OffsetDateTime occurredAt =
                     serviceDate.atTime(12, 0).atZone(serviceZone).toOffsetDateTime();

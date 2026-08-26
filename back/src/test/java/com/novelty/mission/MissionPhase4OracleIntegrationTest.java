@@ -52,7 +52,7 @@ class MissionPhase4OracleIntegrationTest {
                 .recommendToday(user.userKey())
                 .response()
                 .candidates();
-        assertThat(candidates).hasSize(3);
+        assertThat(candidates).hasSize(5);
 
         long first = candidates.get(0).userMissionId();
         long second = candidates.get(1).userMissionId();

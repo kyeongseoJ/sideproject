@@ -2,7 +2,7 @@ package com.novelty.mission;
 
 final class MissionRecommendationConfig {
 
-    static final int CANDIDATE_LIMIT = 3;
+    static final int CANDIDATE_LIMIT = 5;
     static final int RANKED_POOL_LIMIT = 20;
     static final int REEXPOSURE_BLOCK_DAYS = 3;
     static final int COMPLETED_HARD_BLOCK_MAX_AGE_DAYS = 3;

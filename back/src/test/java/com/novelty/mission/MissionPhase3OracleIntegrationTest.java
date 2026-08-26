@@ -48,7 +48,7 @@ class MissionPhase3OracleIntegrationTest {
 
         MissionRecommendationBatchResult created = missionService.recommendToday(user.userKey());
         assertThat(created.created()).isTrue();
-        assertThat(created.response().candidates()).isNotEmpty().hasSizeLessThanOrEqualTo(3);
+        assertThat(created.response().candidates()).isNotEmpty().hasSizeLessThanOrEqualTo(5);
         assertThat(created.response().candidates())
                 .allSatisfy(candidate -> {
                     assertThat(candidate.status()).isEqualTo(MissionStatus.SHOWN);

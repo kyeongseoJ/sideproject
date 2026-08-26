@@ -108,7 +108,7 @@ class MissionRecommendationPolicyTest {
     }
 
     @Test
-    void returnsAtMostThreeMutuallyDiverseCandidates() {
+    void returnsAtMostFiveMutuallyDiverseCandidates() {
         List<Mission> missions = List.of(
                 mission(1, MissionCategory.MOVEMENT),
                 mission(2, MissionCategory.CREATIVE),
@@ -123,9 +123,9 @@ class MissionRecommendationPolicyTest {
         List<MissionRecommendation> results = recommend(
                 missions, vector(0), AvailableTime.SHORT, Map.of(), List.of());
 
-        assertThat(results).hasSize(3);
+        assertThat(results).hasSize(5);
         assertThat(results.stream().map(result -> result.mission().category()).distinct())
-                .hasSize(3);
+                .hasSize(5);
     }
 
     @Test
@@ -172,7 +172,7 @@ class MissionRecommendationPolicyTest {
         List<MissionRecommendation> results = recommend(
                 missions, vector(0), AvailableTime.SHORT, Map.of(), List.of());
 
-        assertThat(results).hasSize(3);
+        assertThat(results).hasSize(4);
         assertThat(results.get(0).mission().category())
                 .isNotEqualTo(results.get(1).mission().category());
     }
@@ -302,7 +302,7 @@ class MissionRecommendationPolicyTest {
                 List.of(cafe, restaurant, place, contact, create), vector(5), AvailableTime.SHORT,
                 Map.of(), List.of(), new ZeroRandom());
 
-        assertThat(results).hasSize(3);
+        assertThat(results).hasSize(5);
         assertThat(results.stream().map(result -> result.mission().category()).distinct()).hasSize(3);
         assertThat(results.stream().map(result -> result.mission().actionType()).distinct()).hasSize(3);
     }

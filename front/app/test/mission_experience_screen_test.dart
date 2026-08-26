@@ -9,23 +9,18 @@ import 'package:novelty_app/mission/mission_models.dart';
 import 'package:novelty_app/novelty_theme.dart';
 
 void main() {
-  testWidgets('asks for settings once and shows recommendations after save', (
+  testWidgets('silently creates default settings and shows recommendations', (
     tester,
   ) async {
     final gateway = _FakeMissionGateway(settingsRequired: true);
     await _pump(tester, gateway);
 
-    expect(find.byKey(const Key('mission-settings-form')), findsOneWidget);
-    await tester.tap(find.byKey(const Key('mission-start-select')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('mission-time-MEDIUM')));
-    await tester.pumpAndSettle();
-
-    expect(gateway.savedSettings?.availableTime, AvailableTime.medium);
+    expect(gateway.savedSettings?.availableTime, AvailableTime.long);
     expect(gateway.savedSettings?.dailyLimit, 1);
     expect(find.byKey(const Key('mission-carousel')), findsOneWidget);
     expect(find.text('새로운 길 걷기'), findsOneWidget);
     expect(find.text('하루 한 개'), findsNothing);
+    expect(find.byKey(const Key('mission-time-picker')), findsNothing);
   });
 
   testWidgets(
@@ -202,10 +197,10 @@ class _FakeMissionGateway implements MissionGateway {
     settingsRequired = false;
     today = _today(
       settings: settings,
-      candidates: [
-        _mission(13),
-        _mission(14, title: '낯선 음악 듣기'),
-      ],
+      active: today.activeMissions,
+      candidates: today.candidates,
+      completed: today.completedToday,
+      remaining: today.remainingSlots,
     );
     return settings;
   }
