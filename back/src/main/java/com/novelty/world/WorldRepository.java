@@ -88,21 +88,14 @@ public class WorldRepository {
 
     void upsertProgress(long userId, long worldObjectId, int exp, int level) {
         int updated = jdbcTemplate.update("""
-                MERGE INTO USER_WORLD_OBJECT target
-                USING (SELECT ? USER_ID, ? WORLD_OBJECT_ID FROM dual) source
-                   ON (target.USER_ID = source.USER_ID
-                       AND target.WORLD_OBJECT_ID = source.WORLD_OBJECT_ID)
-                 WHEN MATCHED THEN UPDATE SET
-                      target.EXPERIENCE = ?, target.CURRENT_LEVEL = ?,
-                      target.UPDATED_AT = CURRENT_TIMESTAMP
-                 WHEN NOT MATCHED THEN INSERT (
-                      USER_ID, WORLD_OBJECT_ID, EXPERIENCE, CURRENT_LEVEL,
-                      CREATED_AT, UPDATED_AT
-                 ) VALUES (
-                      source.USER_ID, source.WORLD_OBJECT_ID, ?, ?,
-                      CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-                 )
-                """, userId, worldObjectId, exp, level, exp, level);
+                INSERT INTO USER_WORLD_OBJECT (
+                    USER_ID, WORLD_OBJECT_ID, EXPERIENCE, CURRENT_LEVEL
+                ) VALUES (?, ?, ?, ?)
+                ON CONFLICT (USER_ID, WORLD_OBJECT_ID) DO UPDATE SET
+                    EXPERIENCE = EXCLUDED.EXPERIENCE,
+                    CURRENT_LEVEL = EXCLUDED.CURRENT_LEVEL,
+                    UPDATED_AT = CURRENT_TIMESTAMP
+                """, userId, worldObjectId, exp, level);
         if (updated != 1) {
             throw new IllegalStateException("Unexpected world progress update count.");
         }

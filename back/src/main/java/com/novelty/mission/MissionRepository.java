@@ -121,9 +121,9 @@ public class MissionRepository {
     }
 
     public long insertGenerated(GeneratedMission generated) {
-        Long missionId = jdbcTemplate.queryForObject("SELECT MISSION_SEQ.NEXTVAL FROM DUAL", Long.class);
-        if (missionId == null) {
-            throw new IllegalStateException("Oracle did not return a mission ID.");
+            Long missionId = jdbcTemplate.queryForObject("SELECT nextval('mission_seq')", Long.class);
+            if (missionId == null) {
+            throw new IllegalStateException("PostgreSQL did not return a mission ID.");
         }
         jdbcTemplate.update("""
                 INSERT INTO MISSION (
@@ -171,7 +171,7 @@ public class MissionRepository {
 
         try {
             Long generationId = jdbcTemplate.queryForObject(
-                    "SELECT MISSION_LLM_GENERATION_SEQ.NEXTVAL FROM DUAL", Long.class);
+                    "SELECT nextval('mission_llm_generation_seq')", Long.class);
             jdbcTemplate.update("""
                     INSERT INTO MISSION_LLM_GENERATION (
                         GENERATION_ID, USER_ID, COMPLETION_MILESTONE, STATUS, MODEL_NAME

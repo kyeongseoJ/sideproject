@@ -202,10 +202,10 @@ public class PersonalityRepository {
 
     long nextAnalysisId() {
         Long analysisId = jdbcTemplate.queryForObject(
-                "SELECT SURVEY_RESPONSE_SEQ.NEXTVAL FROM DUAL",
+                "SELECT nextval('survey_response_seq')",
                 Long.class);
         if (analysisId == null) {
-            throw new DataRetrievalFailureException("Oracle did not return an analysis ID.");
+            throw new DataRetrievalFailureException("PostgreSQL did not return an analysis ID.");
         }
         return analysisId;
     }

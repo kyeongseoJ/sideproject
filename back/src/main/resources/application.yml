@@ -7,12 +7,10 @@ spring:
       - "optional:file:../.env[.properties]"
       - "optional:file:back/.env[.properties]"
   datasource:
-    url: "${DB_URL:jdbc:oracle:thin:@localhost:1521:XE}"
+    url: "${DB_URL:jdbc:postgresql://localhost:5432/postgres}"
     username: "${DB_USERNAME}"
     password: "${DB_PASSWORD}"
-    driver-class-name: oracle.jdbc.OracleDriver
-    hikari:
-      connection-init-sql: "ALTER SESSION SET TIME_ZONE = 'Asia/Seoul'"
+    driver-class-name: org.postgresql.Driver
   jackson:
     time-zone: Asia/Seoul
 

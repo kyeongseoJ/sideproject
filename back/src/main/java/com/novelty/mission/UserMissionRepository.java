@@ -51,18 +51,13 @@ public class UserMissionRepository {
             long userId,
             MissionSettingsResponse settings) {
         jdbcTemplate.update("""
-                MERGE INTO USER_MISSION_SETTING target
-                USING (SELECT ? USER_ID, ? AVAILABLE_TIME, ? DAILY_MISSION_LIMIT FROM DUAL) source
-                   ON (target.USER_ID = source.USER_ID)
-                 WHEN MATCHED THEN UPDATE SET
-                      target.AVAILABLE_TIME = source.AVAILABLE_TIME,
-                      target.DAILY_MISSION_LIMIT = source.DAILY_MISSION_LIMIT,
-                      target.UPDATED_AT = CURRENT_TIMESTAMP
-                 WHEN NOT MATCHED THEN INSERT (
-                      USER_ID, AVAILABLE_TIME, DAILY_MISSION_LIMIT
-                 ) VALUES (
-                      source.USER_ID, source.AVAILABLE_TIME, source.DAILY_MISSION_LIMIT
-                 )
+                INSERT INTO USER_MISSION_SETTING (
+                    USER_ID, AVAILABLE_TIME, DAILY_MISSION_LIMIT
+                ) VALUES (?, ?, ?)
+                ON CONFLICT (USER_ID) DO UPDATE SET
+                    AVAILABLE_TIME = EXCLUDED.AVAILABLE_TIME,
+                    DAILY_MISSION_LIMIT = EXCLUDED.DAILY_MISSION_LIMIT,
+                    UPDATED_AT = CURRENT_TIMESTAMP
                 """, userId, settings.availableTime().name(), settings.dailyMissionLimit());
         return settings;
     }
@@ -95,9 +90,9 @@ public class UserMissionRepository {
             MissionRecommendation recommendation,
             OffsetDateTime shownAt) {
         Long userMissionId = jdbcTemplate.queryForObject(
-                "SELECT USER_MISSION_SEQ.NEXTVAL FROM DUAL", Long.class);
+                "SELECT nextval('user_mission_seq')", Long.class);
         if (userMissionId == null) {
-            throw new IllegalStateException("Oracle did not return a user mission ID.");
+            throw new IllegalStateException("PostgreSQL did not return a user mission ID.");
         }
         jdbcTemplate.update("""
                 INSERT INTO USER_MISSION (
@@ -169,7 +164,7 @@ public class UserMissionRepository {
                   JOIN MISSION m ON m.MISSION_ID = um.MISSION_ID
                  WHERE um.USER_ID = ?
                    AND um.USER_MISSION_ID = ?
-                   FOR UPDATE OF um.STATUS
+                   FOR UPDATE OF um
                 """, this::mapState, userId, userMissionId)
                 .stream()
                 .findFirst();
@@ -187,7 +182,7 @@ public class UserMissionRepository {
                  WHERE um.USER_ID = ?
                    AND um.USER_MISSION_ID IN (?, ?)
                  ORDER BY um.USER_MISSION_ID
-                   FOR UPDATE OF um.STATUS
+                   FOR UPDATE OF um
                 """, this::mapState, userId, firstUserMissionId, secondUserMissionId);
     }
 

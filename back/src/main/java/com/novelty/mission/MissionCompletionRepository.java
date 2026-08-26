@@ -20,25 +20,16 @@ public class MissionCompletionRepository {
             MissionCategory category,
             OffsetDateTime completedAt) {
         int updated = jdbcTemplate.update("""
-                MERGE INTO USER_MISSION_CATEGORY_STAT target
-                USING (SELECT ? USER_ID, ? CATEGORY FROM DUAL) source
-                   ON (target.USER_ID = source.USER_ID
-                       AND target.CATEGORY = source.CATEGORY)
-                 WHEN MATCHED THEN UPDATE SET
-                      target.COMPLETED_COUNT = target.COMPLETED_COUNT + 1,
-                      target.LAST_COMPLETED_AT = ?,
-                      target.UPDATED_AT = ?
-                 WHEN NOT MATCHED THEN INSERT (
-                      USER_ID, CATEGORY, COMPLETED_COUNT,
-                      LAST_COMPLETED_AT, UPDATED_AT
-                 ) VALUES (
-                      source.USER_ID, source.CATEGORY, 1, ?, ?
-                 )
+                INSERT INTO USER_MISSION_CATEGORY_STAT (
+                    USER_ID, CATEGORY, COMPLETED_COUNT, LAST_COMPLETED_AT, UPDATED_AT
+                ) VALUES (?, ?, 1, ?, ?)
+                ON CONFLICT (USER_ID, CATEGORY) DO UPDATE SET
+                    COMPLETED_COUNT = USER_MISSION_CATEGORY_STAT.COMPLETED_COUNT + 1,
+                    LAST_COMPLETED_AT = EXCLUDED.LAST_COMPLETED_AT,
+                    UPDATED_AT = EXCLUDED.UPDATED_AT
                 """,
                 userId,
                 category.name(),
-                completedAt,
-                completedAt,
                 completedAt,
                 completedAt);
         if (updated != 1) {

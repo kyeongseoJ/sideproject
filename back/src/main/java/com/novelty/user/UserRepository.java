@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 public class UserRepository {
 
     private static final String NEXT_USER_ID_SQL =
-            "SELECT NOVELTY_USER_SEQ.NEXTVAL FROM DUAL";
+            "SELECT nextval('novelty_user_seq')";
 
     private static final String INSERT_USER_SQL = """
             INSERT INTO NOVELTY_USER (
@@ -63,7 +63,7 @@ public class UserRepository {
             SELECT COUNT(*)
             FROM NICKNAME_BANNED_WORD
             WHERE ACTIVE = 'Y'
-              AND INSTR(?, WORD_NORMALIZED) > 0
+              AND strpos(?, WORD_NORMALIZED) > 0
             """;
 
     private static final String UPDATE_NICKNAME_SQL = """
@@ -84,7 +84,7 @@ public class UserRepository {
     public long nextUserId() {
         Long userId = jdbcTemplate.queryForObject(NEXT_USER_ID_SQL, Long.class);
         if (userId == null) {
-            throw new IllegalStateException("Oracle did not return a user ID.");
+            throw new IllegalStateException("PostgreSQL did not return a user ID.");
         }
         return userId;
     }

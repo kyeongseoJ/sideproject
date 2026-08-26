@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 public class MissionStatusLogRepository {
 
     private static final String NEXT_LOG_ID_SQL =
-            "SELECT MISSION_STATUS_LOG_SEQ.NEXTVAL FROM DUAL";
+            "SELECT nextval('mission_status_log_seq')";
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -29,7 +29,7 @@ public class MissionStatusLogRepository {
             OffsetDateTime occurredAt) {
         Long logId = jdbcTemplate.queryForObject(NEXT_LOG_ID_SQL, Long.class);
         if (logId == null) {
-            throw new IllegalStateException("Oracle did not return a mission status log ID.");
+            throw new IllegalStateException("PostgreSQL did not return a mission status log ID.");
         }
 
         jdbcTemplate.update("""
