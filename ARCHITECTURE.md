@@ -10,7 +10,7 @@ Novelty
 │  │  ├─ 성향 분석 UI       front/app/lib/personality
 │  │  ├─ 미션 UI            front/app/lib/mission
 │  │  ├─ 프로필             front/app/lib/profile
-│  │  ├─ 미션 설정 UI        front/app/lib/mission
+│  │  ├─ 미션 선택·수행 UI   front/app/lib/mission
 │  │  └─ 3D World 화면      front/app/lib/world
 │  └─ Three.js Renderer      front/world3d/src/world
 ├─ Backend / Spring Boot
@@ -49,7 +49,7 @@ Novelty
 - LLM 호출은 완료 Transaction 이후 수행한다. 검증된 결과만 공유 `MISSION` Catalog에 `SOURCE_TYPE=LLM`으로 저장하며 사용자·마일스톤 Unique 계약으로 중복 시도를 차단한다.
 - `/api/missions/summary`는 전체 완료 수, 마지막 성향 반영 횟수, 성향 코드와 카테고리별 완료 통계를 제공한다.
 - Flutter `lib/api/mission_api.dart`가 `X-User-Key` 기반 REST 계약과 오류 경계를 담당하고, `lib/mission/mission_experience_screen.dart`가 설정·오늘 후보·수행·완료·통계 화면 상태를 담당한다.
-- 성향 완료 홈은 `MissionDashboardSection`을 상단에 직접 포함한다. 시간 선택·후보 캐러셀·단일 수행/완료 상태가 같은 화면에서 전환되며 별도 미션 페이지 이동을 요구하지 않는다.
+- 성향 완료 홈은 `MissionDashboardSection`을 상단에 직접 포함한다. 후보 캐러셀·단일 수행/완료 상태가 같은 화면에서 전환되며 별도 미션 페이지 이동을 요구하지 않는다. 시간 선택 UI는 제공하지 않는다.
 - 완료 미션의 네 축 벡터는 Flutter의 행동 선호 경험 방향 표시에 사용하고, 저장 성향 그래프는 Backend의 5회 단위 갱신 결과만 반영한다.
 - 수행 슬롯의 중복은 `SELECTED`와 `COMPLETED` 상태에만 적용되는 Oracle 함수 기반 Unique Index로 차단한다.
 - Oracle의 `USER`는 예약 의미와 충돌하므로 물리 테이블 이름은 기존 `NOVELTY_USER`를 유지한다.

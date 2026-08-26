@@ -31,10 +31,10 @@ Flutter
 
 ### 포함
 
-- 할애 가능 시간과 하루 수행 한도 설정
+- 기존 `availableTime`·`dailyMissionLimit` 호환 설정 계약 유지와 하루 수행 한도 정책
 - 검수된 기본 미션과 사용 가능한 공유 LLM 미션 조회
 - 성향 거리, 최근 행동 다양성, 탐색 보너스와 현재 조건 적합도를 반영한 후보 생성
-- 서로 다른 경험 패턴의 하루 후보 최대 3개 저장 및 복원
+- 서로 다른 경험 패턴의 하루 후보 최대 5개 저장 및 복원
 - 선택, 취소, 기존 후보로 변경, 완료
 - 상태 집계와 상태 로그 분리
 - 카테고리별 완료 통계
@@ -79,7 +79,7 @@ World 기능은 `category`와 완료 통계를 후속 입력으로 사용하지�
 
 ### 4.3 후보 목록
 
-- 하루 추천 후보 수는 최대 3개다.
+- 하루 추천 후보 수는 최대 5개다.
 - 최초 생성 후 같은 서비스 날짜에는 기존 후보를 반환한다.
 - 후보 생성 요청을 반복해도 새 후보나 상태 로그를 중복 생성하지 않는다.
 - 필터를 통과한 미션이 3개 미만이면 가능한 후보만 반환한다.
@@ -158,7 +158,7 @@ recommendationScore = clamp(positiveScore
 - 카테고리 완료 이력이 없으면 해당 카테고리를 1로 계산한다.
 - `recentDiversityScore`와 `explorationBonus`는 최근 완료 이력과의 메타데이터 유사도·패턴 중복의 역수다.
 - 최근성 가중치는 당일 `1.0`에서 하루마다 `0.75`를 곱한다.
-- `contextFitScore`는 난이도 적합도와 선택한 할애 가능 시간 적합도의 평균이다.
+- `contextFitScore`는 난이도 적합도와 저장된 할애 가능 시간 설정 적합도의 평균이다. 현재 Flutter는 시간 선택 UI를 제공하지 않고 `LONG`을 내부 저장한다.
 - 최근 `category`, `actionType`, 환경, 태그, 사회·신체·창의 특성의 반복은 감점한다.
 - 동일 Mission 완료 이력은 의미 유사도와 별도로 경과 4~7일 `0.35`, 8~14일 `0.20`, 15~30일 `0.08`, 30일 초과 `0`의 장기 반복 감점을 적용한다. 동일 ID는 최근 유사도·패턴 감점에서 제외하여 이중 계산하지 않는다.
 - `SHOWN` 뒤 선택되지 않은 후보와 `CANCELLED` 후보는 skipped/rejected로 해석한다. 반복될수록 같은 패턴의 빈도를 낮추되 하드 제외하지 않고 `comfortZoneDistance`가 큰 후보를 더 감점한다.
@@ -168,14 +168,14 @@ recommendationScore = clamp(positiveScore
 
 - 추천 점수 내림차순 상위 20개를 최종 후보군으로 사용한다.
 - 첫 후보는 점수 기반 가중 추출하고, 다음 후보는 이미 선택한 후보와의 경험 유사도 패널티 `0.35`를 반영한다.
-- 최종 후보끼리 유사도 `0.75` 미만인 후보를 우선하며 최대 3개를 반환한다. Catalog가 부족한 경우에만 유사도 조건을 완화한다.
+- 최종 후보끼리 유사도 `0.75` 미만인 후보를 우선하며 최대 5개를 반환한다. Catalog가 부족한 경우에만 유사도 조건을 완화한다.
 - 최근 수행 카테고리는 가장 최근의 `SELECTED` 또는 `COMPLETED` 로그로 정한다.
 - Category뿐 아니라 `actionType`, 태그와 행동 수준이 서로 다른 경험을 우선한다.
 - 테스트에서는 고정 `Clock`과 고정 난수 공급자로 결과를 재현한다.
 
 ## 7. 미션 Catalog와 LLM
 
-- 검수된 `BASE` Catalog는 M001~M200의 200개이며 8개 Category에 각각 24~26개를 배분한다. Seed 반영 시 과거 Catalog 행은 이력 참조 보존을 위해 삭제하지 않고 비활성화한다.
+- 검수된 `BASE` Catalog는 기존 200개와 추가 100개를 포함하는 seed 기준으로 관리한다. 추가 seed는 30~150분 미션을 포함하며, 기존 Catalog 행은 이력 참조 보존을 위해 삭제하지 않고 비활성화한다. 신규 seed는 `CONTENT_FINGERPRINT` 또는 `TITLE_NORMALIZED` 기준으로 재실행 중복을 방지한다.
 - 제공 Seed의 0~4 원본 수준은 기존 Domain 범위로 정규화한다. `INDOOR/BOTH/OUTDOOR`는 -1/0/1, 사회 수준은 -1~1, 신체·창의·새로움·예측불가·편안함 거리는 0~2, 난이도는 1~3으로 저장한다.
 - 최초 추천과 완료 5회 미만 사용자는 `BASE` 미션만 사용한다.
 - 완료 5회 이상 사용자는 `BASE`와 검증을 통과한 공유 `LLM` 미션을 사용한다.
@@ -221,7 +221,7 @@ CANCELLED → SELECTED
 
 ### 기존 `MISSION`
 
-기존 `category`, `estimatedMinutes`, `indoorOutdoor`, `socialLevel`, `activityLevel`, `noveltyLevel`을 재사용한다. 다양성 계산을 위해 `ACTION_TYPE`, `CREATIVITY_LEVEL`, `UNPREDICTABILITY_LEVEL`, `COMFORT_ZONE_DISTANCE`, `COST_LEVEL`, 쉼표 구분 정규화 `TAGS`를 추가한다. 각 수준 값은 0~2이고 태그는 대문자 영문·숫자·underscore 또는 한글 조합으로 개별 1~30자, 1~10개만 허용한다. 기본 Seed는 첫 태그로 M001~M200 식별자를 보존하고 LLM 생성 태그는 기존 대문자 영문 규칙을 유지한다. `durationLevel`은 예상 시간으로 파생하므로 별도 Column을 만들지 않는다.
+기존 `category`, `estimatedMinutes`, `indoorOutdoor`, `socialLevel`, `activityLevel`, `noveltyLevel`을 재사용한다. 다양성 계산을 위해 `ACTION_TYPE`, `CREATIVITY_LEVEL`, `UNPREDICTABILITY_LEVEL`, `COMFORT_ZONE_DISTANCE`, `COST_LEVEL`, 쉼표 구분 정규화 `TAGS`를 추가한다. 각 수준 값은 0~2이고 태그는 대문자 영문·숫자·underscore 또는 한글 조합으로 개별 1~30자, 1~10개만 허용한다. 기본 Seed는 식별자와 한글 태그를 허용하고 LLM 생성 태그는 기존 대문자 영문 규칙을 유지한다. `durationLevel`은 예상 시간으로 파생하므로 별도 Column을 만들지 않는다.
 
 ### 보강할 `USER_MISSION`
 
@@ -249,7 +249,7 @@ CANCELLED → SELECTED
 ### 2026-08-24 Flutter 화면 계약 개정
 
 - 성향 완료 홈 상단에 오늘의 미션을 인라인으로 표시한다.
-- 미션 시작 버튼을 누르면 할애 가능 시간만 선택하며 미션 수 옵션은 표시하지 않는다.
+- 미션 시작 버튼을 누르면 시간 선택 없이 추천 후보를 최대 5개 조회하며 미션 수 옵션도 표시하지 않는다.
 - 추천 후보는 `PageView` 가로 캐러셀로 표시한다.
 - Web의 추천 캐러셀은 터치·트랙패드뿐 아니라 마우스 드래그로도 이동할 수 있어야 한다.
 - 선택 후 수행 중 미션 하나를 크게 표시하고 완료·취소만 제공한다. 직접 변경 버튼은 표시하지 않으며 취소 후 기존 캐러셀에서 다시 선택한다.
@@ -404,7 +404,8 @@ docs/mission-phase*-verification.md
 4. Phase 3: 설정과 오늘 후보 REST·Service·Oracle 통합, 사용자 잠금, 후보 재사용과 OpenAPI를 구현하고 검증했다.
 5. Phase 4: `userMissionId` 기반 선택·취소·변경·완료 API, 소유권 검증, 활성 슬롯, 원자적 교체, 완료 멱등성과 연결 로그를 구현하고 검증했다.
 6. Phase 5: 완료 상태·로그·카테고리 통계·완료 횟수·성향 변동을 원자적으로 저장하고, 매 완료 시 성향과 유형을 갱신하며 커밋 이후 5회 단위 LLM 생성·중복/유사도 차단을 연결했다.
-7. Phase 6: Flutter 미션 설정·후보·수행·통계 흐름과 안전한 오류·중복 요청 방지를 구현하고 정상·실패 시나리오를 검증했다.
+7. Phase 6: Flutter 미션 호환 설정·후보·수행·통계 흐름과 안전한 오류·중복 요청 방지를 구현하고 정상·실패 시나리오를 검증했다.
 8. Phase 7: Flutter → REST → Spring Boot → Oracle → Response → Flutter E2E, 잘못된 사용자 키 실패와 Oracle 직접 조회·정리를 검증했다.
 9. 2026-08-24 V1.1: 추천 다양성 개정과 Oracle 메타데이터를 적용하고 집중 22개, 실제 Oracle 1개, Backend 전체 179개와 Flutter 81개 회귀 테스트를 통과했다.
 10. 2026-08-24 V1.2: 기본 Catalog를 M001~M200으로 교체하고 동일 완료 Mission의 4~30일 장기 재노출 감점을 추가했다. 실제 Oracle에서 활성 200개·Category별 24~26개와 30일 매일 3개 추천을 검증했다.
+11. 2026-08-26: 시간 선택 UI를 제거하고 `LONG` 호환값을 내부 저장하도록 Flutter 흐름을 개정했으며, 기준 seed에 30~150분 중심 BASE 미션 100개를 멱등 방식으로 추가했다.

@@ -1,55 +1,174 @@
 # Novelty
 
-새로운 행동을 제안하고 미션 완료에 따라 3D 공간이 성장하는 서비스입니다.
+Novelty는 사용자의 성향을 바탕으로 평소와 다른 행동을 제안하고, 미션을 완료할수록 개인의 3D World가 성장하는 서비스입니다.
 
-- `front/app`: 선택지 폼, 성향, 미션, 프로필, 설정과 3D World 화면을 담당하는 Flutter 앱
-- `front/world3d`: GLB 기반 3D World를 그리는 Three.js 렌더러
-- `back`: User, Personality, Mission 완료 처리, World/Progression을 담당하는 Spring Boot 서버
-- `DB.sql`: Oracle 기준 스키마
-- `ARCHITECTURE.md`: 전체 기술 구조와 영역별 소유 경계
+> 선택지를 고르고 → 나를 이해하고 → 새로운 미션을 선택하고 → 행동의 결과를 나만의 공간에서 확인합니다.
 
-## 공식 기능 흐름
+## 한눈에 보기
+
+| 영역 | 역할 | 기술 |
+|---|---|---|
+| `front/app` | 로그인, 성향 분석, 미션, 프로필, 3D World 화면 | Flutter Web / Android |
+| `front/world3d` | GLB 오브젝트를 배치하고 렌더링하는 3D 엔진 | Three.js / Vite |
+| `back` | 사용자, 성향, 미션, 완료 보상, World 상태 API | Java 21 / Spring Boot |
+| `DB.sql` | Oracle 21c 기준 스키마와 기본 데이터 | Oracle SQL |
+
+## 사용자 흐름
 
 ```text
-POST /api/users/register 또는 POST /api/users/login
-→ GET /api/users/me → PATCH /api/users/me/nickname
-→ POST /api/personality-analyses
-→ POST /api/missions/today/recommendations
-→ /api/user-missions/{userMissionId}/select|cancel|replace|complete
-→ GET /api/world
+스플래시
+  ↓
+로그인 또는 회원가입
+  ↓
+성향 선택 6문항
+  ↓
+성향 프로필과 3D World 확인
+  ↓
+오늘의 미션 후보 최대 5개 중 1개 선택
+  ↓
+미션 수행 → 완료
+  ↓
+EXP 지급 → 카테고리 오브젝트와 World 성장
 ```
 
-사용자 범위 요청은 `X-User-Key`를 사용한다. `missionId`는 공용 Catalog ID이고, 선택·취소·교체·완료는 사용자에게 발급된 `userMissionId`를 사용한다.
+### 계정과 성향
 
-최초 사용자는 아이디·비밀번호로 회원가입하고 서버가 중복 없는 랜덤 닉네임을 배정한 뒤 성향 선택폼을 시작한다.
-Web과 Android 모두 Purple 배경의 White 로고 스플래시를 표시한 후 진입하며, 캐시 사용자가 없으면 회원가입 화면이 기본으로 열린다.
-첫 문항에는 이전 버튼이 없고 두 번째 문항부터 이전 답변으로 돌아갈 수 있다. 같은 브라우저·앱의
-기존 사용자는 저장된 `userKey`로 자동 복원되며, 캐시가 삭제됐거나 다른 기기에서는 아이디·비밀번호로 로그인해 복구한다. 완료된 성향 프로필에는
-회전·확대 가능한 3D World가 인라인으로 표시되며 장면을 탭하면 성향별 이름을 가진 전체 화면으로 이동한다.
+- 시작 화면은 로그인 우선이며 회원가입은 보조 선택지로 제공합니다.
+- 회원가입 시 서버가 초기 랜덤 닉네임을 배정합니다.
+- 같은 브라우저 또는 앱에서는 저장된 `userKey`로 사용자를 자동 복원합니다.
+- 성향 폼은 총 6문항이며 실내·실외, 사회성, 신체 활동, 새로움, 관심 카테고리, 실행 방식을 다룹니다.
+- 분석 결과는 9개 성향 유형과 네 축 점수로 저장하고 프로필에서 확인합니다.
 
-성향 완료 홈에서는 오늘의 미션을 가장 먼저 보여준다. 사용자는 하루 할애 시간만 고른 뒤
-가로 캐러셀에서 한 개를 선택하며, 수행 중에는 해당 미션 하나만 크게 표시된다. 관심 분야와
-행동 선호는 분리되어 있고 행동 선호는 저장 점수 그래프와 최근 완료 미션의 경험 방향을 함께 보여준다.
+### 오늘의 미션
 
-## 실행
+- 현재 UI에서는 사용자가 시간을 직접 선택하지 않습니다.
+- Backend는 사용자 성향, 최근 완료 이력, 행동 메타데이터와 미션 난이도 등을 이용해 후보를 구성합니다.
+- Flutter는 서로 다른 경험의 후보를 최대 5개까지 보여주며 사용자가 그중 1개를 선택합니다.
+- 선택 후에는 수행 중 미션 하나만 표시하고 `완료` 또는 `취소`를 제공합니다.
+- 완료 처리는 `userMissionId`를 기준으로 수행하며 상태, 통계, 성향 반영, World EXP 지급은 하나의 Transaction으로 처리합니다.
+- 기준 seed에는 기존 200개와 추가 100개의 BASE 미션이 포함되어 있어 30~150분 미션도 구성할 수 있습니다.
+
+### 3D World
+
+- 미션 카테고리와 연결된 World 오브젝트가 미션 완료 후 성장합니다.
+- MVP는 8개 카테고리와 카테고리별 오브젝트, 5개 레벨의 GLB 모델을 사용합니다.
+- 성향 프로필 안에서는 인라인 미리보기를 제공하고, 전체 화면 World에서는 오브젝트를 탭하거나 가리켜 상세 정보를 확인할 수 있습니다.
+- Flutter는 사용자 화면과 상태를 관리하고 Three.js는 렌더링만 담당합니다.
+- GLB 로드 실패나 World 데이터 누락이 앱 전체를 중단시키지 않도록 오류·대체 화면을 제공합니다.
+
+## 프로젝트 구조
+
+```text
+sideproject/
+├─ front/
+│  ├─ app/
+│  │  ├─ lib/
+│  │  │  ├─ api/             # Backend REST Client
+│  │  │  ├─ personality/     # 성향 선택과 분석 결과
+│  │  │  ├─ mission/         # 오늘의 미션과 완료 흐름
+│  │  │  ├─ profile/         # 프로필 화면
+│  │  │  ├─ user/            # 로그인, 회원가입, 사용자 키
+│  │  │  └─ world/           # World 상태와 Flutter-Three.js Bridge
+│  │  ├─ assets/world3d/     # Web용 Three.js bundle과 GLB asset
+│  │  └─ test/               # Flutter 단위·위젯 테스트
+│  └─ world3d/
+│     └─ src/                # Three.js renderer source
+├─ back/
+│  ├─ src/main/java/com/novelty/
+│  │  ├─ user/               # 회원가입·로그인
+│  │  ├─ personality/        # 성향 분석·프로필
+│  │  ├─ mission/            # 추천·선택·완료·통계
+│  │  └─ world/              # EXP·레벨·Snapshot
+│  └─ src/main/resources/
+│     └─ db/survey-schema.sql # Backend 실행용 Schema mirror
+├─ DB.sql                    # Oracle 기준 Schema와 seed
+├─ SPEC.md                   # 현재 유효한 제품·기술 정책
+├─ PROJECT_STATUS.md         # 구현·검증 상태
+└─ ARCHITECTURE.md           # 전체 구조와 책임 경계
+```
+
+## 로컬 실행
+
+### 준비 사항
+
+- Java 21
+- Flutter SDK와 Dart SDK
+- Node.js와 npm
+- Oracle Database 21c 또는 접속 가능한 Oracle 인스턴스
+- Windows에서는 PowerShell 기준 명령을 사용합니다.
+
+### 1. 환경 변수 준비
+
+저장소 루트에서 `.env.example`을 `.env`로 복사하고 로컬 Oracle 접속 정보를 입력합니다.
+
+```powershell
+Copy-Item .env.example .env
+```
+
+`.env`에는 다음 계열의 값이 사용됩니다.
+
+```text
+DB_URL=jdbc:oracle:thin:@localhost:1521:XE
+DB_USERNAME=your_username
+DB_PASSWORD=your_password
+OPENAI_API_KEY=
+OPENAI_MODEL=
+OPENAI_BASE_URL=https://api.openai.com/v1
+```
+
+`.env`는 Git에 추가하지 않습니다. OpenAI 설정은 완료 5회 단위의 LLM 미션 생성이 필요할 때만 사용하며, 기본 미션 추천에는 필수가 아닙니다.
+
+### 2. Database 적용
+
+기준 SQL은 루트의 `DB.sql`이며 Backend mirror는 `back/src/main/resources/db/survey-schema.sql`입니다. 두 파일의 실행 내용은 동일하게 유지해야 합니다.
+
+```powershell
+# Oracle SQL*Plus 또는 사용하는 Oracle SQL 도구에서 DB.sql 실행
+```
+
+Windows SQL*Plus에서 한글 seed를 실행할 때는 세션 인코딩을 다음과 같이 맞춥니다.
+
+```powershell
+$env:NLS_LANG = 'KOREAN_KOREA.AL32UTF8'
+```
+
+### 3. Backend 실행
+
+```powershell
+cd back
+.\mvnw.cmd spring-boot:run
+```
+
+Backend 기본 주소는 `http://localhost:8080`입니다.
+
+### 4. Flutter Web 실행
 
 ```powershell
 cd front/app
+flutter pub get
 flutter run -d web-server --web-port 3000
 ```
 
-`API_BASE_URL`을 생략하면 Web은 `http://localhost:8080`, Android Emulator는
-`http://10.0.2.2:8080`을 자동 사용한다. 배포 환경에서는 실제 HTTPS Backend 주소를
-`--dart-define=API_BASE_URL=...`로 지정한다.
+브라우저에서 `http://localhost:3000`을 엽니다. 기본 Web API 주소는 `http://localhost:8080`입니다.
 
-Android 에뮬레이터에서는 PC의 `localhost`를 `10.0.2.2`로 접근한다.
+배포 Backend를 사용할 때는 API 주소만 dart-define으로 주입합니다.
+
+```powershell
+flutter build web --release --dart-define=API_BASE_URL=https://api.example.com
+```
+
+### 5. Android 실행
 
 ```powershell
 cd front/app
 flutter run -d <android-device-id>
 ```
 
-실기기는 `10.0.2.2` 대신 PC의 같은 네트워크 내부 IP를 사용한다. Web과 Android는 동일한 Flutter UI를 사용한다.
+Android Emulator에서는 호스트 PC의 `localhost` 대신 기본값 `http://10.0.2.2:8080`을 사용합니다. 실기기는 Backend가 실행 중인 PC의 같은 네트워크 IP를 `API_BASE_URL`로 지정해야 합니다.
+
+### 6. Three.js 개발 서버
+
+Flutter가 제공하는 Web asset을 사용하지 않고 World renderer만 별도로 확인할 때 실행합니다.
 
 ```powershell
 cd front/world3d
@@ -57,25 +176,30 @@ npm.cmd install
 npm.cmd run dev
 ```
 
-```powershell
-cd back
-.\mvnw.cmd spring-boot:run
+## API 경계
+
+사용자 범위 API는 `X-User-Key` Header로 사용자를 식별합니다.
+
+| 기능 | 공식 경로 |
+|---|---|
+| 회원가입·로그인·사용자 복원 | `/api/users/**` |
+| 성향 분석 제출 | `POST /api/personality-analyses` |
+| 미션 설정·오늘 조회·추천 | `/api/missions/settings`, `/api/missions/today`, `/api/missions/today/recommendations` |
+| 미션 선택·취소·교체·완료 | `/api/user-missions/{userMissionId}/select|cancel|replace|complete` |
+| 미션 통계 | `GET /api/missions/summary` |
+| World 전체 Snapshot | `GET /api/world` |
+
+`missionId`는 공용 Catalog ID이고, 사용자 상태를 변경할 때는 반드시 소유권이 확인된 `userMissionId`를 사용합니다.
+
+Swagger UI는 Backend 실행 후 다음 주소에서 확인할 수 있습니다.
+
+```text
+http://localhost:8080/swagger-ui.html
 ```
 
-저장소 루트의 `.env`를 Spring Boot가 자동으로 읽으므로 로컬 실행 때마다 환경 변수를
-터미널에 다시 입력할 필요가 없다. 새 환경에서는 `.env.example`을 `.env`로 복사한 뒤
-Oracle 값을 채운다. `.env`는 Git에서 제외되며, LLM 미션 생성을 사용할 때만
-`OPENAI_API_KEY`, `OPENAI_MODEL`을 채운다. 이미 노출된 API Key는 재사용하지 않는다.
+폐기된 `/api/surveys`, `/api/missions/random`, `PATCH /api/missions/{missionId}/status` 경로는 사용하지 않습니다.
 
-`application.yml`은 저장소 루트와 `back` 디렉터리 양쪽 실행 위치를 지원한다. 배포에서는
-`.env`를 이미지에 포함하지 않고 호스팅 환경의 Secret/환경 변수 기능으로 같은 이름의 값을 주입한다.
-
-Windows SQL*Plus에서 한글 Seed가 포함된 `DB.sql`을 직접 실행할 때는 세션의 `NLS_LANG`을
-`KOREAN_KOREA.AL32UTF8`로 지정한다. 지정하지 않으면 한글 태그 정규식이 잘못 해석될 수 있다.
-
-Swagger UI는 Backend 실행 후 `http://localhost:8080/swagger-ui.html`에서 확인한다.
-
-## 검증
+## 검증 명령
 
 ```powershell
 cd back
@@ -91,7 +215,61 @@ flutter build web
 flutter build apk --debug
 ```
 
-World Phase 0~8에서 `GET /api/world`, Mission 완료 EXP Transaction, Flutter World 상태,
-Android WebView·Web iframe Bridge, Three.js Diorama와 8개 Object × 5레벨 GLB를 구현했다.
-World Schema는 실제 Oracle에 적용했으며 Table 3개, Object 8개, Level 40개를 확인했다.
-Oracle Rollback 통합 테스트에서 Mission 완료→World EXP→Snapshot과 중복 보상 방지를 검증했다.
+```powershell
+cd front/world3d
+npm.cmd run build
+```
+
+Oracle 연동 테스트는 환경 변수와 실제 Oracle 접속이 필요하므로 일반 단위 테스트와 분리해 실행합니다.
+
+## 현재 상태와 알려진 범위
+
+- 성향 분석, 미션 추천·선택·취소·완료, 미션 통계는 Backend와 Flutter 흐름이 연결되어 있습니다.
+- 미션 완료와 World EXP 지급은 동일 Transaction에서 처리되며 완료 재요청은 중복 보상 없이 멱등 처리됩니다.
+- World Backend, Flutter, Three.js, Android WebView 연결과 40개 레벨 GLB는 구현되어 있습니다.
+- 3D World는 자동 회귀와 Android·Oracle 검증이 진행됐지만 Web·Android 전체 사용자 흐름의 최종 수동 확인은 남아 있습니다.
+- 사용자별 Timezone 설정은 아직 제공하지 않으며 MVP 서비스 날짜는 `Asia/Seoul` 기준입니다.
+- 운영 배포 시 Flutter Web 정적 파일과 Spring Boot Backend, Oracle Database를 별도 배포해야 합니다.
+
+상세 진행 상태는 [PROJECT_STATUS.md](PROJECT_STATUS.md), 정책은 [SPEC.md](SPEC.md), 구조는 [ARCHITECTURE.md](ARCHITECTURE.md)에서 확인합니다.
+
+## README에 추가하면 좋은 시각 자료
+
+현재 저장소에는 기능별 설명은 있지만 README 상단에서 제품 경험을 한눈에 보여주는 이미지나 영상은 없습니다. 처음 방문한 사람이 프로젝트를 빠르게 이해하도록 다음 자료를 권장합니다.
+
+### 권장 이미지
+
+1. **대표 화면 한 장**
+   - 성향 프로필, 오늘의 미션 Spotlight 카드, 3D World 일부가 함께 보이는 홈 화면
+   - README 제목 아래에 배치해 서비스의 핵심 결과를 즉시 전달
+
+2. **사용자 흐름 다이어그램**
+   - 로그인 → 성향 분석 → 미션 선택 → 완료 → World 성장의 5단계
+   - 각 단계의 입력과 결과를 짧게 표시
+
+3. **3D 성장 비교 이미지**
+   - 동일 카테고리 오브젝트의 Lv1과 Lv5를 나란히 비교
+   - “미션 완료가 World 성장으로 연결된다”는 점을 설명하는 데 효과적
+
+4. **아키텍처 다이어그램**
+   - Flutter ↔ Spring Boot ↔ Oracle, Flutter ↔ Three.js Bridge의 방향과 책임
+   - 개발자가 프로젝트 구조를 이해하는 문서 하단에 배치
+
+### 권장 영상
+
+- 30~45초 분량의 사용자 여정 영상이 가장 효과적입니다.
+- 로그인 후 성향 1~2문항을 선택하고, 미션 후보 중 하나를 선택한 뒤 완료합니다.
+- 완료 응답으로 EXP가 반영되고 3D 오브젝트 레벨 또는 장면이 바뀌는 순간을 반드시 포함합니다.
+- Web과 Android 중 실제 지원을 우선할 플랫폼 하나를 기준으로 촬영하고, 영상 시작 3초 안에 서비스 핵심을 보여줍니다.
+- 영상은 README에 직접 대용량 파일로 넣기보다 `docs/media/novelty-demo.mp4` 또는 외부 동영상 링크를 사용하고, 대체 텍스트가 있는 대표 이미지도 함께 제공합니다.
+
+권장 배치 순서는 `대표 화면 → 짧은 데모 영상 → 사용자 흐름 → 기술 구조`입니다. 이미지와 영상은 실제 현재 동작을 촬영한 자료만 사용하고, 구현되지 않은 기능이나 가짜 API 응답을 제품 화면처럼 보이게 만들지 않는 것이 좋습니다.
+
+## 참고 문서
+
+- [제품·기술 정책](SPEC.md)
+- [프로젝트 진행 상태](PROJECT_STATUS.md)
+- [전체 아키텍처](ARCHITECTURE.md)
+- [성향 분석 SDD](docs/personality-sdd-v2.md)
+- [미션 SDD](docs/mission-sdd-v1.md)
+- [3D World SDD](docs/world-sdd-v1.md)
