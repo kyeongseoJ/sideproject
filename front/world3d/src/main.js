@@ -8,6 +8,8 @@ const worldRenderer = new WorldRenderer(worldRoot);
 worldRenderer.start();
 let currentRoomAssetCode = 'room';
 let currentRoomDecorationLevel = 1;
+let pendingInitializationKey = null;
+let initializedKey = null;
 
 async function loadSpikeLevel(level) {
   await worldRenderer.loadLevel({
@@ -30,11 +32,44 @@ async function updateObjectLevel(objectCode, level) {
   postBridgeMessage('objectLevelChanged', { objectCode, level });
 }
 
+async function initializeWorld(payload) {
+  if (!Array.isArray(payload.objects) || payload.objects.length === 0) {
+    throw new Error('World objects are required.');
+  }
+  if (payload.objectCount !== payload.objects.length) {
+    throw new Error(`World object count mismatch: ${payload.objects.length}`);
+  }
+  payload.objects.forEach((object) => {
+    if (typeof object?.objectCode !== 'string' || !Number.isInteger(object?.level)) {
+      throw new Error('Invalid world object data.');
+    }
+  });
+
+  const roomAssetCode = payload.roomAssetCode ?? 'room';
+  const roomDecorationLevel = payload.roomDecorationLevel ?? 1;
+  const requestKey = `${roomAssetCode}:${roomDecorationLevel}`;
+  if (initializedKey === requestKey || pendingInitializationKey === requestKey) return;
+
+  pendingInitializationKey = requestKey;
+  try {
+    currentRoomAssetCode = roomAssetCode;
+    currentRoomDecorationLevel = roomDecorationLevel;
+    await worldRenderer.loadLevel(roomAsset(roomAssetCode, roomDecorationLevel));
+    initializedKey = requestKey;
+    postBridgeMessage('worldInitialized');
+  } finally {
+    pendingInitializationKey = null;
+  }
+}
+
 installWorldBridge(async ({ type, payload }) => {
   if (type === 'setSpikeLevel') {
     await loadSpikeLevel(payload.level);
     postBridgeMessage('objectLevelChanged', { objectCode: 'SPIKE_OBJECT', level: payload.level });
   } else if (type === 'initializeWorld') {
+    await initializeWorld(payload);
+    /* The renderer no longer preloads a placeholder room. */
+  } else if (false) {
     if (!Array.isArray(payload.objects) || payload.objects.length === 0) {
       throw new Error('World 오브젝트 정보를 불러오지 못했습니다.');
     }
@@ -62,8 +97,6 @@ installWorldBridge(async ({ type, payload }) => {
   }
 });
 
-worldRenderer.loadLevel(roomAsset())
-  .then(() => postBridgeMessage('rendererReady'))
-  .catch((error) => postBridgeMessage('rendererError', { message: error.message }));
+postBridgeMessage('rendererReady');
 
 addEventListener('pagehide', () => worldRenderer.destroy(), { once: true });
