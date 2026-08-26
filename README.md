@@ -58,6 +58,8 @@ EXP 지급 → 카테고리 오브젝트와 World 성장
 - GLB 로드 실패나 World 데이터 누락이 앱 전체를 중단시키지 않도록 오류·대체 화면을 제공합니다.
 - 사용자 World 화면에는 연결된 룸 파일명이나 룸 종류를 노출하지 않고 성향명만 표시합니다. 상단 `노벨티 Lv.N` 배지의 툴팁에서 현재 공간 장식 표시 상태를 확인할 수 있습니다.
 
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/e836489b-a5b1-4a33-898e-6cad2d43c8d9" />
+
 ## 프로젝트 구조
 
 ```text
