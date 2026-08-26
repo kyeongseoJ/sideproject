@@ -1,4 +1,5 @@
 # Novelty
+<img width="3834" height="1810" alt="image" src="https://github.com/user-attachments/assets/3264daf5-dd13-4a40-ba32-f5f82d826249" />
 
 Novelty는 사용자의 성향을 바탕으로 평소와 다른 행동을 제안하고, 미션을 완료할수록 개인의 3D World가 성장하는 서비스입니다.
 
