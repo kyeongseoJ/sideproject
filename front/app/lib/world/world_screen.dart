@@ -303,7 +303,7 @@ class _WorldScreenState extends State<WorldScreen> {
                   child: Text(
                     growth.levelUp
                         ? '${growth.objectCode} Lv.${growth.currentLevel} 달성!'
-                        : '${growth.objectCode} +${growth.awardedExp} EXP',
+                        : '노벨티 경험치 + ${growth.awardedExp} EXP',
                     textAlign: TextAlign.center,
                   ),
                 ),

@@ -15,6 +15,7 @@ class PersonalityProfileScreen extends StatelessWidget {
     super.key,
     required this.user,
     required this.onReanalyze,
+    this.onLogout,
     this.onOpenWorld,
     this.missionGateway,
     this.worldGateway,
@@ -27,6 +28,7 @@ class PersonalityProfileScreen extends StatelessWidget {
 
   final UserProfile user;
   final VoidCallback onReanalyze;
+  final Future<void> Function()? onLogout;
   final VoidCallback? onOpenWorld;
   final MissionGateway? missionGateway;
   final WorldGateway? worldGateway;
@@ -66,7 +68,7 @@ class PersonalityProfileScreen extends StatelessWidget {
                         key: const Key('personality-profile-content'),
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const _BrandHeader(),
+                          _BrandHeader(onLogout: onLogout),
                           const SizedBox(height: 10),
                           _PersonalityTitle(profile: profile),
                           if (missionGateway != null && userKey != null) ...[
@@ -111,7 +113,9 @@ class PersonalityProfileScreen extends StatelessWidget {
                               gateway: worldGateway!,
                               userKey: userKey!,
                               worldName: profile.typeName,
-                              roomAssetCode: personalityWorldRoomAssetCode(profile),
+                              roomAssetCode: personalityWorldRoomAssetCode(
+                                profile,
+                              ),
                               baseCategoryCodes: personalityWorldCategories(
                                 profile,
                               ),
@@ -144,29 +148,58 @@ class PersonalityProfileScreen extends StatelessWidget {
 }
 
 class _BrandHeader extends StatelessWidget {
-  const _BrandHeader();
+  const _BrandHeader({this.onLogout});
+
+  final Future<void> Function()? onLogout;
 
   @override
-  Widget build(BuildContext context) => Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    crossAxisAlignment: CrossAxisAlignment.center,
-    children: [
-      Image.asset(
-        'assets/ui/Novelty_logo_letter.png',
-        key: const Key('novelty-wordmark'),
-        width: 148,
-        height: 25,
-        fit: BoxFit.contain,
-        alignment: Alignment.centerLeft,
-      ),
-      Image.asset(
-        'assets/ui/Novelty_logo_dark.png',
-        key: const Key('novelty-symbol'),
-        width: 34,
-        height: 34,
-        fit: BoxFit.contain,
-      ),
-    ],
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final compact = constraints.maxWidth < 340;
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Image.asset(
+            'assets/ui/Novelty_logo_letter.png',
+            key: const Key('novelty-wordmark'),
+            width: 148,
+            height: 25,
+            fit: BoxFit.contain,
+            alignment: Alignment.centerLeft,
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'assets/ui/Novelty_logo_dark.png',
+                key: const Key('novelty-symbol'),
+                width: 34,
+                height: 34,
+                fit: BoxFit.contain,
+              ),
+              if (onLogout != null) ...[
+                const SizedBox(width: 4),
+                if (compact)
+                  IconButton(
+                    key: const Key('personality-logout-button'),
+                    tooltip: '로그아웃',
+                    onPressed: () => onLogout!(),
+                    icon: const Icon(Icons.logout_rounded),
+                  )
+                else
+                  TextButton.icon(
+                    key: const Key('personality-logout-button'),
+                    onPressed: () => onLogout!(),
+                    icon: const Icon(Icons.logout_rounded, size: 18),
+                    label: const Text('로그아웃'),
+                  ),
+              ],
+            ],
+          ),
+        ],
+      );
+    },
   );
 }
 

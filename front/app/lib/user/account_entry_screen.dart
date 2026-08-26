@@ -198,12 +198,48 @@ class _AccountEntryScreenState extends State<AccountEntryScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text(
-                      '노벨티 효과는 새로운 자극을 접했을 때 호기심과 참여 동기가 높아지는 현상입니다.\n\n노벨티는 이 효과를 활용해 매일 작은 새로운 행동을 시작하도록 돕습니다.',
+                    Container(
                       key: Key('novelty-service-description'),
-                      style: TextStyle(
-                        color: NoveltyColors.gray040,
-                        height: 1.5,
+                      padding: const EdgeInsets.all(NoveltySpacing.base),
+                      decoration: BoxDecoration(
+                        color: NoveltyColors.primaryFaint,
+                        border: Border.all(color: NoveltyColors.primarySubtle),
+                        borderRadius: BorderRadius.circular(NoveltyRadii.card),
+                      ),
+                      child: const Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome_rounded,
+                            color: NoveltyColors.primary,
+                            size: 22,
+                          ),
+                          SizedBox(width: NoveltySpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '노벨티 효과는',
+                                  style: TextStyle(
+                                    color: NoveltyColors.primaryStrong,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.5,
+                                  ),
+                                ),
+                                SizedBox(height: NoveltySpacing.xs),
+                                Text(
+                                  '새로운 자극을 접했을 때 호기심과 참여 동기가 높아지는 현상입니다.\n노벨티는 이 효과를 활용해 매일 작은 새로운 행동을 시작하도록 돕습니다.',
+                                  style: TextStyle(
+                                    color: NoveltyColors.gray040,
+                                    height: 1.55,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

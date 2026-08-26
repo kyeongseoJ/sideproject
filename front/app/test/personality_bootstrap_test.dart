@@ -178,6 +178,11 @@ void main() {
         find.byKey(const Key('novelty-service-description')),
         findsOneWidget,
       );
+      expect(find.text('노벨티 효과는'), findsOneWidget);
+      expect(
+        find.textContaining('새로운 자극을 접했을 때 호기심과 참여 동기가 높아지는 현상입니다.'),
+        findsOneWidget,
+      );
       expect(find.text('다시 만나 반가워요'), findsOneWidget);
       expect(find.text('처음 방문했어요 · 회원가입'), findsOneWidget);
       await tester.tap(find.byKey(const Key('account-mode-toggle')));
@@ -235,6 +240,28 @@ void main() {
     expect(find.text('실내 중심'), findsOneWidget);
     expect(find.text('계획 실행형'), findsOneWidget);
     expect(find.text('만들기'), findsOneWidget);
+  });
+
+  testWidgets('clears the cached user key and returns to login on logout', (
+    tester,
+  ) async {
+    final store = _FakeUserKeyStore(value: 'cached-user-key');
+    await tester.pumpWidget(
+      NoveltyApp(
+        personalityGateway: _FakePersonalityGateway(
+          currentUser: _analyzedUser(),
+        ),
+        userKeyStore: store,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('personality-logout-button')));
+    await tester.pumpAndSettle();
+
+    expect(store.value, isNull);
+    expect(store.clearCalls, 1);
+    expect(find.byKey(const Key('account-entry-card')), findsOneWidget);
   });
 
   testWidgets('shows a safe error and retries the same cached user', (

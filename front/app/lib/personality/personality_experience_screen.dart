@@ -22,6 +22,7 @@ class PersonalityExperienceScreen extends StatefulWidget {
     this.missionGateway,
     this.submissionSession,
     this.worldGateway,
+    this.onLogout,
   });
 
   final PersonalityGateway gateway;
@@ -30,6 +31,7 @@ class PersonalityExperienceScreen extends StatefulWidget {
   final MissionGateway? missionGateway;
   final PersonalitySubmissionSession? submissionSession;
   final WorldGateway? worldGateway;
+  final Future<void> Function()? onLogout;
 
   @override
   State<PersonalityExperienceScreen> createState() =>
@@ -80,6 +82,7 @@ class _PersonalityExperienceScreenState
         analysisMode: _analysisMode,
         submissionSession: widget.submissionSession,
         onCompleted: _handleCompleted,
+        onLogout: widget.onLogout,
         onCancel: _analysisMode == AnalysisMode.reanalysis
             ? _returnToCurrentProfile
             : null,
@@ -89,6 +92,7 @@ class _PersonalityExperienceScreenState
     return PersonalityProfileScreen(
       user: _user,
       onReanalyze: _confirmReanalysis,
+      onLogout: widget.onLogout,
       onOpenWorld: () => setState(() => _showingWorld = true),
       missionGateway: widget.missionGateway,
       worldGateway: widget.worldGateway,

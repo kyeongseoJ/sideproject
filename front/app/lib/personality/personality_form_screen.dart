@@ -14,6 +14,7 @@ class PersonalityFormScreen extends StatefulWidget {
     this.analysisMode = AnalysisMode.initial,
     this.onCompleted,
     this.onCancel,
+    this.onLogout,
     this.submissionSession,
   });
 
@@ -23,6 +24,7 @@ class PersonalityFormScreen extends StatefulWidget {
   final AnalysisMode analysisMode;
   final ValueChanged<PersonalityAnalysisResult>? onCompleted;
   final VoidCallback? onCancel;
+  final Future<void> Function()? onLogout;
   final PersonalitySubmissionSession? submissionSession;
 
   @override
@@ -81,12 +83,25 @@ class _PersonalityFormScreenState extends State<PersonalityFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Novelty',
-          key: const Key('novelty-form-logo'),
-          style: Theme.of(
-            context,
-          ).textTheme.headlineMedium?.copyWith(color: NoveltyColors.primary),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Novelty',
+                key: const Key('novelty-form-logo'),
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: NoveltyColors.primary,
+                ),
+              ),
+            ),
+            if (widget.onLogout != null)
+              TextButton.icon(
+                key: const Key('personality-logout-button'),
+                onPressed: _isSubmitting ? null : () => widget.onLogout!(),
+                icon: const Icon(Icons.logout_rounded, size: 18),
+                label: const Text('로그아웃'),
+              ),
+          ],
         ),
         const SizedBox(height: 28),
         Align(

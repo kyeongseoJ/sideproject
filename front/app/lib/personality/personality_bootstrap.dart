@@ -216,6 +216,27 @@ class _PersonalityBootstrapScreenState
     }
   }
 
+  Future<void> _logout() async {
+    try {
+      await _userKeyStore.clear();
+    } catch (_) {
+      if (!mounted) return;
+      setState(
+        () => _error = const PersonalityBootstrapException(
+          kind: PersonalityBootstrapFailureKind.cache,
+          message: '로그인 정보를 기기에서 삭제하지 못했습니다. 다시 시도해 주세요.',
+        ),
+      );
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _result = null;
+      _error = null;
+      _showAccount = true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_showAccount) {
@@ -257,6 +278,7 @@ class _PersonalityBootstrapScreenState
       worldGateway: widget.worldGateway ?? _ownedWorldApi,
       userKey: result.userKey,
       initialUser: result.user,
+      onLogout: _logout,
     );
   }
 }

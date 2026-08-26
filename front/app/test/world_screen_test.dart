@@ -191,6 +191,38 @@ void main() {
     expect(find.text('BOOKSHELF Lv.2 달성!'), findsOneWidget);
   });
 
+  testWidgets('shows novelty experience instead of an internal object code', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WorldScreen(
+          gateway: _FakeWorldGateway(),
+          userKey: 'user-key',
+          worldName: '테스트 공간',
+          pendingGrowth: const WorldGrowth(
+            objectCode: 'RECORD_PLAYER',
+            categoryCode: 'CULTURE',
+            awardedExp: 10,
+            previousLevel: 1,
+            currentLevel: 1,
+            currentExp: 10,
+            nextLevelRequiredExp: 50,
+            levelUp: false,
+            rewardApplied: true,
+          ),
+          onBack: () {},
+          rendererBuilder: (controller, onMessage) =>
+              const ColoredBox(color: Colors.white),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('노벨티 경험치 + 10 EXP'), findsOneWidget);
+    expect(find.textContaining('RECORD_PLAYER +10 EXP'), findsNothing);
+  });
+
   testWidgets('shows an error when the world snapshot has no objects', (
     tester,
   ) async {
