@@ -20,7 +20,7 @@ class AccountEntryScreen extends StatefulWidget {
 class _AccountEntryScreenState extends State<AccountEntryScreen> {
   final _loginIdController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _registerMode = true;
+  bool _registerMode = false;
   bool _busy = false;
   bool _obscurePassword = true;
   String? _error;

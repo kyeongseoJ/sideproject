@@ -161,7 +161,7 @@ void main() {
   });
 
   testWidgets(
-    'shows account entry and continues to the form after registration',
+    'shows login first and offers registration before continuing to the form',
     (tester) async {
       final gateway = _FakePersonalityGateway(currentUser: _notAnalyzedUser());
 
@@ -178,6 +178,11 @@ void main() {
         find.byKey(const Key('novelty-service-description')),
         findsOneWidget,
       );
+      expect(find.text('다시 만나 반가워요'), findsOneWidget);
+      expect(find.text('처음 방문했어요 · 회원가입'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('account-mode-toggle')));
+      await tester.pumpAndSettle();
+      expect(find.text('새 계정 만들기'), findsOneWidget);
       await tester.enterText(
         find.byKey(const Key('account-login-id')),
         'tester1',
