@@ -182,7 +182,9 @@ function applyRoomDecorationLevel(room, level) {
     decorations.push(node);
   });
 
-  const visibleCount = Math.ceil(decorations.length * (level - 1) / 4);
+  const visibleCount = decorations.length === 0
+    ? 0
+    : Math.max(1, Math.ceil(decorations.length * (level - 1) / 4));
   decorations.forEach((node, index) => {
     node.visible = index < visibleCount;
   });

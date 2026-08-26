@@ -290,7 +290,7 @@ COMPLETED
 - GLB 로드 실패는 실패한 상대 asset 경로를 포함한 `rendererError`로 Flutter에 전달한다.
 - 전체 World 공간명은 현재 성향 유형에 맞는 이름을 사용한다.
 - 성향 유형별 기본 방 에셋 코드는 `classroom_2`, `art_gallery_4`, `cafe_5`, `music_store_20`, `flower_shop_26`, `Theatre_32`, `Gym_25`, `bookshop_7`, `stadium_40`으로 사전 등록하고, 각 실제 GLB를 Flutter Web 번들에 포함한다. 파일명은 제공된 에셋의 대소문자와 `Art_Galery` 표기를 그대로 사용한다.
-- 각 기본 방 GLB에서 이름에 `floor` 또는 `wall`이 포함된 Mesh는 항상 표시한다. 그 외 Mesh는 장식 요소로 보고 World의 최고 Object Level에 따라 Lv.1~5에서 각각 0%, 25%, 50%, 75%, 100%를 표시한다. 장식 순서는 GLB 노드 순서를 따르며, 방마다 장식 수가 달라도 마지막 단계에서 전체가 표시된다.
+- 각 기본 방 GLB에서 이름에 `floor` 또는 `wall`이 포함된 Mesh는 항상 표시한다. 그 외 Mesh는 장식 요소로 보고 World의 최고 Object Level에 따라 Lv.1에서는 최소 1개, 이후 25%, 50%, 75%, 100%를 표시한다. 장식 순서는 GLB 노드 순서를 따르며, 방마다 장식 수가 달라도 마지막 단계에서 전체가 표시된다.
 - 전체 World에서 Object를 Web 마우스·펜으로 가리키거나 Web·Android에서 탭하면 Object명, 연결된 성향 Category와 현재 성장 단계를 툴팁으로 표시한다.
 - 성향 완료 홈의 순서는 Novelty 워드마크·심볼, 성향명, 오늘의 미션, 프로필 요약, 관심 분야, 행동 선호, 3D World, 분석 메타 정보다.
 - 오늘의 미션은 시간 선택 없이 최대 5개 후보를 가로 캐러셀로 표시하고, 선택 뒤에는 수행 중 미션 하나만 크게 표시한다.
