@@ -119,4 +119,36 @@ void main() {
       expect(opened, 1);
     },
   );
+
+  testWidgets('reduces the inline World stage on a narrow mobile screen', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: WorldPreview(
+            gateway: _FakeWorldGateway(),
+            userKey: 'user-key',
+            worldName: '고요한 몰입 작업실',
+            baseCategoryCodes: const {'CREATIVE'},
+            onOpen: () {},
+            rendererBuilder: (controller, onMessage) =>
+                const ColoredBox(color: Colors.white),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final stage = tester.widget<SizedBox>(
+      find.byWidgetPredicate(
+        (widget) => widget is SizedBox && widget.height == 240,
+      ),
+    );
+    expect(stage.height, 240);
+    expect(tester.takeException(), isNull);
+  });
 }

@@ -198,6 +198,24 @@ void main() {
     },
   );
 
+  testWidgets('keeps the login card usable on a narrow mobile screen', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      NoveltyApp(
+        personalityGateway: _FakePersonalityGateway(),
+        userKeyStore: _FakeUserKeyStore(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('account-entry-card')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('skips the form and shows profile entry for analyzed user', (
     tester,
   ) async {

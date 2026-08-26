@@ -145,8 +145,9 @@ Backend 전체 181개 테스트는 실패 0·환경조건부 12개 제외로 통
 - Phase 1: Android WebView·Three.js·GLB·Bridge Technical Spike 완료
 - Phase 2~4: World Oracle DDL, Backend Domain, `GET /api/world`, Mission 완료 Transaction 연동과 중복 보상 방지 완료
 - Phase 5~8: Flutter World 상태, Three.js Diorama, Backend↔Flutter↔Three.js 연결, Level Up UI·Animation 완료
+- 성향별 기본 방 9종 GLB를 Flutter Web과 Three.js 모델 경로에 배치했다. `floor`·`wall` Mesh는 기본 골조로 유지하고, 나머지 장식 Mesh는 World 최고 레벨에 따라 5단계로 노출한다. 매핑 및 초기화 메시지 테스트와 Three.js production build를 통과했다.
 - Android Emulator에서 Room GLB, Lv1→Lv2 모델 교체, Background/Foreground 복귀와 Renderer 재진입을 확인했다.
-- Web/Android는 같은 Flutter UI와 Three.js 번들을 사용하며 8개 Category Object × 5레벨 MVP GLB를 Local Asset으로 제공한다.
+- Web/Android는 같은 Flutter UI와 Three.js 번들을 사용하며 성향별 룸 GLB 9종을 Local Asset으로 제공한다. Backend의 Category Object 성장 데이터는 룸 장식 노출 단계 계산에 사용하고, 기존 외부 placeholder GLB는 제거했다.
 - 실제 Oracle에 World Table 3개, Object 8개, Level 40개를 적용·조회했다.
 - Mission Phase 4 Oracle Rollback 통합 테스트로 완료→World EXP→Snapshot과 완료 재요청 보상 방지를 검증했다.
 - 최신 자동 회귀는 Backend 179건(실패 0, 오류 0, 환경 조건부 11건 제외), Flutter 81건(조건부 1건 제외), Analyze와 Web Build를 통과했다. 이번 변경 전 검증된 APK·Three.js Build 상태는 유지한다.
@@ -165,7 +166,7 @@ Backend 전체 181개 테스트는 실패 0·환경조건부 12개 제외로 통
 | Swagger UI | 검증 완료 | 회원가입·로그인·사용자·성향·미션·World 공식 API 노출과 `/api/users/anonymous`, `/api/surveys`, `/api/missions/random`, `missionId` 직접 상태 변경 미노출 자동 검증. 기본 주소 `http://localhost:8080/swagger-ui.html` |
 | OpenAI 설정 | 진행 중 | API Key는 `OPENAI_API_KEY` 환경 변수로만 주입; 실제 연동 성공 검증 필요 |
 | Backend 자동 테스트 | 검증 완료 | 전체 회귀 188개 실행, 실패 0, 오류 0, 환경 조건부 12개 제외; 계정 Swagger 1개 별도 통과 및 Package 성공 |
-| Three.js Build | 검증 완료 | 8종×5레벨 GLB 40개 존재 및 Build 성공, 번들 612.36KB로 500KB 경고 존재 |
+| Three.js Build | 검증 완료 | 성향별 룸 GLB 9종과 fallback·Spike 테스트 모델만 존재, Build 성공, 번들 500KB 경고 존재 |
 | Flutter 자동 테스트 | 검증 완료 | 전체 87개 통과, 환경 조건부 1개 제외; Analyze 무결점과 Web·Android Debug Build 성공 |
 | Flutter Android 기반 | 검증 완료 | Debug APK Build, WebView Renderer Ready, GLB 표시·교체, Background/Foreground 복귀 성공 |
 | Flutter 성향 분석 흐름 | 검증 완료 | 최초 분석·복원·멱등 재시도·재분석과 Oracle 직접 조회 E2E 완료 |
@@ -194,6 +195,7 @@ Backend 전체 181개 테스트는 실패 0·환경조건부 12개 제외로 통
 | 2026-08-26 | 미션 사용자 플로우에서 시간 선택 단계를 제거하고 기존 `availableTime`은 `LONG` 기본값으로 내부 정규화, 추천 후보 상한을 5개로 확장 |
 | 2026-08-26 | 기준 `DB.sql`과 Backend Schema mirror에 BASE 미션 100건을 fingerprint·제목 기준 멱등 seed로 추가 |
 | 2026-08-26 | 오늘의 미션 UI를 Spotlight 카드 중심으로 개편하고 완료 수 배지, 카테고리 아이콘, 메타데이터와 명확한 선택 CTA를 추가 |
+| 2026-08-26 | 9개 성향 타입별 기본 룸 에셋 코드 매핑을 등록하고 GLB 추가 전까지 공통 `room.glb` fallback 정책을 유지 |
 | 2026-08-24 | DESIGN.md 기준 Flutter 공통 Theme와 계정·설문·미션·프로필·World 화면을 재점검하고 CTA·입력·Card·Chip·상태·Utility Control 토큰을 통일 |
 | 2026-08-24 | World API 정상 Snapshot을 기준으로 빈 objects 오류 표시, 성향 필터 전체 fallback, Bridge objectCount 검증과 GLB 실패 asset 경로 표시를 구현하고 Flutter·Three.js 검증 완료 |
 | 2026-08-24 | 미션 매 완료 시 성향 네 축·유형 반영, 완료 응답 실제 변화량 표시, 5회 LLM 신규 미션의 다음 날짜 추천 후보 반영 계약과 World 도움말 5초 페이드 적용 |

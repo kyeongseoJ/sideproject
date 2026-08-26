@@ -56,7 +56,12 @@ class _PersonalityFormScreenState extends State<PersonalityFormScreen> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 560),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                  padding: EdgeInsets.fromLTRB(
+                    constraints.maxWidth < 360 ? 16 : 24,
+                    28,
+                    constraints.maxWidth < 360 ? 16 : 24,
+                    24,
+                  ),
                   child: _result == null
                       ? _buildSurveyLayout()
                       : DecoratedBox(
