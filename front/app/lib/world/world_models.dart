@@ -94,6 +94,14 @@ class WorldSnapshot {
   }
 }
 
+int worldRoomDecorationLevel(Iterable<WorldObjectProgress> objects) {
+  var level = 1;
+  for (final object in objects) {
+    if (object.level > level) level = object.level;
+  }
+  return level.clamp(1, 5);
+}
+
 class WorldGrowth {
   const WorldGrowth({
     required this.objectCode,

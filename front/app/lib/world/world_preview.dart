@@ -19,6 +19,7 @@ class WorldPreview extends StatefulWidget {
     required this.gateway,
     required this.userKey,
     required this.worldName,
+    this.roomAssetCode = 'room',
     required this.baseCategoryCodes,
     required this.onOpen,
     this.pendingGrowth,
@@ -28,6 +29,7 @@ class WorldPreview extends StatefulWidget {
   final WorldGateway gateway;
   final String userKey;
   final String worldName;
+  final String roomAssetCode;
   final Set<String> baseCategoryCodes;
   final VoidCallback onOpen;
   final WorldGrowth? pendingGrowth;
@@ -138,6 +140,8 @@ class _WorldPreviewState extends State<WorldPreview> {
     await _controller.send('initializeWorld', {
       'objectCount': objects.length,
       'objects': objects.map((object) => object.toBridgeJson()).toList(),
+      'roomAssetCode': widget.roomAssetCode,
+      'roomDecorationLevel': worldRoomDecorationLevel(objects),
     });
     if (_rendererReady) {
       await _applyPendingGrowth();
@@ -221,38 +225,40 @@ class _WorldPreviewState extends State<WorldPreview> {
             ),
           ),
         ),
-        SizedBox(
-          height: 320,
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child:
-                    widget.rendererBuilder?.call(_controller, _onMessage) ??
-                    WorldRendererView(
-                      controller: _controller,
-                      onMessage: _onMessage,
-                    ),
-              ),
-              if (_snapshot == null && _error == null)
-                const Center(child: CircularProgressIndicator()),
-              if (_error case final error?)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(error, textAlign: TextAlign.center),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: _load,
-                          child: const Text('다시 시도'),
-                        ),
-                      ],
+        LayoutBuilder(
+          builder: (context, constraints) => SizedBox(
+            height: constraints.maxWidth < 400 ? 240 : 320,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child:
+                      widget.rendererBuilder?.call(_controller, _onMessage) ??
+                      WorldRendererView(
+                        controller: _controller,
+                        onMessage: _onMessage,
+                      ),
+                ),
+                if (_snapshot == null && _error == null)
+                  const Center(child: CircularProgressIndicator()),
+                if (_error case final error?)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(error, textAlign: TextAlign.center),
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: _load,
+                            child: const Text('다시 시도'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
         Material(

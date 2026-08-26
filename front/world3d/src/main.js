@@ -1,11 +1,13 @@
 import './style.css';
 import { WorldRenderer } from './world/world_renderer.js';
 import { installWorldBridge, postBridgeMessage } from './world/world_bridge.js';
-import { objectAsset, roomAsset } from './world/world_manifest.js';
+import { roomAsset } from './world/world_manifest.js';
 
 const worldRoot = document.querySelector('#world-root');
 const worldRenderer = new WorldRenderer(worldRoot);
 worldRenderer.start();
+let currentRoomAssetCode = 'room';
+let currentRoomDecorationLevel = 1;
 
 async function loadSpikeLevel(level) {
   await worldRenderer.loadLevel({
@@ -20,8 +22,11 @@ worldRenderer.onObjectHovered = (objectCode) => postBridgeMessage('objectHovered
 worldRenderer.onSceneTapped = () => postBridgeMessage('sceneTapped');
 
 async function updateObjectLevel(objectCode, level) {
-  const asset = objectAsset(objectCode, level);
-  await worldRenderer.loadLevel(asset);
+  if (typeof objectCode !== 'string' || !Number.isInteger(level) || level < 1 || level > 5) {
+    throw new Error('World 성장 단계 데이터 형식이 올바르지 않습니다.');
+  }
+  currentRoomDecorationLevel = Math.max(currentRoomDecorationLevel, level);
+  await worldRenderer.loadLevel(roomAsset(currentRoomAssetCode, currentRoomDecorationLevel));
   postBridgeMessage('objectLevelChanged', { objectCode, level });
 }
 
@@ -36,12 +41,17 @@ installWorldBridge(async ({ type, payload }) => {
     if (payload.objectCount !== payload.objects.length) {
       throw new Error(`World 오브젝트 개수 검증 실패: ${payload.objects.length}`);
     }
-    await Promise.all(payload.objects.map((object) => {
+    currentRoomAssetCode = payload.roomAssetCode ?? 'room';
+    currentRoomDecorationLevel = payload.roomDecorationLevel ?? 1;
+    await worldRenderer.loadLevel(roomAsset(
+      currentRoomAssetCode,
+      currentRoomDecorationLevel,
+    ));
+    payload.objects.forEach((object) => {
       if (typeof object?.objectCode !== 'string' || !Number.isInteger(object?.level)) {
         throw new Error('World 오브젝트 데이터 형식이 올바르지 않습니다.');
       }
-      return updateObjectLevel(object.objectCode, object.level);
-    }));
+    });
     postBridgeMessage('worldInitialized');
   } else if (type === 'updateObjectLevel') {
     await updateObjectLevel(payload.objectCode, payload.level);
@@ -52,7 +62,7 @@ installWorldBridge(async ({ type, payload }) => {
   }
 });
 
-worldRenderer.loadLevel(roomAsset)
+worldRenderer.loadLevel(roomAsset())
   .then(() => postBridgeMessage('rendererReady'))
   .catch((error) => postBridgeMessage('rendererError', { message: error.message }));
 

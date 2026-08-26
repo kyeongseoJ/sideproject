@@ -20,6 +20,7 @@ class WorldScreen extends StatefulWidget {
     required this.userKey,
     required this.onBack,
     required this.worldName,
+    this.roomAssetCode = 'room',
     this.pendingGrowth,
     this.baseCategoryCodes = const <String>{},
     this.rendererBuilder,
@@ -29,6 +30,7 @@ class WorldScreen extends StatefulWidget {
   final String userKey;
   final VoidCallback onBack;
   final String worldName;
+  final String roomAssetCode;
   final WorldGrowth? pendingGrowth;
   final Set<String> baseCategoryCodes;
   final WorldRendererBuilder? rendererBuilder;
@@ -126,6 +128,8 @@ class _WorldScreenState extends State<WorldScreen> {
     await _controller.send('initializeWorld', {
       'objectCount': visibleObjects.length,
       'objects': visibleObjects.map((object) => object.toBridgeJson()).toList(),
+      'roomAssetCode': widget.roomAssetCode,
+      'roomDecorationLevel': worldRoomDecorationLevel(visibleObjects),
     });
     if (!_rendererReady) return;
     final growth = widget.pendingGrowth;

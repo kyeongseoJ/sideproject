@@ -58,8 +58,11 @@ export class WorldRenderer {
     this.onSceneTapped = null;
   }
 
-  async loadLevel({ objectKey, assetUri, transform }) {
+  async loadLevel({ objectKey, assetUri, transform, decorationLevel }) {
     const gltf = await loadGlb(assetUri);
+    if (objectKey === 'ROOM') {
+      applyRoomDecorationLevel(gltf.scene, decorationLevel ?? 1);
+    }
     const nextObject = placeObject(gltf.scene, transform);
     nextObject.userData.objectCode = objectKey;
     const currentObject = this.levelObjects.get(objectKey);
@@ -170,4 +173,17 @@ export class WorldRenderer {
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
+}
+
+function applyRoomDecorationLevel(room, level) {
+  const decorations = [];
+  room.traverse((node) => {
+    if (!node.isMesh || !node.name || /floor|wall/i.test(node.name)) return;
+    decorations.push(node);
+  });
+
+  const visibleCount = Math.ceil(decorations.length * (level - 1) / 4);
+  decorations.forEach((node, index) => {
+    node.visible = index < visibleCount;
+  });
 }

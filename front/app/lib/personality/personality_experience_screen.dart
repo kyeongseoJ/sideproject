@@ -65,6 +65,7 @@ class _PersonalityExperienceScreenState
         gateway: gateway,
         userKey: widget.userKey,
         worldName: personalityWorldName(_user.personality!),
+        roomAssetCode: personalityWorldRoomAssetCode(_user.personality!),
         baseCategoryCodes: personalityWorldCategories(_user.personality!),
         pendingGrowth: _pendingWorldGrowth,
         onBack: () => setState(() => _showingWorld = false),

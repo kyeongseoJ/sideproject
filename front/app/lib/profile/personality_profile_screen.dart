@@ -43,9 +43,10 @@ class PersonalityProfileScreen extends StatelessWidget {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final wide = constraints.maxWidth >= 720;
+          final horizontalPadding = constraints.maxWidth < 360 ? 16.0 : 24.0;
           return SafeArea(
             child: SingleChildScrollView(
-              padding: EdgeInsets.all(wide ? 24 : 0),
+              padding: EdgeInsets.all(wide ? 24 : horizontalPadding),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 760),
@@ -60,7 +61,7 @@ class PersonalityProfileScreen extends StatelessWidget {
                       ),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.all(horizontalPadding),
                       child: Column(
                         key: const Key('personality-profile-content'),
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -110,6 +111,7 @@ class PersonalityProfileScreen extends StatelessWidget {
                               gateway: worldGateway!,
                               userKey: userKey!,
                               worldName: personalityWorldName(profile),
+                              roomAssetCode: personalityWorldRoomAssetCode(profile),
                               baseCategoryCodes: personalityWorldCategories(
                                 profile,
                               ),
