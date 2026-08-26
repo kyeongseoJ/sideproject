@@ -5,6 +5,18 @@ Novelty는 사용자의 성향을 바탕으로 평소와 다른 행동을 제안
 
 > 선택지를 고르고 → 나를 이해하고 → 새로운 미션을 선택하고 → 행동의 결과를 나만의 공간에서 확인합니다.
 
+## 현재 구현 기준
+
+이 저장소의 운영 기준 Backend 데이터베이스는 **Supabase PostgreSQL**입니다. `supabase/migrations`의 초기 스키마와 미션 seed를 사용하며, 루트 `DB.sql`과 `back/src/main/resources/db/survey-schema.sql`은 Oracle 레거시 호환과 과거 검증 이력을 위한 보관본입니다.
+
+- Flutter Web과 Android는 `front/app/lib`의 동일한 반응형 UI를 사용합니다.
+- 앱 시작 시 스플래시는 고정 시간으로 끝나지 않고 사용자 복원 또는 로그인·오류 화면이 준비된 시점에 종료됩니다.
+- Noto Sans KR은 `front/app/assets/fonts`에 번들되어 최초 폰트 네트워크 요청이 필요하지 않습니다.
+- Three.js는 Flutter가 전달한 성향 룸만 로드하며, GLB URI 캐시와 중복 초기화 방지를 적용합니다.
+- 운영 빌드에는 `WORLD_TEST=true` 테스트 진입 경로가 포함되지 않습니다.
+
+최근 검증 기준은 `flutter analyze`, `flutter test` 93개 통과, `flutter build web`, `npm.cmd run build` 성공입니다. Three.js 번들은 500KB 초과 청크 경고가 있으나 빌드는 성공합니다.
+
 ## 한눈에 보기
 
 | 영역 | 역할 | 기술 |
@@ -12,7 +24,8 @@ Novelty는 사용자의 성향을 바탕으로 평소와 다른 행동을 제안
 | `front/app` | 로그인, 성향 분석, 미션, 프로필, 3D World 화면 | Flutter Web / Android |
 | `front/world3d` | GLB 오브젝트를 배치하고 렌더링하는 3D 엔진 | Three.js / Vite |
 | `back` | 사용자, 성향, 미션, 완료 보상, World 상태 API | Java 21 / Spring Boot |
-| `DB.sql` | Oracle 21c 기준 스키마와 기본 데이터 | Oracle SQL |
+| `supabase/migrations` | Supabase PostgreSQL 스키마와 기본 데이터 | PostgreSQL SQL |
+| `DB.sql` | 기존 Oracle 21c 기준 스키마 보관본 | Oracle SQL (레거시) |
 
 ## 사용자 흐름
 
@@ -86,6 +99,10 @@ sideproject/
 │  └─ src/main/resources/
 │     └─ db/survey-schema.sql # Backend 실행용 Schema mirror
 ├─ DB.sql                    # Oracle 기준 Schema와 seed
+├─ supabase/
+│  ├─ migrations/             # Supabase PostgreSQL 운영 Schema와 seed
+│  ├─ apply-migrations.jsh    # 환경변수 기반 migration 실행기
+│  └─ verify-migration.jsh    # 테이블·seed·FK 검증기
 ├─ SPEC.md                   # 현재 유효한 제품·기술 정책
 ├─ PROJECT_STATUS.md         # 구현·검증 상태
 └─ ARCHITECTURE.md           # 전체 구조와 책임 경계
@@ -98,12 +115,12 @@ sideproject/
 - Java 21
 - Flutter SDK와 Dart SDK
 - Node.js와 npm
-- Oracle Database 21c 또는 접속 가능한 Oracle 인스턴스
+- Supabase PostgreSQL 프로젝트
 - Windows에서는 PowerShell 기준 명령을 사용합니다.
 
 ### 1. 환경 변수 준비
 
-저장소 루트에서 `.env.example`을 `.env`로 복사하고 로컬 Oracle 접속 정보를 입력합니다.
+저장소 루트에서 `.env.example`을 `.env`로 복사하고 Supabase PostgreSQL 접속 정보를 입력합니다.
 
 ```powershell
 Copy-Item .env.example .env
@@ -112,9 +129,9 @@ Copy-Item .env.example .env
 `.env`에는 다음 계열의 값이 사용됩니다.
 
 ```text
-DB_URL=jdbc:oracle:thin:@localhost:1521:XE
-DB_USERNAME=your_username
-DB_PASSWORD=your_password
+DB_URL=jdbc:postgresql://your-project.pooler.supabase.com:5432/postgres?sslmode=require
+DB_USERNAME=your_supabase_database_user
+DB_PASSWORD=your_supabase_database_password
 OPENAI_API_KEY=
 OPENAI_MODEL=
 OPENAI_BASE_URL=https://api.openai.com/v1
@@ -124,16 +141,18 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 
 ### 2. Database 적용
 
-기준 SQL은 루트의 `DB.sql`이며 Backend mirror는 `back/src/main/resources/db/survey-schema.sql`입니다. 두 파일의 실행 내용은 동일하게 유지해야 합니다.
+운영 기준 SQL은 `supabase/migrations`이며, `DB.sql`과 `back/src/main/resources/db/survey-schema.sql`은 기존 Oracle 환경을 위한 레거시 기준 파일입니다.
 
 ```powershell
-# Oracle SQL*Plus 또는 사용하는 Oracle SQL 도구에서 DB.sql 실행
+# 저장소 루트에서 실행. DB_URL, DB_USERNAME, DB_PASSWORD가 필요합니다.
+$cp = Get-Content back/target/migration-classpath.txt -Raw
+jshell --class-path $cp supabase/apply-migrations.jsh -q
 ```
 
-Windows SQL*Plus에서 한글 seed를 실행할 때는 세션 인코딩을 다음과 같이 맞춥니다.
+처음 실행하기 전에 `cd back; .\mvnw.cmd dependency:build-classpath -Dmdep.outputFile=target/migration-classpath.txt`로 PostgreSQL JDBC classpath를 생성합니다. migration은 재실행 가능한 형태이며, 적용 후 다음 명령으로 건수를 확인합니다.
 
 ```powershell
-$env:NLS_LANG = 'KOREAN_KOREA.AL32UTF8'
+jshell --class-path $cp supabase/verify-migration.jsh -q
 ```
 
 ### 3. Backend 실행
@@ -233,7 +252,7 @@ cd front/world3d
 npm.cmd run build
 ```
 
-Oracle 연동 테스트는 환경 변수와 실제 Oracle 접속이 필요하므로 일반 단위 테스트와 분리해 실행합니다.
+Oracle 연동 테스트는 레거시 검증용으로만 유지하며, 운영 기준 통합 검증은 Supabase PostgreSQL 환경에서 실행합니다.
 
 ## 현재 상태와 알려진 범위
 
@@ -242,7 +261,7 @@ Oracle 연동 테스트는 환경 변수와 실제 Oracle 접속이 필요하므
 - World Backend, Flutter, Three.js, Android WebView 연결과 성향별 룸 GLB 9종은 구현되어 있습니다. 기존 개별 placeholder GLB는 제거했습니다.
 - 3D World는 자동 회귀와 Android·Oracle 검증이 진행됐지만 Web·Android 전체 사용자 흐름의 최종 수동 확인은 남아 있습니다.
 - 사용자별 Timezone 설정은 아직 제공하지 않으며 MVP 서비스 날짜는 `Asia/Seoul` 기준입니다.
-- 운영 배포 시 Flutter Web 정적 파일과 Spring Boot Backend, Oracle Database를 별도 배포해야 합니다.
+  - 운영 배포 시 Flutter Web 정적 파일과 Spring Boot Backend, Supabase PostgreSQL을 각각 배포·연결해야 합니다.
 
 상세 진행 상태는 [PROJECT_STATUS.md](PROJECT_STATUS.md), 정책은 [SPEC.md](SPEC.md), 구조는 [ARCHITECTURE.md](ARCHITECTURE.md)에서 확인합니다.
 
@@ -265,7 +284,7 @@ Oracle 연동 테스트는 환경 변수와 실제 Oracle 접속이 필요하므
    - “미션 완료가 World 성장으로 연결된다”는 점을 설명하는 데 효과적
 
 4. **아키텍처 다이어그램**
-   - Flutter ↔ Spring Boot ↔ Oracle, Flutter ↔ Three.js Bridge의 방향과 책임
+   - Flutter ↔ Spring Boot ↔ Supabase PostgreSQL, Flutter ↔ Three.js Bridge의 방향과 책임
    - 개발자가 프로젝트 구조를 이해하는 문서 하단에 배치
 
 ### 권장 영상

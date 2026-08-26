@@ -96,8 +96,8 @@ Noto Sans KR
 다음 규칙을 지킨다.
 
 - 새로운 Flutter 및 Three.js 화면을 만들기 전에 `DESIGN.md`의 색상, 타이포그래피, 간격, radius, 상태 및 반응형 규칙을 확인한다.
-- Flutter에서는 공식 `google_fonts` 패키지의 `Noto Sans KR`을 전역 Theme에 적용한다.
-- Three.js를 포함한 Web UI에서는 Google Fonts의 `Noto Sans KR`을 불러오고 동일한 fallback을 사용한다.
+- Flutter에서는 `front/app/assets/fonts`에 번들된 `Noto Sans KR`을 전역 Theme에 적용한다.
+- Three.js renderer는 별도 Google Fonts 네트워크 요청을 사용하지 않으며, Flutter UI와 동일한 시각 체계를 유지한다.
 - 주요 CTA는 NC Purple `#7234e0`, 본문은 Ink `#0f1011`, 구분 표면은 `#f2f2f3` 및 `#f7f7f8`을 우선 사용한다.
 - 버튼 radius는 6px, 주요 카드 radius는 16px을 기본으로 한다.
 - 그림자를 사용하지 않고 배경색 구분과 `#ebebeb` hairline으로 깊이를 표현한다.
@@ -113,7 +113,8 @@ Backend는 다음 기술을 사용한다.
 - Spring Boot
 - Maven Wrapper
 - Spring Web MVC
-- Oracle Database 21c
+- Supabase PostgreSQL (운영 기준)
+- Oracle Database 21c (레거시 스키마·검증 기록)
 
 Backend 프로젝트 위치:
 
@@ -135,7 +136,9 @@ back/src/main/resources/application.yml
 
 ## Database 변경 규칙
 
-프로젝트의 기준 Oracle 스키마 파일은 루트의 `DB.sql`이다.
+운영 기준 PostgreSQL migration은 `supabase/migrations`다.
+
+기존 Oracle 기준 스키마 파일은 루트의 `DB.sql`이며, 레거시 호환과 이력 보존을 위해 유지한다.
 
 Backend에서 함께 사용하는 SQL 파일:
 
@@ -145,12 +148,12 @@ back/src/main/resources/db/survey-schema.sql
 
 Database 관련 작업은 다음 규칙을 지킨다.
 
-- 테이블, Sequence, Index, Constraint 및 필수 기준 데이터 변경은 실행 전에 `DB.sql`에 먼저 작성한다.
-- 실제 Oracle에 적용한 SQL만 실행 날짜와 변경 내용을 `DB.sql`의 적용 이력 주석에 기록한다.
-- `DB.sql`과 Backend의 대응 스키마 SQL은 항상 동일한 실행 내용을 유지한다.
+- 테이블, Sequence, Index, Constraint 및 필수 기준 데이터 변경은 실행 전에 `supabase/migrations`에 작성한다.
+- 실제 Supabase에 적용한 migration과 검증 결과를 `PROJECT_STATUS.md`에 기록한다.
+- `DB.sql`과 `back/src/main/resources/db/survey-schema.sql`은 Oracle 레거시 기준으로 보존하며, 운영 SQL과 실행 문법이 다를 수 있다.
 - 재실행해도 기존 데이터나 객체가 손상되지 않도록 가능한 경우 멱등 SQL로 작성한다.
 - 임시 테스트 데이터의 `INSERT`와 정리용 `DELETE`는 기준 스키마에 포함하지 않는다.
-- 실제 적용 후 Oracle의 테이블, Sequence, Constraint와 필요한 컬럼을 조회하여 검증한다.
+- 실제 적용 후 PostgreSQL의 테이블, Sequence, Constraint와 필요한 컬럼을 조회하여 검증한다.
 - DB 접속 계정과 비밀번호는 SQL 파일에 작성하지 않고 환경 변수 또는 로컬 실행 환경에서만 사용한다.
 - 앞으로 새로운 기능에 DB 객체가 필요하면 기능 코드와 함께 `DB.sql`도 같은 작업에서 갱신한다.
 

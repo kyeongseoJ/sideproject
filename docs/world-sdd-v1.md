@@ -1,5 +1,7 @@
 # 3D World / Object Growth SDD V1
 
+현재 운영 Database는 Supabase PostgreSQL이다. 이 문서의 과거 Oracle Phase 기록은 레거시 검증 이력이며, 현재 Schema와 실행 기준은 `supabase/migrations`다.
+
 ## 1. 범위와 기준 흐름
 
 Mission 완료 Category와 연결된 World Object에 EXP를 지급하고 레벨별 GLB 외형을 표시한다. Character, 이동, Physics, 자유 배치, 멀티플레이, 다른 사용자 World, 전체 World Level은 제외한다.
@@ -9,7 +11,7 @@ USER_MISSION 완료 → Category·Difficulty → WorldProgressService
 → USER_WORLD_OBJECT EXP·Level → Flutter World State → JSON Bridge → Three.js
 ```
 
-Backend와 Oracle이 EXP·Level의 Source of Truth다. Three.js는 Backend API를 호출하거나 성장값을 계산하지 않는다.
+Backend와 Supabase PostgreSQL이 EXP·Level의 Source of Truth다. Three.js는 Backend API를 호출하거나 성장값을 계산하지 않는다.
 
 ## 2. Category와 Object
 
@@ -32,7 +34,7 @@ Backend와 Oracle이 EXP·Level의 Source of Truth다. Three.js는 Backend API�
 - Lv1/Lv2/Lv3/Lv4/Lv5: 누적 EXP 0/50/120/220/350
 - EXP는 Lv5 이후에도 누적하며 Lv5의 `nextLevelRequiredExp`는 `null`이다.
 
-## 4. Oracle 계약
+## 4. PostgreSQL 계약
 
 - `WORLD_OBJECT`: ID, Object Code, 표시명, Category, Max Level, 활성 여부, 시각. Object Code와 Category는 각각 Unique다.
 - `WORLD_OBJECT_LEVEL`: Object ID, Level, Required EXP만 관리한다.
@@ -53,6 +55,8 @@ Backend와 Oracle이 EXP·Level의 Source of Truth다. Three.js는 Backend API�
 ## 7. Asset Manifest
 
 GLB URI와 Position·Rotation·Scale은 `front/world3d`의 Manifest가 소유한다. Key는 `objectCode + level`이다. Runtime GLB는 Flutter Local Asset으로 배포한다. Backend와 DB는 파일명을 알지 못한다.
+
+초기화 시 Flutter가 선택한 성향 룸만 로드한다. 기본 placeholder 룸은 선행 로드하지 않으며, GLB Loader는 asset URI별 Promise를 캐시한다. Bridge 초기화 재시도 중 동일한 룸 요청은 진행 중인 작업과 완료 키를 확인해 중복 로드하지 않는다.
 
 ## 8. JSON Bridge V1
 

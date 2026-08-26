@@ -1,6 +1,6 @@
 # Novelty 통합 사양
 
-최종 갱신일: 2026-08-20
+최종 갱신일: 2026-08-26
 
 ## 1. 문서 목적과 우선순위
 
@@ -45,10 +45,10 @@ Novelty는 사용자가 평소 잘 하지 않던 작은 행동을 제안하여 �
 
 ### Database
 
-- Oracle Database 21c
+- Supabase PostgreSQL
 - 논리 테이블: `USER`, `PERSONALITY`, `MISSION`, `USER_MISSION`, `WORLD_OBJECT`, `WORLD_OBJECT_LEVEL`, `USER_WORLD_OBJECT`
 - Oracle 예약어 충돌과 현재 물리 Schema를 고려한 실제 이름 대응은 `ARCHITECTURE.md`를 따른다.
-- 기준 DDL은 루트 `DB.sql`이며 Backend 대응 SQL과 동일한 실행 내용을 유지한다.
+- 운영 기준 DDL은 `supabase/migrations`이며, `DB.sql`과 `back/src/main/resources/db/survey-schema.sql`은 Oracle 레거시 보관본이다.
 
 ### 3D Asset 흐름
 
@@ -58,6 +58,10 @@ Blender 또는 Asset 제작
 → Flutter bundle 또는 CDN
 → Three.js World Renderer
 ```
+
+- 현재 배포 구성은 GLB를 `front/app/assets/world3d/models`에 번들한다.
+- Three.js는 Flutter가 전달한 성향 룸만 로드하며 초기 placeholder 룸을 먼저 로드하지 않는다.
+- 동일 asset URI의 GLB 요청은 Loader 캐시를 사용하고, Bridge 재시도 요청은 동일한 초기화 작업을 중복 실행하지 않는다.
 
 ## 4. 전체 사용자 흐름
 
@@ -149,7 +153,7 @@ Blender 또는 Asset 제작
 
 ### 성향 프로필
 
-- 분석 결과는 사용자 정보와 연결하여 Oracle에 저장한다.
+- 분석 결과는 사용자 정보와 연결하여 Supabase PostgreSQL에 저장한다.
 - 프로필은 현재 값과 분석 버전을 관리한다.
 - 최초 설문 답변뿐 아니라 추후 완료한 미션 이력을 근거로 갱신할 수 있다.
 - 성향 결과는 사용자에게 이름과 설명이 있는 프로필로 표시한다.
@@ -256,7 +260,7 @@ COMPLETED
 - 동일 사용자·동일 완료 마일스톤은 한 번만 Claim하며 완료 재요청으로 통계·성향·LLM 생성을 중복 적용하지 않는다.
 - 완료 응답과 `GET /api/missions/summary`는 전체 완료 수, 마지막 성향 반영 횟수, 성향 코드와 카테고리별 완료 통계를 제공한다.
 - 같은 서비스 날짜에는 최초 생성한 후보를 저장하고 재접속·새로고침 시 동일 후보를 복원한다.
-- Oracle은 `SHOWN`·`CANCELLED` 후보의 슬롯 없음은 허용하고 `SELECTED`·`COMPLETED`의 동일 사용자·날짜·슬롯 중복만 함수 기반 Unique Index로 차단한다.
+- PostgreSQL은 `SHOWN`·`CANCELLED` 후보의 슬롯 없음은 허용하고 `SELECTED`·`COMPLETED`의 동일 사용자·날짜·슬롯 중복만 partial Unique Index로 차단한다.
 
 ### 미션 추천 점수
 
@@ -267,8 +271,8 @@ COMPLETED
 - 점수 상위 20개 후보군에서 첫 후보를 가중 추출하고 이후 후보에는 선택지 사이 경험 유사도 35% 패널티를 적용한다.
 - 최종 후보끼리 유사도 0.75 미만을 우선하여 category·actionType·tags가 겹치지 않는 최대 5개를 구성한다.
 - Mission Catalog는 기존 필드를 재사용하고 `actionType`, `creativityLevel`, `unpredictability`, `comfortZoneDistance`, `costLevel`, `tags`를 추가한다. `durationLevel`은 `estimatedMinutes`에서 파생한다. BASE Seed 태그는 식별자와 한글 태그를 허용하고 LLM 태그는 대문자 영문 규칙을 유지한다.
-- Oracle 21c 구조에서는 pgvector를 추가하지 않으며 현재는 메타데이터+문자 bigram을 사용하고 `MissionSemanticSimilarity` 확장 지점만 유지한다.
-- 상세 공식, 상태 전이, REST와 Oracle 계약은 `docs/mission-sdd-v1.md`를 기준으로 한다.
+- PostgreSQL 운영 환경에서는 pgvector를 추가하지 않으며 현재는 메타데이터+문자 bigram을 사용하고 `MissionSemanticSimilarity` 확장 지점만 유지한다.
+- 상세 공식, 상태 전이, REST와 PostgreSQL 계약은 `docs/mission-sdd-v1.md`를 기준으로 한다.
 
 ## 9. 3D World와 레벨
 
@@ -319,12 +323,12 @@ COMPLETED
 
 ## 11. Database 규칙
 
-- 기준 파일은 루트 `DB.sql`이다.
-- Backend Schema 파일은 기준 DDL과 동일한 실행 내용을 유지한다.
+- 운영 기준 파일은 `supabase/migrations`다.
+- `DB.sql`과 `back/src/main/resources/db/survey-schema.sql`은 Oracle 레거시 기준으로 보존한다.
 - 테이블, Sequence, Index, Constraint, Trigger 및 필수 기준 데이터 변경은 코드 적용과 같은 작업에서 SQL에도 반영한다.
 - 가능한 DDL과 기준 데이터는 재실행 가능한 형태로 작성한다.
-- 실제 Oracle 적용 후 객체와 Constraint를 조회하여 검증하기 전에는 적용 완료로 기록하지 않는다.
-- Oracle 접속 실패나 SQL 실패를 숨기지 않고 `PROJECT_STATUS.md`에 남긴다.
+- 실제 Supabase 적용 후 테이블, Sequence, Constraint와 기준 데이터 건수를 조회하여 검증하기 전에는 적용 완료로 기록하지 않는다.
+- PostgreSQL 접속 실패나 SQL 실패를 숨기지 않고 `PROJECT_STATUS.md`에 남긴다.
 - Database 접속정보와 Secret은 SQL 또는 추적되는 설정 파일에 직접 작성하지 않는다.
 
 ## 12. 디자인과 접근성
@@ -361,7 +365,7 @@ COMPLETED
 8. `PROJECT_STATUS.md`와 변경된 사양 문서 갱신
 
 - Frontend와 Backend API 계약은 어느 한쪽만 변경하지 않는다.
-- Database 변경은 SQL 기준 파일과 실제 Oracle 적용 결과를 함께 확인한다.
+- Database 변경은 `supabase/migrations` 기준 파일과 실제 Supabase 적용 결과를 함께 확인한다. Oracle 레거시 파일은 별도 보관 이력으로 확인한다.
 - 새 Library는 현재 기능에 반드시 필요한 경우에만 추가한다.
 - 검증 실패, 경고와 외부 환경 차단을 숨기지 않는다.
 - 작업 마지막에는 변경 파일, Library 변경, 실행 명령, 결과와 남은 문제를 설명한다.
@@ -372,7 +376,7 @@ COMPLETED
 - 누적 EXP 0/50/120/220/350은 Lv1~Lv5에 대응한다.
 - 현재 여덟 Mission Category는 여덟 World Object와 1:1로 연결한다.
 - GLB는 MVP에서 Flutter Local Asset으로 배포하고 경로·Transform은 Frontend Manifest만 관리한다.
-- Backend와 Oracle이 EXP·Level의 Source of Truth이며 Flutter와 Three.js는 계산하지 않는다.
+- Backend와 Supabase PostgreSQL이 EXP·Level의 Source of Truth이며 Flutter와 Three.js는 계산하지 않는다.
 - World 미리보기와 전체 화면은 같은 Snapshot과 Renderer를 사용하며 별도 성장 상태를 만들지 않는다.
 
 ## 16. 사양 변경 관리

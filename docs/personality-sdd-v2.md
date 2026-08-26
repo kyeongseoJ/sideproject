@@ -2,6 +2,8 @@
 
 > 2026-08-24 계정 V1 개정: 이 문서의 익명 사용자 생성·닉네임 선입력·다른 기기 복구 미지원 내용은 `docs/account-sdd-v1.md`로 대체한다. 현재는 회원가입/로그인 후 기존 `X-User-Key` 성향 API를 사용하며, 회원가입 시 랜덤 닉네임을 자동 배정하고 즉시 최초 선택폼을 시작한다. 성향 질문·분석·저장 계약은 그대로 유지한다.
 
+현재 운영 Database는 Supabase PostgreSQL이다. 아래의 Oracle 표현은 과거 Phase 설계·검증 기록을 설명하는 경우를 제외하고 현재 구현 기준으로 해석하지 않는다.
+
 ## 1. 문서 정보
 
 - 프로젝트: Novelty
@@ -22,7 +24,7 @@ V2 설계 당시 프로젝트에는 다음 불일치가 있었다. 현재 구현
 1. 기존 `activityLevel`은 `INDOOR`, `MIXED`, `OUTDOOR` 값을 사용하여 실제 의미가 활동 강도가 아니라 실내·실외 선호다.
 2. 향후 사용될 성향 벡터에는 실내·실외와 별개로 신체 활동 강도가 필요하지만 최초 설문에는 해당 입력이 없다.
 3. Flutter와 `POST /api/surveys`는 `energyLevel`을 전송했고, 개정 정책의 `executionStyle`을 사용하지 않았다.
-4. 익명 사용자와 성향 Profile용 Oracle 구조는 일부 준비됐지만 설문 저장과 연결되지 않았다.
+4. 익명 사용자와 성향 Profile용 기존 Oracle 구조는 일부 준비됐지만 설문 저장과 연결되지 않았다.
 5. 사용자 Profile 응답은 현재 성향 객체를 실제로 조회하지 않고 `null`로 반환한다.
 6. 이전 SDD에는 시간 질문과 미션 해석 규칙이 함께 포함되어 성향 분석 자체의 완료 범위가 불명확했다.
 
@@ -30,14 +32,14 @@ V2는 이 불일치를 해소하고 미션 관련 구현을 후속 SDD로 분리
 
 ## 3. 목표
 
-다음 흐름을 Frontend부터 Oracle과 응답까지 완성한다.
+다음 흐름을 Frontend부터 Supabase PostgreSQL과 응답까지 완성한다.
 
 ```text
 Flutter 성향 선택폼
 → REST API
 → Spring Boot 입력 검증
 → 결정적 성향 분석
-→ Oracle 원본 답변과 현재 Profile 저장
+→ Supabase PostgreSQL 원본 답변과 현재 Profile 저장
 → 성향 결과 Response
 → Flutter 성향 Profile 표시
 ```
@@ -540,7 +542,7 @@ Q1×Q2의 모든 9개 조합이 정확히 하나의 유형으로 Mapping되고 �
 
 ### AC-05 입력 검증
 
-필수값 누락, 잘못된 Enum, 관심 분야 0개·4개 이상·중복은 Oracle에 저장되지 않고 400으로 반환된다.
+필수값 누락, 잘못된 Enum, 관심 분야 0개·4개 이상·중복은 PostgreSQL에 저장되지 않고 400으로 반환된다.
 
 ### AC-06 원자적 저장
 

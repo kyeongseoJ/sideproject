@@ -10,19 +10,21 @@
 
 이 문서는 세 번째 핵심 기능의 활성 기준 사양이다. 의료 진단이나 치료를 제공하지 않으며, 안전한 일상 활동을 통해 새로운 행동을 시도하도록 돕는 범위로 한정한다.
 
+현재 운영 Database는 Supabase PostgreSQL이다. 아래 Phase 완료 이력에 남은 Oracle 표현은 과거 검증 환경을 가리키며, 신규 실행·Migration·검증은 `supabase/migrations`와 PostgreSQL 계약을 따른다.
+
 ## 2. 목표
 
 ```text
 Flutter
 → REST API
 → Spring Boot
-→ Oracle
+→ Supabase PostgreSQL
 → Response
 → Flutter
 ```
 
 1. 저장된 사용자 성향과 거리가 먼 미션을 우선 추천한다.
-2. 같은 날의 추천 후보를 Oracle에 고정하여 재접속해도 같은 목록을 복원한다.
+2. 같은 날의 추천 후보를 Supabase PostgreSQL에 고정하여 재접속해도 같은 목록을 복원한다.
 3. 사용자가 후보를 선택·취소·변경·완료할 수 있게 한다.
 4. 하루 수행 한도를 설정으로 관리한다.
 5. 완료 결과를 카테고리 통계와 성향 갱신의 근거로 저장한다.
@@ -59,7 +61,7 @@ World 기능은 `category`와 완료 통계를 후속 입력으로 사용하지�
 - 하루 미션과 추천 이력의 날짜 판정은 사용자의 설정 Timezone으로 변환한 Local Date를 사용한다.
 - MVP에는 사용자별 Timezone 선택값이 없으므로 모든 사용자의 설정 Timezone을 `Asia/Seoul`로 고정한다.
 - 서버·JVM·Database의 기본 Timezone이나 UTC 날짜를 당일 판정에 직접 사용하지 않고, 주입된 `Clock`의 Instant를 설정 Timezone으로 변환한다.
-- Oracle의 `SERVICE_DATE`에는 시간과 Offset이 없는 사용자 기준 Local Date만 저장한다.
+- PostgreSQL의 `SERVICE_DATE`에는 시간과 Offset이 없는 사용자 기준 Local Date만 저장한다.
 - 동일 사용자·동일 Local Date에서는 최초 생성한 추천 목록과 `OFFER_BATCH_ID`를 재사용하며 새 후보와 상태 로그를 중복 생성하지 않는다.
 - 설정 Timezone에서 Local Date가 변경되면 이전 날짜의 목록을 이어 쓰지 않고 새로운 일일 추천 주기를 시작한다.
 

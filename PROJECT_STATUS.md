@@ -17,14 +17,31 @@
 | 검증 완료 | 현재 사양의 구현과 관련 Build·테스트 또는 E2E 검증이 완료됨 |
 | 대체됨 | 과거에는 완료됐으나 이후 변경된 사양의 현재 완료 근거로 사용할 수 없음 |
 
+## Supabase PostgreSQL 전환 상태
+
+- 운영 기준은 Supabase PostgreSQL로 전환했으며, PostgreSQL JDBC driver와 Repository SQL 변환을 적용했다.
+- `supabase/migrations/001_initial_schema.sql`과 `002_seed_missions.sql`을 테스트용 Supabase에 실제 적용했다.
+- 적용 결과는 `MISSION` 300건, `WORLD_OBJECT` 8건, `WORLD_OBJECT_LEVEL` 40건, `NICKNAME_BANNED_WORD` 9건이다.
+- 확인한 외래키 고아 레코드는 0건이며, 사용자·수행 이력 테이블은 이관 시점에 0건이었다.
+- PostgreSQL 기준 `회원가입 → 사용자 조회 → World Snapshot` API 흐름을 실제 DB 연결로 확인했다.
+- 기존 Oracle 실제 인스턴스는 `ORA-12638` 인증 오류로 읽기 전용 row count 확인이 불가능했으므로, 기존 사용자 데이터가 존재하는 환경의 데이터 이관 완료로 간주하지 않는다.
+
+## 2026-08-26 최신 반영
+
+- 시작 스플래시는 고정 `1600ms` 타이머를 제거하고 사용자 복원·로그인·오류 화면이 준비된 시점에 종료하도록 변경했다.
+- Noto Sans KR Regular·Medium·Bold를 Flutter 번들에 포함하고 `google_fonts` 런타임 의존성을 제거했다.
+- Three.js는 기본 placeholder 룸을 선행 로드하지 않고 Flutter가 지정한 성향 룸만 로드한다.
+- GLB URI 캐시와 Bridge 초기화 중복 방지를 적용했다.
+- `flutter analyze`, Flutter 전체 테스트 93개, `flutter build web`, `npm.cmd run build`를 통과했다. Three.js 번들 500KB 초과 경고는 남아 있다.
+
 ## 핵심 기능 요약
 
 | 핵심 기능 | 현재 상태 | SDD 상태 | 실제 구현 판단 |
 |---|---|---|---|
-| 1. 선택지 폼 | 검증 완료 | V2 Phase 5~7 완료 | 여섯 문항·검증·제출 재시도와 실제 Oracle E2E 완료 |
-| 2. 사용자 성향 분석 | 검증 완료 | V2 Phase 0~7 완료 | Backend 계약과 Flutter 최초 분기·선택폼·Profile·재분석·Oracle E2E 완료 |
-| 3. 랜덤 미션 생성 | 검증 완료 | V1 Phase 0~7 검증 완료 | Flutter 추천·선택·변경·취소·완료·통계와 실제 Oracle E2E 완료 |
-| 4. 3D 공간·레벨 | 진행 중 | V1 Phase 0~8 검증 완료, Phase 9 부분 완료 | Backend·Flutter·Three.js·성향별 룸 GLB 9종과 실제 Oracle World E2E 완료, Web·Android 실제 조작 재확인 대기 |
+| 1. 선택지 폼 | 검증 완료 | V2 Phase 5~7 완료 | 여섯 문항·검증·제출 재시도와 PostgreSQL 연결 흐름 검증 |
+| 2. 사용자 성향 분석 | 검증 완료 | V2 Phase 0~7 완료 | Backend 계약과 Flutter 최초 분기·선택폼·Profile·재분석 검증 |
+| 3. 랜덤 미션 생성 | 검증 완료 | V1 Phase 0~7 검증 완료 | Flutter 추천·선택·변경·취소·완료·통계와 PostgreSQL seed 검증 |
+| 4. 3D 공간·레벨 | 진행 중 | V1 Phase 0~8 검증 완료, Phase 9 부분 완료 | Backend·Flutter·Three.js·성향별 룸 GLB 9종과 로딩 최적화 완료, Web·Android 실제 조작 재확인 대기 |
 
 ## SDD Phase 현황표
 
@@ -38,8 +55,8 @@
 | 3D 공간·레벨 V1 | 검증 완료 | 검증 완료 | 검증 완료 | 검증 완료 | 검증 완료 | 검증 완료 | 검증 완료 | 검증 완료 |
 
 World Phase 8의 Level Up UI·Animation은 검증 완료했다. Phase 9는 Backend·Flutter·Three.js
-자동 회귀, Android Emulator와 실제 Oracle World E2E를 통과했으며 Web·Android 사용자 흐름의
-최종 수동 조작 재확인만 남아 있다.
+자동 회귀와 Android Emulator 검증을 통과했으며 Web·Android 사용자 흐름의 최종 수동 조작
+재확인만 남아 있다. 운영 데이터베이스는 Supabase PostgreSQL 기준으로 확인한다.
 
 핵심 기능 1~3 안정화 Phase 1~7은 완료했다. 공식 경로는 `POST /api/personality-analyses`, `/api/missions/today/recommendations`, `/api/user-missions/{userMissionId}/**`이며 구형 Survey·random mission·`missionId` 직접 상태 변경 API는 제거했다.
 
@@ -167,9 +184,9 @@ Backend 전체 181개 테스트는 실패 0·환경조건부 12개 제외로 통
 | OpenAI 설정 | 진행 중 | API Key는 `OPENAI_API_KEY` 환경 변수로만 주입; 실제 연동 성공 검증 필요 |
 | Backend 자동 테스트 | 검증 완료 | 전체 회귀 188개 실행, 실패 0, 오류 0, 환경 조건부 12개 제외; 계정 Swagger 1개 별도 통과 및 Package 성공 |
 | Three.js Build | 검증 완료 | 성향별 룸 GLB 9종과 fallback·Spike 테스트 모델만 존재, Build 성공, 번들 500KB 경고 존재 |
-| Flutter 자동 테스트 | 검증 완료 | 전체 87개 통과, 환경 조건부 1개 제외; Analyze 무결점과 Web·Android Debug Build 성공, `WORLD_TEST=true` Web build 성공 |
+| Flutter 자동 테스트 | 검증 완료 | 전체 93개 통과; Analyze 무결점과 Web build 성공 |
 | Flutter Android 기반 | 검증 완료 | Debug APK Build, WebView Renderer Ready, GLB 표시·교체, Background/Foreground 복귀 성공 |
-| Flutter 성향 분석 흐름 | 검증 완료 | 최초 분석·복원·멱등 재시도·재분석과 Oracle 직접 조회 E2E 완료 |
+| Flutter 성향 분석 흐름 | 검증 완료 | 최초 분석·복원·멱등 재시도·재분석과 PostgreSQL API 흐름 검증 |
 | 로컬 환경 설정 | 검증 완료 | Git 제외 `.env`, 추적 가능한 `.env.example`, Spring Boot 자동 import와 Oracle Connection 생성 확인. OpenAI Key는 유효한 값을 별도 입력해야 함 |
 | Flutter 전체 사용자 흐름 | 진행 중 | 닉네임·성향·미션·인라인 World 연결 완료. Web·Android 실제 UI 재확인 대기 |
 
