@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:novelty_app/api/world_api.dart';
 import 'package:novelty_app/novelty_theme.dart';
@@ -42,11 +44,19 @@ class _WorldScreenState extends State<WorldScreen> {
   WorldObjectProgress? _hovered;
   String? _error;
   bool _rendererReady = false;
+  bool _worldInitialized = false;
+  Timer? _initializeRetryTimer;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _initializeRetryTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -61,6 +71,7 @@ class _WorldScreenState extends State<WorldScreen> {
         });
         return;
       }
+      _worldInitialized = false;
       setState(() => _snapshot = snapshot);
       await _initializeRenderer();
     } on WorldApiException catch (error) {
@@ -70,9 +81,9 @@ class _WorldScreenState extends State<WorldScreen> {
     }
   }
 
-  Future<void> _initializeRenderer() async {
+  List<WorldObjectProgress>? _visibleObjects() {
     final snapshot = _snapshot;
-    if (!_rendererReady || snapshot == null) return;
+    if (snapshot == null) return null;
     final filteredObjects = snapshot.objects
         .where(
           (object) =>
@@ -81,7 +92,6 @@ class _WorldScreenState extends State<WorldScreen> {
               widget.baseCategoryCodes.contains(object.categoryCode),
         )
         .toList();
-    // 성향 필터가 모든 오브젝트를 제외하면 전체 목록을 사용해 빈 방을 방지한다.
     final visibleObjects = filteredObjects.isEmpty
         ? snapshot.objects
         : filteredObjects;
@@ -89,12 +99,35 @@ class _WorldScreenState extends State<WorldScreen> {
       if (mounted) {
         setState(() => _error = 'World 오브젝트 정보를 불러오지 못했습니다.');
       }
-      return;
+      return null;
     }
+    return visibleObjects;
+  }
+
+  Future<void> _initializeRenderer() async {
+    final visibleObjects = _visibleObjects();
+    if (visibleObjects == null) return;
+    _initializeRetryTimer?.cancel();
+    _initializeRetryTimer = Timer.periodic(const Duration(milliseconds: 350), (
+      timer,
+    ) {
+      if (!mounted || _worldInitialized) {
+        timer.cancel();
+        return;
+      }
+      unawaited(_sendInitializeWorld(visibleObjects));
+    });
+    await _sendInitializeWorld(visibleObjects);
+  }
+
+  Future<void> _sendInitializeWorld(
+    List<WorldObjectProgress> visibleObjects,
+  ) async {
     await _controller.send('initializeWorld', {
       'objectCount': visibleObjects.length,
       'objects': visibleObjects.map((object) => object.toBridgeJson()).toList(),
     });
+    if (!_rendererReady) return;
     final growth = widget.pendingGrowth;
     if (growth != null && growth.rewardApplied) {
       await _controller.send('updateObjectLevel', {
@@ -114,7 +147,10 @@ class _WorldScreenState extends State<WorldScreen> {
     final payload = message['payload'];
     if (type == 'rendererReady') {
       _rendererReady = true;
-      _initializeRenderer();
+      unawaited(_initializeRenderer());
+    } else if (type == 'worldInitialized') {
+      _worldInitialized = true;
+      _initializeRetryTimer?.cancel();
     } else if (type == 'rendererError') {
       final text = payload is Map<String, Object?> ? payload['message'] : null;
       setState(

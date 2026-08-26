@@ -124,7 +124,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final initialize = messages.singleWhere(
+    final initialize = messages.firstWhere(
       (message) => message['type'] == 'initializeWorld',
     );
     final payload = initialize['payload'] as Map<String, Object?>;
@@ -184,7 +184,7 @@ void main() {
         'playLevelUp',
       ]),
     );
-    final levelMessage = messages.singleWhere(
+    final levelMessage = messages.firstWhere(
       (message) => message['type'] == 'updateObjectLevel',
     );
     expect((levelMessage['payload'] as Map<String, Object?>)['level'], 2);
@@ -257,7 +257,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final initialize = messages.singleWhere(
+    final initialize = messages.firstWhere(
       (message) => message['type'] == 'initializeWorld',
     );
     final payload = initialize['payload'] as Map<String, Object?>;

@@ -88,7 +88,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final initialize = messages.singleWhere(
+      final initialize = messages.firstWhere(
         (message) => message['type'] == 'initializeWorld',
       );
       final payload = initialize['payload'] as Map<String, Object?>;

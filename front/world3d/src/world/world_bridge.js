@@ -10,19 +10,34 @@ export function postBridgeMessage(type, payload = {}) {
   }
 }
 
+function decodeMessage(rawMessage) {
+  const message = typeof rawMessage === 'string' ? JSON.parse(rawMessage) : rawMessage;
+  if (message?.version !== VERSION || typeof message.type !== 'string') {
+    throw new Error('Unsupported bridge message.');
+  }
+  return message;
+}
+
 export function installWorldBridge(onMessage) {
+  const handleMessage = (rawMessage) => {
+    try {
+      return Promise.resolve(onMessage(decodeMessage(rawMessage)));
+    } catch (error) {
+      postBridgeMessage('rendererError', { message: error.message });
+      return Promise.reject(error);
+    }
+  };
+
   globalThis.NoveltyWorld = {
     receiveFromFlutter(rawMessage) {
-      try {
-        const message = typeof rawMessage === 'string' ? JSON.parse(rawMessage) : rawMessage;
-        if (message?.version !== VERSION || typeof message.type !== 'string') {
-          throw new Error('Unsupported bridge message.');
-        }
-        return Promise.resolve(onMessage(message));
-      } catch (error) {
-        postBridgeMessage('rendererError', { message: error.message });
-        return Promise.reject(error);
-      }
+      return handleMessage(rawMessage);
     },
   };
+
+  globalThis.addEventListener('message', (event) => {
+    if (event.origin !== globalThis.location.origin) {
+      return;
+    }
+    void handleMessage(event.data);
+  });
 }

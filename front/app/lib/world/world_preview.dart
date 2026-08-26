@@ -42,8 +42,10 @@ class _WorldPreviewState extends State<WorldPreview> {
   WorldSnapshot? _snapshot;
   String? _error;
   bool _rendererReady = false;
+  bool _worldInitialized = false;
   bool _helpExpanded = false;
   Timer? _helpTimer;
+  Timer? _initializeRetryTimer;
 
   @override
   void initState() {
@@ -62,6 +64,7 @@ class _WorldPreviewState extends State<WorldPreview> {
   @override
   void dispose() {
     _helpTimer?.cancel();
+    _initializeRetryTimer?.cancel();
     super.dispose();
   }
 
@@ -95,6 +98,7 @@ class _WorldPreviewState extends State<WorldPreview> {
         });
         return;
       }
+      _worldInitialized = false;
       setState(() {
         _snapshot = snapshot;
         _error = null;
@@ -109,7 +113,7 @@ class _WorldPreviewState extends State<WorldPreview> {
 
   Future<void> _initialize() async {
     final snapshot = _snapshot;
-    if (!_rendererReady || snapshot == null) return;
+    if (snapshot == null) return;
     final objects = _visibleObjects(snapshot);
     if (objects.isEmpty) {
       if (mounted) {
@@ -117,11 +121,27 @@ class _WorldPreviewState extends State<WorldPreview> {
       }
       return;
     }
+    _initializeRetryTimer?.cancel();
+    _initializeRetryTimer = Timer.periodic(const Duration(milliseconds: 350), (
+      timer,
+    ) {
+      if (!mounted || _worldInitialized) {
+        timer.cancel();
+        return;
+      }
+      unawaited(_sendInitializeWorld(objects));
+    });
+    await _sendInitializeWorld(objects);
+  }
+
+  Future<void> _sendInitializeWorld(List<WorldObjectProgress> objects) async {
     await _controller.send('initializeWorld', {
       'objectCount': objects.length,
       'objects': objects.map((object) => object.toBridgeJson()).toList(),
     });
-    await _applyPendingGrowth();
+    if (_rendererReady) {
+      await _applyPendingGrowth();
+    }
   }
 
   Future<void> _applyPendingGrowth() async {
@@ -140,19 +160,27 @@ class _WorldPreviewState extends State<WorldPreview> {
     switch (message['type']) {
       case 'rendererReady':
         _rendererReady = true;
-        _initialize();
+        unawaited(_initialize());
+        break;
+      case 'worldInitialized':
+        _worldInitialized = true;
+        _initializeRetryTimer?.cancel();
+        break;
       case 'objectSelected':
       case 'sceneTapped':
         widget.onOpen();
+        break;
       case 'rendererError':
         final payload = message['payload'];
         final text = payload is Map<String, Object?>
             ? payload['message']
             : null;
-        if (mounted)
+        if (mounted) {
           setState(
             () => _error = text is String ? text : '3D Renderer 오류가 발생했습니다.',
           );
+        }
+        break;
     }
   }
 
@@ -235,7 +263,7 @@ class _WorldPreviewState extends State<WorldPreview> {
               children: [
                 IconButton(
                   key: const Key('world-help-toggle'),
-                  tooltip: '공간 조작 도움말',
+                  tooltip: '공간 조작 안내',
                   onPressed: _showHelp,
                   icon: const Icon(Icons.help_outline_rounded),
                   color: NoveltyColors.primary,
@@ -252,7 +280,7 @@ class _WorldPreviewState extends State<WorldPreview> {
                         FadeTransition(opacity: animation, child: child),
                     child: _helpExpanded
                         ? const Text(
-                            '드래그 회전 · 휠/핀치 확대 · 공간 클릭 전체보기',
+                            '드래그 회전 · 휠 또는 터치 확대 · 공간 클릭 시 전체 보기',
                             key: Key('world-help-text'),
                           )
                         : const SizedBox(key: Key('world-help-hidden')),
