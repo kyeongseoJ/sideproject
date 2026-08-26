@@ -289,6 +289,8 @@ COMPLETED
 - `initializeWorld` Bridge payload는 `objectCount`와 실제 `objects.length`가 일치해야 하며, 1개 이상인 경우에만 전송한다.
 - GLB 로드 실패는 실패한 상대 asset 경로를 포함한 `rendererError`로 Flutter에 전달한다.
 - 전체 World 공간명은 현재 성향 유형에 맞는 이름을 사용한다.
+- 사용자 화면의 World 제목과 선택 UI에는 성향명만 표시하고 연결된 룸 에셋 파일명·룸 종류명은 표시하지 않는다.
+- 기존 Object 선택 툴팁은 외부 placeholder Object 제거 이후 `노벨티 Lv.N` 배지로 대체한다. 배지 툴팁은 Lv.1의 장식 1개, Lv.2~4의 장식 약 25%·50%·75%, Lv.5의 전체 장식 표시 상태를 안내한다.
 - 성향 유형별 기본 방 에셋 코드는 `classroom_2`, `art_gallery_4`, `cafe_5`, `music_store_20`, `flower_shop_26`, `Theatre_32`, `Gym_25`, `bookshop_7`, `stadium_40`으로 사전 등록하고, 각 실제 GLB를 Flutter Web 번들에 포함한다. 파일명은 제공된 에셋의 대소문자와 `Art_Galery` 표기를 그대로 사용한다.
 - 각 기본 방 GLB에서 이름에 `floor` 또는 `wall`이 포함된 Mesh는 항상 표시한다. 그 외 Mesh는 장식 요소로 보고 World의 최고 Object Level에 따라 Lv.1에서는 최소 1개, 이후 25%, 50%, 75%, 100%를 표시한다. 장식 순서는 GLB 노드 순서를 따르며, 방마다 장식 수가 달라도 마지막 단계에서 전체가 표시된다.
 - 전체 World에서 Object를 Web 마우스·펜으로 가리키거나 Web·Android에서 탭하면 Object명, 연결된 성향 Category와 현재 성장 단계를 툴팁으로 표시한다.
@@ -298,6 +300,7 @@ COMPLETED
 - 관심 분야와 행동 선호는 별도 영역으로 표시한다. 행동 선호의 네 축은 저장된 점수를 수치와 막대그래프로 표시한다.
 - 미션 완료 직후에는 Backend 완료 응답의 저장 전·후 네 축 차이 중 실제 변화가 있는 값만 프로필의 `성향 변동`으로 표시한다. Client가 미션 속성으로 변화량을 추정하지 않는다.
 - 3D World 조작 설명은 아이콘 버튼만 기본 표시하고, 누르면 펼친 뒤 5초 후 페이드 아웃한다. World 꾸미기 기능은 제공하지 않는다.
+- `WORLD_TEST=true`를 지정한 개발 실행에서는 실제 성향별 룸 GLB를 선택하고 모든 World Object 레벨을 한 단계씩 올리는 테스트 화면을 제공한다. 이 화면은 기본 운영 빌드의 진입 플로우에 포함하지 않는다.
 - Web 플랫폼 뷰가 클릭을 가로채지 않도록 인라인 World 도움말은 renderer 바깥의 Flutter 영역에 배치한다.
 - 미션 완료 성장 응답은 전체 World뿐 아니라 현재 표시 중인 인라인 World에도 즉시 전달해 Level 모델과 Level Up 애니메이션을 갱신한다.
 

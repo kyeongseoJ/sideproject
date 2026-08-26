@@ -23,6 +23,7 @@ class WorldScreen extends StatefulWidget {
     this.roomAssetCode = 'room',
     this.pendingGrowth,
     this.baseCategoryCodes = const <String>{},
+    this.debugOverlay,
     this.rendererBuilder,
   });
 
@@ -33,6 +34,7 @@ class WorldScreen extends StatefulWidget {
   final String roomAssetCode;
   final WorldGrowth? pendingGrowth;
   final Set<String> baseCategoryCodes;
+  final Widget? debugOverlay;
   final WorldRendererBuilder? rendererBuilder;
 
   @override
@@ -185,6 +187,9 @@ class _WorldScreenState extends State<WorldScreen> {
   @override
   Widget build(BuildContext context) {
     final snapshot = _snapshot;
+    final roomLevel = snapshot == null
+        ? null
+        : worldRoomDecorationLevel(snapshot.objects);
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.worldName),
@@ -192,6 +197,41 @@ class _WorldScreenState extends State<WorldScreen> {
           onPressed: widget.onBack,
           icon: const Icon(Icons.arrow_back),
         ),
+        actions: [
+          if (roomLevel case final level?)
+            Tooltip(
+              message: _roomLevelTooltip(level),
+              child: Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Center(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: NoveltyColors.primaryFaint,
+                      border: Border.all(color: NoveltyColors.primarySubtle),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      child: Text(
+                        '노벨티 Lv.$level',
+                        style: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(color: NoveltyColors.primaryStrong),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+        bottom: widget.debugOverlay == null
+            ? null
+            : PreferredSize(
+                preferredSize: const Size.fromHeight(116),
+                child: widget.debugOverlay!,
+              ),
       ),
       body: Stack(
         children: [
@@ -274,6 +314,14 @@ class _WorldScreenState extends State<WorldScreen> {
     );
   }
 }
+
+String _roomLevelTooltip(int level) => switch (level) {
+  1 => '노벨티 성장 Lv.1\n공간 장식 1개가 보입니다.',
+  2 => '노벨티 성장 Lv.2\n공간 장식이 약 25% 보입니다.',
+  3 => '노벨티 성장 Lv.3\n공간 장식이 약 50% 보입니다.',
+  4 => '노벨티 성장 Lv.4\n공간 장식이 약 75% 보입니다.',
+  _ => '노벨티 성장 Lv.5\n공간 장식이 모두 보입니다.',
+};
 
 class _WorldObjectTooltip extends StatelessWidget {
   const _WorldObjectTooltip({

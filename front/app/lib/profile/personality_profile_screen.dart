@@ -110,7 +110,7 @@ class PersonalityProfileScreen extends StatelessWidget {
                             WorldPreview(
                               gateway: worldGateway!,
                               userKey: userKey!,
-                              worldName: personalityWorldName(profile),
+                              worldName: profile.typeName,
                               roomAssetCode: personalityWorldRoomAssetCode(profile),
                               baseCategoryCodes: personalityWorldCategories(
                                 profile,

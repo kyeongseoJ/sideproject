@@ -55,6 +55,7 @@ EXP 지급 → 카테고리 오브젝트와 World 성장
 - 성향 프로필 안에서는 인라인 미리보기를 제공하고, 전체 화면 World에서는 오브젝트를 탭하거나 가리켜 상세 정보를 확인할 수 있습니다.
 - Flutter는 사용자 화면과 상태를 관리하고 Three.js는 렌더링만 담당합니다.
 - GLB 로드 실패나 World 데이터 누락이 앱 전체를 중단시키지 않도록 오류·대체 화면을 제공합니다.
+- 사용자 World 화면에는 연결된 룸 파일명이나 룸 종류를 노출하지 않고 성향명만 표시합니다. 상단 `노벨티 Lv.N` 배지의 툴팁에서 현재 공간 장식 표시 상태를 확인할 수 있습니다.
 
 ## 프로젝트 구조
 
@@ -157,6 +158,15 @@ flutter run -d web-server --web-port 3000
 flutter build web --release --dart-define=API_BASE_URL=https://api.example.com
 ```
 
+World 장식 성장 테스트는 운영 배포에 포함하지 않는 컴파일 플래그로 실행합니다.
+
+```powershell
+cd front/app
+flutter run -d chrome --dart-define=WORLD_TEST=true
+```
+
+테스트 화면에서 성향별 룸을 선택하고 `전체 +1` 버튼으로 모든 World Object를 한 단계씩 올릴 수 있습니다. 일반 배포 빌드에서는 `WORLD_TEST`를 지정하지 않습니다.
+
 ### 5. Android 실행
 
 ```powershell
@@ -226,7 +236,7 @@ Oracle 연동 테스트는 환경 변수와 실제 Oracle 접속이 필요하므
 
 - 성향 분석, 미션 추천·선택·취소·완료, 미션 통계는 Backend와 Flutter 흐름이 연결되어 있습니다.
 - 미션 완료와 World EXP 지급은 동일 Transaction에서 처리되며 완료 재요청은 중복 보상 없이 멱등 처리됩니다.
-- World Backend, Flutter, Three.js, Android WebView 연결과 40개 레벨 GLB는 구현되어 있습니다.
+- World Backend, Flutter, Three.js, Android WebView 연결과 성향별 룸 GLB 9종은 구현되어 있습니다. 기존 개별 placeholder GLB는 제거했습니다.
 - 3D World는 자동 회귀와 Android·Oracle 검증이 진행됐지만 Web·Android 전체 사용자 흐름의 최종 수동 확인은 남아 있습니다.
 - 사용자별 Timezone 설정은 아직 제공하지 않으며 MVP 서비스 날짜는 `Asia/Seoul` 기준입니다.
 - 운영 배포 시 Flutter Web 정적 파일과 Spring Boot Backend, Oracle Database를 별도 배포해야 합니다.

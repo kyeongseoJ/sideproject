@@ -64,7 +64,7 @@ class _PersonalityExperienceScreenState
       return WorldScreen(
         gateway: gateway,
         userKey: widget.userKey,
-        worldName: personalityWorldName(_user.personality!),
+        worldName: _user.personality!.typeName,
         roomAssetCode: personalityWorldRoomAssetCode(_user.personality!),
         baseCategoryCodes: personalityWorldCategories(_user.personality!),
         pendingGrowth: _pendingWorldGrowth,

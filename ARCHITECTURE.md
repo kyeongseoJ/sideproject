@@ -37,7 +37,7 @@ Novelty
 ## 경계 규칙
 
 - Flutter는 사용자 흐름과 화면 상태를 담당하고 3D 장면을 직접 구성하지 않는다.
-- Three.js는 GLB 로딩, 카메라, 조명, 오브젝트 배치, 레벨 모델 전환과 단순 애니메이션만 담당한다.
+- Three.js는 성향별 룸 GLB 로딩, 카메라, 조명, 룸 배치, 룸 장식 노드 가시성 전환과 단순 애니메이션을 담당한다.
 - Spring Boot가 사용자, 성향, 미션 수행 상태와 월드 성장의 기준 데이터를 관리한다.
 - Oracle이 사용자별 미션 수행과 월드 진행 상태의 최종 기준이다.
 - `MISSION_STATUS_LOG`는 기존 이벤트 이력으로 보존한다. `USER_MISSION`은 사용자에게 제안된 한 건의 미션과 현재 상태를 나타내는 집계 레코드다.
@@ -69,4 +69,6 @@ Blender 원본
 → Three.js GLB Loader 로드
 ```
 
-Oracle의 `WORLD_OBJECT_LEVEL`은 레벨별 누적 요구 EXP만 관리한다. 레벨별 GLB 파일은 `objectCode`와 `level`로 Frontend Manifest에서 찾는다.
+Oracle의 `WORLD_OBJECT_LEVEL`은 레벨별 누적 요구 EXP만 관리한다. World Object 레벨은 룸 장식 표시 단계를 계산하는 데 사용하며, 성향별 룸 GLB 경로와 파일명은 Frontend Manifest에서 관리한다. 룸 GLB 내부에서 `floor`·`wall` Mesh는 기본 골조로 유지하고 나머지 Mesh를 단계적으로 표시한다.
+
+개발 검증 시 `flutter run -d chrome --dart-define=WORLD_TEST=true`로 테스트 화면을 실행한다. 테스트 화면은 실제 성향별 룸을 선택하고 모든 World Object 레벨을 한 단계씩 올려 Lv.1~Lv.5 장식 변화를 확인한다. `WORLD_TEST`를 지정하지 않은 운영 빌드에는 이 진입 경로가 없다.
