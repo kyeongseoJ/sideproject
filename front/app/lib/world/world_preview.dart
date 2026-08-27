@@ -48,7 +48,6 @@ class _WorldPreviewState extends State<WorldPreview> {
   bool _rendererReady = false;
   bool _worldInitialized = false;
   bool _helpExpanded = false;
-  Timer? _helpTimer;
   Timer? _initializeRetryTimer;
 
   @override
@@ -67,17 +66,12 @@ class _WorldPreviewState extends State<WorldPreview> {
 
   @override
   void dispose() {
-    _helpTimer?.cancel();
     _initializeRetryTimer?.cancel();
     super.dispose();
   }
 
   void _showHelp() {
-    _helpTimer?.cancel();
-    setState(() => _helpExpanded = true);
-    _helpTimer = Timer(const Duration(seconds: 5), () {
-      if (mounted) setState(() => _helpExpanded = false);
-    });
+    setState(() => _helpExpanded = !_helpExpanded);
   }
 
   List<WorldObjectProgress> _visibleObjects(WorldSnapshot snapshot) {
@@ -249,41 +243,70 @@ class _WorldPreviewState extends State<WorldPreview> {
                       ),
                     ),
                   ),
-              ],
-            ),
-          ),
-        ),
-        Material(
-          color: NoveltyColors.canvas,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Row(
-              children: [
-                IconButton(
-                  key: const Key('world-help-toggle'),
-                  tooltip: '공간 조작 안내',
-                  onPressed: _showHelp,
-                  icon: const Icon(Icons.help_outline_rounded),
-                  color: NoveltyColors.primary,
-                  style: IconButton.styleFrom(
-                    minimumSize: const Size.square(40),
+                Positioned(
+                  top: 8,
+                  bottom: 8,
+                  left: 8,
+                  child: NavigationRail(
+                    key: const Key('world-help-rail'),
                     backgroundColor: NoveltyColors.canvas,
-                    side: const BorderSide(color: NoveltyColors.line),
+                    minWidth: 52,
+                    groupAlignment: -0.85,
+                    selectedIndex: _helpExpanded ? 0 : null,
+                    onDestinationSelected: (_) => _showHelp(),
+                    labelType: NavigationRailLabelType.none,
+                    destinations: const [
+                      NavigationRailDestination(
+                        icon: Icon(
+                          Icons.help_outline_rounded,
+                          key: Key('world-help-toggle'),
+                        ),
+                        selectedIcon: Icon(Icons.help_rounded),
+                        label: Text('도움말'),
+                      ),
+                    ],
                   ),
                 ),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: NoveltyMotion.slow,
-                    transitionBuilder: (child, animation) =>
-                        FadeTransition(opacity: animation, child: child),
-                    child: _helpExpanded
-                        ? const Text(
-                            '드래그 회전 · 휠 또는 터치 확대 · 공간 클릭 시 전체 보기',
-                            key: Key('world-help-text'),
-                          )
-                        : const SizedBox(key: Key('world-help-hidden')),
+                if (_helpExpanded)
+                  Positioned(
+                    top: 8,
+                    left: 68,
+                    right: 8,
+                    child: Material(
+                      color: NoveltyColors.canvas,
+                      child: Container(
+                        key: const Key('world-help-text'),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: NoveltyColors.line),
+                          borderRadius: BorderRadius.circular(
+                            NoveltyRadii.medium,
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                '드래그 회전 · 휠 또는 터치 확대 · 공간 클릭 시 전체 보기',
+                              ),
+                            ),
+                            IconButton(
+                              key: const Key('world-help-close'),
+                              tooltip: '도움말 닫기',
+                              onPressed: _showHelp,
+                              icon: const Icon(Icons.close_rounded, size: 18),
+                              constraints: const BoxConstraints.tightFor(
+                                width: 28,
+                                height: 28,
+                              ),
+                              padding: EdgeInsets.zero,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
-                ),
               ],
             ),
           ),

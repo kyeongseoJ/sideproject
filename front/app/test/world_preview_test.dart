@@ -108,11 +108,11 @@ void main() {
       expect(find.text('고요한 몰입 작업실'), findsOneWidget);
 
       expect(find.textContaining('드래그 회전'), findsNothing);
-      await tester.tap(find.byKey(const Key('world-help-toggle')));
+      await tester.tap(find.byIcon(Icons.help_outline_rounded));
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.textContaining('드래그 회전'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 5));
-      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.byKey(const Key('world-help-close')));
+      await tester.pump();
       expect(find.textContaining('드래그 회전'), findsNothing);
 
       await tester.tap(find.byKey(const Key('world-preview-open-header')));
