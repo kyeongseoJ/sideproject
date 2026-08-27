@@ -40,8 +40,8 @@ class _FakeWorldGateway implements WorldGateway {
 }
 
 void main() {
-  testWidgets(
-    'sends personality objects and completed categories to renderer',
+    testWidgets(
+    'sends only completed category objects to renderer',
     (tester) async {
       final messages = <Map<String, Object?>>[];
       var opened = 0;
@@ -96,7 +96,7 @@ void main() {
       final codes = objects
           .map((object) => (object as Map<String, Object?>)['objectCode'])
           .toSet();
-      expect(codes, {'ART_EASEL', 'BOOKSHELF'});
+      expect(codes, {'BOOKSHELF'});
       expect(
         messages.map((message) => message['type']),
         containsAllInOrder([

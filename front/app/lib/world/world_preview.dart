@@ -79,14 +79,9 @@ class _WorldPreviewState extends State<WorldPreview> {
   }
 
   List<WorldObjectProgress> _visibleObjects(WorldSnapshot snapshot) {
-    final selected = snapshot.objects
-        .where(
-          (object) =>
-              object.exp > 0 ||
-              widget.baseCategoryCodes.contains(object.categoryCode),
-        )
-        .toList();
-    return selected.isEmpty ? snapshot.objects.take(1).toList() : selected;
+    // The preview starts with the base room only. Category objects appear
+    // after their first mission completion grants EXP.
+    return snapshot.objects.where((object) => object.exp > 0).toList();
   }
 
   Future<void> _load() async {
@@ -117,12 +112,6 @@ class _WorldPreviewState extends State<WorldPreview> {
     final snapshot = _snapshot;
     if (snapshot == null) return;
     final objects = _visibleObjects(snapshot);
-    if (objects.isEmpty) {
-      if (mounted) {
-        setState(() => _error = 'World 오브젝트 정보를 불러오지 못했습니다.');
-      }
-      return;
-    }
     _initializeRetryTimer?.cancel();
     _initializeRetryTimer = Timer.periodic(const Duration(milliseconds: 350), (
       timer,

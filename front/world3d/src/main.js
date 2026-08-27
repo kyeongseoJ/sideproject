@@ -33,8 +33,8 @@ async function updateObjectLevel(objectCode, level) {
 }
 
 async function initializeWorld(payload) {
-  if (!Array.isArray(payload.objects) || payload.objects.length === 0) {
-    throw new Error('World objects are required.');
+  if (!Array.isArray(payload.objects)) {
+    throw new Error('World objects must be an array.');
   }
   if (payload.objectCount !== payload.objects.length) {
     throw new Error(`World object count mismatch: ${payload.objects.length}`);

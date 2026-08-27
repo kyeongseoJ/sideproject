@@ -340,13 +340,19 @@ function disposeObject(root) {
 function applyRoomDecorationLevel(room, level) {
   const decorations = [];
   room.traverse((node) => {
-    if (!node.isMesh || !node.name || /floor|wall/i.test(node.name)) return;
+    if (!node.isMesh || !node.name) return;
+    // The base room always includes its structural floor, walls, door, and window.
+    // Only the remaining decorative meshes are progressively revealed by level.
+    if (/floor|wall|door|window/i.test(node.name)) {
+      node.visible = true;
+      return;
+    }
     decorations.push(node);
   });
 
   const visibleCount = decorations.length === 0
     ? 0
-    : Math.max(1, Math.ceil(decorations.length * (level - 1) / 4));
+    : Math.ceil(decorations.length * (level - 1) / 4);
   decorations.forEach((node, index) => {
     node.visible = index < visibleCount;
   });

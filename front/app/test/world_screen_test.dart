@@ -246,7 +246,7 @@ void main() {
     expect(find.text('World 오브젝트 정보를 불러오지 못했습니다.'), findsOneWidget);
   });
 
-  testWidgets('falls back to all objects when personality filtering is empty', (
+  testWidgets('sends the base room without category objects before completion', (
     tester,
   ) async {
     final messages = <Map<String, Object?>>[];
@@ -296,7 +296,7 @@ void main() {
       (message) => message['type'] == 'initializeWorld',
     );
     final payload = initialize['payload'] as Map<String, Object?>;
-    expect(payload['objectCount'], 1);
-    expect((payload['objects'] as List<Object?>).length, 1);
+    expect(payload['objectCount'], 0);
+    expect((payload['objects'] as List<Object?>).length, 0);
   });
 }

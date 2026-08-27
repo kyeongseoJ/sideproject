@@ -105,24 +105,9 @@ class _WorldScreenState extends State<WorldScreen> {
   List<WorldObjectProgress>? _visibleObjects() {
     final snapshot = _snapshot;
     if (snapshot == null) return null;
-    final filteredObjects = snapshot.objects
-        .where(
-          (object) =>
-              object.exp > 0 ||
-              widget.baseCategoryCodes.isEmpty ||
-              widget.baseCategoryCodes.contains(object.categoryCode),
-        )
-        .toList();
-    final visibleObjects = filteredObjects.isEmpty
-        ? snapshot.objects
-        : filteredObjects;
-    if (visibleObjects.isEmpty) {
-      if (mounted) {
-        setState(() => _error = 'World 오브젝트 정보를 불러오지 못했습니다.');
-      }
-      return null;
-    }
-    return visibleObjects;
+    // Before the first completion only the base room is rendered. The first
+    // category object becomes visible once it has received EXP.
+    return snapshot.objects.where((object) => object.exp > 0).toList();
   }
 
   Future<void> _initializeRenderer() async {
@@ -360,11 +345,11 @@ class _WorldScreenState extends State<WorldScreen> {
 }
 
 String _roomLevelTooltip(int level) => switch (level) {
-  1 => '노벨티 성장 Lv.1\n공간 장식 1개가 보입니다.',
-  2 => '노벨티 성장 Lv.2\n공간 장식이 약 25% 보입니다.',
-  3 => '노벨티 성장 Lv.3\n공간 장식이 약 50% 보입니다.',
-  4 => '노벨티 성장 Lv.4\n공간 장식이 약 75% 보입니다.',
-  _ => '노벨티 성장 Lv.5\n공간 장식이 모두 보입니다.',
+  1 => '노벨티 성장 Lv.1\n바닥·벽·문·창문 기본 구조가 보입니다.',
+  2 => '노벨티 성장 Lv.2\n기본 구조 + 나머지 장식 25%가 보입니다.',
+  3 => '노벨티 성장 Lv.3\n기본 구조 + 나머지 장식 50%가 보입니다.',
+  4 => '노벨티 성장 Lv.4\n기본 구조 + 나머지 장식 75%가 보입니다.',
+  _ => '노벨티 성장 Lv.5\n기본 구조 + 나머지 장식 100%가 보입니다.',
 };
 
 class _WorldGrowthSummary extends StatelessWidget {
