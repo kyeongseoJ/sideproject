@@ -232,6 +232,15 @@ Swagger UI는 Backend 실행 후 다음 주소에서 확인할 수 있습니다.
 http://localhost:8080/swagger-ui.html
 ```
 
+운영 배포 주소:
+
+- [Novelty WebApp](https://kyeongseoj.dx6project.site/)
+- [Novelty Backend Swagger UI](https://kyeongseoj-api.dx6project.site/swagger-ui/index.html)
+- 운영 Backend API Base URL: `https://kyeongseoj-api.dx6project.site`
+
+Swagger UI에서 사용자별 API를 호출할 때는 회원가입 또는 로그인 응답의
+`userKey`를 `X-User-Key` Header에 입력합니다.
+
 폐기된 `/api/surveys`, `/api/missions/random`, `PATCH /api/missions/{missionId}/status` 경로는 사용하지 않습니다.
 
 ## 검증 명령

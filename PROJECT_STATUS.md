@@ -1,6 +1,6 @@
 # Novelty 프로젝트 진행 상태
 
-최종 갱신일: 2026-08-26
+최종 갱신일: 2026-08-27
 
 ## 문서 목적
 
@@ -17,10 +17,32 @@
 | 검증 완료 | 현재 사양의 구현과 관련 Build·테스트 또는 E2E 검증이 완료됨 |
 | 대체됨 | 과거에는 완료됐으나 이후 변경된 사양의 현재 완료 근거로 사용할 수 없음 |
 
+## energy_level 정리 상태
+
+- 현재 V2 성향 분석에서 사용하지 않는 `survey_response.energy_level` 컬럼을 운영 Supabase에서 삭제했다.
+- 적용 migration: `supabase/migrations/005_remove_unused_energy_level.sql`
+- Backend의 성향 응답 INSERT에서도 해당 컬럼 저장을 제거했다.
+- 적용 후 검증: `survey_response.energy_level=absent`, 기존 테이블별 건수·고아 레코드 검사 정상.
+- 과거 Oracle 및 V1 문서의 `ENERGY_LEVEL` 표기는 변경 이력·레거시 기준으로만 보존한다.
+
+## 2026-08-27 미션·World 정책 반영
+
+- `supabase/migrations/008_balance_category_mission_counts.sql`을 운영 Supabase에 적용해 부족한 카테고리에 신규 미션 34개를 추가했다. 활성 미션은 총 400개이며 8개 카테고리가 각각 50개로 맞춰졌다.
+- 신규 미션은 카테고리별 고유 코드, 제목 정규화 값, 콘텐츠 fingerprint를 사용해 중복 없이 추가했으며 운영 DB 검증 결과 제목·fingerprint 중복은 각각 0건이다.
+
+- 관심 분야 카테고리 미션을 추천 후보에서 제외하고, 5~180분 시간 구간을 가능한 한 분산해 후보를 구성하도록 Backend를 변경했다.
+- 완료 5회 단위로 생성된 검증 LLM 미션은 공용 Catalog에 저장되며 모든 사용자에게 추천될 수 있도록 변경했다.
+- 3D 기본 룸은 floor·wall·door·window를 항상 표시하고, 나머지 장식은 레벨 1~5에서 0/25/50/75/100%로 노출한다.
+- 3D World 상단 `Novelty 3D WORLD` 배지와 전용 CSS를 제거하고 Flutter 번들을 재생성했다.
+- Supabase 활성 미션 시간 분포에 180분 미션을 추가했다.
+- `supabase/migrations/007_add_long_and_deviation_missions.sql`을 운영 Supabase에 적용해 장기 미션 30개와 카테고리별 일탈 미션 36개를 추가했다. 활성 미션은 총 366개이며, 시간 범위는 5~180분이다.
+- 적용 후 분류 검증: `LONG=30`, `DEVIATION=36`, 기존 미션 `300`.
+- World 초기화 정책을 기본 룸 전용으로 변경했다. 첫 미션 완료로 EXP가 생긴 Category Object부터 Flutter가 Renderer에 전달하며, 초기 `roomDecorationLevel`은 1이다.
+
 ## Supabase PostgreSQL 전환 상태
 
 - 운영 기준은 Supabase PostgreSQL로 전환했으며, PostgreSQL JDBC driver와 Repository SQL 변환을 적용했다.
-- `supabase/migrations/001_initial_schema.sql`과 `002_seed_missions.sql`을 테스트용 Supabase에 실제 적용했다.
+- `supabase/migrations/001_initial_schema.sql`부터 `005_remove_unused_energy_level.sql`까지 운영 Supabase에 실제 적용했다.
 - 적용 결과는 `MISSION` 300건, `WORLD_OBJECT` 8건, `WORLD_OBJECT_LEVEL` 40건, `NICKNAME_BANNED_WORD` 9건이다.
 - 확인한 외래키 고아 레코드는 0건이며, 사용자·수행 이력 테이블은 이관 시점에 0건이었다.
 - PostgreSQL 기준 `회원가입 → 사용자 조회 → World Snapshot` API 흐름을 실제 DB 연결로 확인했다.

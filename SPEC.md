@@ -193,8 +193,8 @@ Blender 또는 Asset 제작
 ### 추천 원천과 LLM
 
 - 최초 성향 분석 후에는 미리 검수해 둔 기본 미션 중에서 추천한다.
-- 기본 미션 Catalog는 기존 M001~M200 200개에 30~150분 중심의 BASE 미션 100개를 추가한 seed 기준으로 관리한다. 기존 행은 과거 이력 참조를 위해 삭제하지 않고 `enabled=N`으로 보존하며, 신규 seed는 `CONTENT_FINGERPRINT`와 `TITLE_NORMALIZED` 기준으로 멱등 삽입한다.
-- 완료 미션이 5회 이상인 사용자는 검수된 기본 미션과 공유 LLM 미션 Catalog의 후보가 될 수 있다.
+- 기본 미션 Catalog는 5분·10분·15분·30분·45분·60분·90분·120분·180분 구간을 포함하는 BASE seed 기준으로 관리한다. 기존 행은 과거 이력 참조를 위해 삭제하지 않고 `enabled=N`으로 보존하며, 신규 seed는 `CONTENT_FINGERPRINT`와 `TITLE_NORMALIZED` 기준으로 멱등 삽입한다.
+- 검증을 통과한 공유 LLM 미션은 생성자뿐 아니라 모든 사용자의 추천 후보가 될 수 있다.
 - LLM 신규 생성은 사용자별 완료 횟수 5회 단위를 기준으로 시도한다.
 - 생성된 미션은 해당 사용자만의 일회성 데이터가 아니라 검증 후 유사 사용자도 사용할 수 있는 공용 Catalog에 저장한다.
 - 기존 미션과 제목·설명이 중복되거나 의미가 지나치게 유사한 미션은 저장하지 않는다.
@@ -275,6 +275,12 @@ COMPLETED
 
 ## 9. 3D World와 레벨
 
+Current mission recommendation rules:
+
+- Selected interest categories are excluded from the recommendation pool so missions intentionally lead users outside their stated interests.
+- The shared catalog targets duration bands from 5 minutes through 180 minutes. Candidate selection prefers different duration bands when enough eligible missions exist.
+- A validated LLM mission generated at each five-completion milestone is stored as a shared catalog mission and can be recommended to every user.
+
 - 미션 완료는 미션 `category`와 연결된 World object의 경험치 또는 성장값에 반영한다.
 - 사용자별 Object 상태는 `USER_WORLD_OBJECT` 영역에서 관리한다.
 - Object의 레벨별 요구치는 `WORLD_OBJECT_LEVEL` 영역에서 관리한다.
@@ -286,7 +292,7 @@ COMPLETED
 - 레벨 변경은 Backend의 저장 결과를 기준으로 처리하며 Client만의 값으로 확정하지 않는다.
 - 상세 계약은 `docs/world-sdd-v1.md`를 기준으로 한다.
 - 성향 프로필 안에 회전·확대 가능한 World 미리보기를 표시하고 장면 또는 사물을 탭하면 전체 화면으로 이동한다.
-- 초기 World에는 성향 관심 Category의 Lv1 Object를 표시하고, 이후 완료 EXP가 있는 Category Object도 함께 표시한다.
+- 초기 World에는 기본 룸만 표시하고 오브젝트는 표시하지 않는다. 첫 미션 완료로 EXP가 지급된 Category의 Lv1 Object부터 표시하며, 이후 완료 EXP가 있는 Category Object를 함께 표시한다.
 - `/api/world`의 `objects`가 비어 있으면 Flutter는 빈 방을 정상 상태로 표시하지 않고 `World 오브젝트 정보를 불러오지 못했습니다.`를 표시한다.
 - 성향 Category 필터 결과가 비어 있으면 전체 Snapshot Object를 fallback으로 사용해 빈 방을 방지한다.
 - `initializeWorld` Bridge payload는 `objectCount`와 실제 `objects.length`가 일치해야 하며, 1개 이상인 경우에만 전송한다.

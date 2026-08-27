@@ -57,7 +57,7 @@ Novelty
 - GLB Loader는 asset URI별 Promise를 캐시하고, Bridge 초기화 재시도 중 동일한 룸을 중복 로드하지 않는다.
 - `GET /api/world`는 Flutter에 World Snapshot을 제공하고 Three.js는 Backend API를 직접 호출하지 않는다.
 - Mission 완료 Transaction은 `WorldProgressService`를 호출해 Category EXP를 갱신하며 동일 `userMissionId` 재요청에는 보상을 지급하지 않는다.
-- Flutter 성향 프로필은 Three.js Renderer를 인라인으로 포함하며 성향 관심 Category와 완료 EXP가 있는 Object를 표시한다.
+- Flutter 성향 프로필은 Three.js Renderer를 인라인으로 포함하며 초기에는 기본 룸만 표시한다. 첫 미션 완료 후 EXP가 있는 Category Object를 표시한다.
 - 인라인 장면 탭은 기존 전체 World 화면으로 이동하고 회전·확대 입력은 Renderer가 그대로 처리한다.
 
 ## 3D Asset 규칙

@@ -1,5 +1,7 @@
 # 랜덤 미션 생성·선택·완료 SDD V1
 
+Current policy override: selected interest categories are excluded from recommendations; the shared BASE/LLM catalog covers 5–180 minute duration bands; and validated LLM missions created every five completions are eligible for all users.
+
 ## 1. 문서 정보
 
 - 프로젝트: 노벨티(Novelty)
