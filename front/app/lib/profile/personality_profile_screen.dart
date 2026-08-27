@@ -71,8 +71,30 @@ class PersonalityProfileScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _BrandHeader(onLogout: onLogout),
-                          const SizedBox(height: 10),
-                          _PersonalityTitle(profile: profile),
+                          if (worldGateway != null &&
+                              userKey != null &&
+                              onOpenWorld != null) ...[
+                            const SizedBox(height: 20),
+                            Text(
+                              '나의 세계',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 10),
+                            WorldPreview(
+                              gateway: worldGateway!,
+                              userKey: userKey!,
+                              worldName: profile.typeName,
+                              roomAssetCode: personalityWorldRoomAssetCode(
+                                profile,
+                              ),
+                              baseCategoryCodes: personalityWorldCategories(
+                                profile,
+                              ),
+                              pendingGrowth: pendingWorldGrowth,
+                              interactive: worldInteractionEnabled,
+                              onOpen: onOpenWorld!,
+                            ),
+                          ],
                           if (missionGateway != null && userKey != null) ...[
                             const SizedBox(height: 20),
                             MissionDashboardSection(
@@ -102,30 +124,6 @@ class PersonalityProfileScreen extends StatelessWidget {
                             onPressed: onReanalyze,
                             child: const Text('성향 분석 다시하기'),
                           ),
-                          if (worldGateway != null &&
-                              userKey != null &&
-                              onOpenWorld != null) ...[
-                            const SizedBox(height: 28),
-                            Text(
-                              '나의 세계',
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                            const SizedBox(height: 10),
-                            WorldPreview(
-                              gateway: worldGateway!,
-                              userKey: userKey!,
-                              worldName: profile.typeName,
-                              roomAssetCode: personalityWorldRoomAssetCode(
-                                profile,
-                              ),
-                              baseCategoryCodes: personalityWorldCategories(
-                                profile,
-                              ),
-                              pendingGrowth: pendingWorldGrowth,
-                              interactive: worldInteractionEnabled,
-                              onOpen: onOpenWorld!,
-                            ),
-                          ],
                           const SizedBox(height: 40),
                           const Divider(height: 1),
                           const SizedBox(height: 10),
@@ -215,40 +213,6 @@ class _BrandHeader extends StatelessWidget {
   );
 }
 
-class _PersonalityTitle extends StatelessWidget {
-  const _PersonalityTitle({required this.profile});
-  final PersonalityProfile profile;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-    decoration: BoxDecoration(
-      color: NoveltyColors.primaryFaint,
-      border: Border.all(color: NoveltyColors.primarySubtle),
-      borderRadius: BorderRadius.circular(NoveltyRadii.card),
-    ),
-    child: Column(
-      children: [
-        Text(
-          '나의 성향 분석 결과',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: NoveltyColors.primaryStrong),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          profile.typeName,
-          key: const Key('personality-profile-type-name'),
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            color: NoveltyColors.primaryStrong,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
 class _ProfileSummary extends StatelessWidget {
   const _ProfileSummary({required this.profile});
   final PersonalityProfile profile;
@@ -258,7 +222,27 @@ class _ProfileSummary extends StatelessWidget {
     key: const Key('personality-summary-card'),
     padding: const EdgeInsets.all(18),
     decoration: _sectionDecoration(),
-    child: Text(profile.summary, style: Theme.of(context).textTheme.bodyLarge),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '성향 분석 결과',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: NoveltyColors.primaryStrong,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          profile.typeName,
+          key: const Key('personality-profile-type-name'),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: NoveltyColors.primaryStrong,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(profile.summary, style: Theme.of(context).textTheme.bodyLarge),
+      ],
+    ),
   );
 }
 
