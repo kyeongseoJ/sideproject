@@ -21,7 +21,6 @@ class _NoveltySplashGateState extends State<NoveltySplashGate>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _fade;
-  late final Animation<double> _scale;
   bool _showSplash = true;
 
   @override
@@ -44,10 +43,6 @@ class _NoveltySplashGateState extends State<NoveltySplashGate>
       duration: const Duration(milliseconds: 900),
     );
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
-    _scale = Tween<double>(
-      begin: 0.94,
-      end: 1,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     unawaited(_waitForReadiness());
   }
 
@@ -82,28 +77,25 @@ class _NoveltySplashGateState extends State<NoveltySplashGate>
             child: Center(
               child: FadeTransition(
                 opacity: Tween<double>(begin: 0.72, end: 1).animate(_fade),
-                child: ScaleTransition(
-                  scale: _scale,
-                  child: Semantics(
-                    label: 'Novelty 로딩 중',
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Image.asset(
-                          'assets/ui/Novelty_logo_white.png',
-                          width: 112,
-                          height: 112,
-                          filterQuality: FilterQuality.high,
-                        ),
-                        const SizedBox(height: 24),
-                        Image.asset(
-                          'assets/ui/Novelty_logo_letter_white.png',
-                          width: 190,
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
-                        ),
-                      ],
-                    ),
+                child: Semantics(
+                  label: 'Novelty 로딩 중',
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset(
+                        'assets/ui/Novelty_logo_white.png',
+                        width: 112,
+                        height: 112,
+                        filterQuality: FilterQuality.high,
+                      ),
+                      const SizedBox(height: 24),
+                      Image.asset(
+                        'assets/ui/Novelty_logo_letter_white.png',
+                        width: 190,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.high,
+                      ),
+                    ],
                   ),
                 ),
               ),
