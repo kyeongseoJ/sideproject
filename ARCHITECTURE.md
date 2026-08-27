@@ -74,3 +74,24 @@ Blender 원본
 PostgreSQL의 `WORLD_OBJECT_LEVEL`은 레벨별 누적 요구 EXP만 관리한다. World Object 레벨은 룸 장식 표시 단계를 계산하는 데 사용하며, 성향별 룸 GLB 경로와 파일명은 Frontend Manifest에서 관리한다. 룸 GLB 내부에서 `floor`·`wall` Mesh는 기본 골조로 유지하고 나머지 Mesh를 단계적으로 표시한다.
 
 개발 검증 시 `flutter run -d chrome --dart-define=WORLD_TEST=true`로 테스트 화면을 실행한다. 테스트 화면은 실제 성향별 룸을 선택하고 모든 World Object 레벨을 한 단계씩 올려 Lv.1~Lv.5 장식 변화를 확인한다. `WORLD_TEST`를 지정하지 않은 운영 빌드에는 이 진입 경로가 없다.
+
+## Deployment topology
+
+```text
+Repository root (Docker build context)
+├─ front/Dockerfile
+│  ├─ Three.js / Vite build   → front/world3d/dist
+│  ├─ Flutter Web build       → front/app/build/web
+│  └─ Nginx static server     → port 80
+├─ back/Dockerfile
+│  ├─ Maven + Java 21 build   → Spring Boot JAR
+│  └─ Java 21 JRE runtime     → port 8080
+└─ Supabase PostgreSQL
+   └─ supabase/migrations (applied separately)
+```
+
+The frontend image contains the Flutter Web output and bundled Three.js/GLB
+assets. `API_BASE_URL` is supplied as a Docker build argument and compiled
+into Flutter. The backend image receives database, CORS, and optional OpenAI
+settings only at runtime. `.dockerignore` prevents local `.env`, build
+outputs, and dependency caches from entering the build context.

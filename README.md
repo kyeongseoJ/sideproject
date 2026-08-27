@@ -315,3 +315,35 @@ daily mission count. `GET /api/missions/today` and
 `POST /api/missions/today/recommendations` use the fixed policy of one daily
 mission and return up to five candidates. `estimatedMinutes` remains mission
 catalog metadata and is displayed as information only.
+
+## Docker deployment
+
+Dockerfiles use the repository root as their build context.
+
+Frontend image:
+
+```powershell
+docker build -f front/Dockerfile --build-arg API_BASE_URL=https://api.example.com -t novelty-front .
+docker run --rm -p 80:80 novelty-front
+```
+
+The frontend image builds `front/world3d` with Vite, builds Flutter Web with
+the supplied `API_BASE_URL`, and serves `front/app/build/web` through Nginx.
+`front/nginx.conf` provides the Flutter SPA fallback to `index.html`.
+
+Backend image:
+
+```powershell
+docker build -f back/Dockerfile -t novelty-back .
+docker run --rm -p 8080:8080 --env-file .env novelty-back
+```
+
+For a deployment platform, register the variables from `.env.example` in its
+environment settings instead of copying `.env` into the image. The backend
+requires `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, and the deployed Web origin
+in `CORS_ALLOWED_ORIGIN_PATTERNS`. OpenAI variables are optional.
+
+Apply and verify `supabase/migrations` separately before starting the backend.
+There is currently no Docker Compose file; frontend and backend images are
+deployed as separate services connected to the same Supabase PostgreSQL
+database.

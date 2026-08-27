@@ -424,3 +424,26 @@ User mission settings for available time and daily mission count are removed
 from the current contract. The Backend always limits a user to one selected
 mission per service date and returns up to five recommendations. Mission
 `estimatedMinutes` remains catalog metadata, not a user preference.
+
+## Deployment contract (2026-08-27)
+
+- The repository root is the Docker build context. `front/Dockerfile` builds
+  the Three.js bundle first, copies it into the Flutter Web project, builds
+  Flutter Web, and serves the resulting static files with Nginx on port 80.
+- `front/Dockerfile` accepts the non-secret build argument `API_BASE_URL` and
+  passes it to Flutter as `--dart-define`. The deployed API URL is fixed at
+  frontend build time.
+- `front/nginx.conf` preserves Flutter client-side routing by falling back
+  unknown paths to `/index.html`.
+- `back/Dockerfile` builds the Spring Boot JAR with Maven and Java 21, then
+  runs it on the Java 21 JRE image on port 8080. Backend secrets are runtime
+  environment variables and are not copied into the image.
+- The backend runtime must provide `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD`.
+  `CORS_ALLOWED_ORIGIN_PATTERNS` must contain the deployed Flutter Web origin.
+  `OPENAI_API_KEY`, `OPENAI_MODEL`, and `OPENAI_BASE_URL` are optional LLM
+  configuration values.
+- Supabase PostgreSQL migrations are applied separately from the application
+  images using `supabase/apply-migrations.jsh` and verified with
+  `supabase/verify-migration.jsh`.
+- `.dockerignore` excludes `.env` and local build artifacts. The deployment
+  platform must inject secrets through its environment configuration.

@@ -257,3 +257,16 @@ Backend 전체 181개 테스트는 실패 0·환경조건부 12개 제외로 통
 - Removed the current Backend settings endpoints and fixed the daily limit to one mission.
 - Added `supabase/migrations/003_remove_mission_settings.sql` to remove the obsolete settings table and `user_mission.available_time` column while preserving mission history.
 - Mission recommendations still return up to five candidates; `estimatedMinutes` remains catalog metadata.
+
+## Deployment preparation (2026-08-27)
+
+- Added a multi-stage frontend image in `front/Dockerfile`: Three.js/Vite
+  build, Flutter Web release build, and Nginx static serving on port 80.
+- Added a backend image in `back/Dockerfile`: Maven/Java 21 build stage and
+  Java 21 JRE runtime on port 8080.
+- `API_BASE_URL` is a frontend Docker build argument. Backend database,
+  CORS, and optional OpenAI values remain runtime environment variables.
+- `.dockerignore` excludes `.env`, build outputs, IDE metadata, and dependency
+  caches. Supabase migrations remain a separate deployment step.
+- Docker image builds and a live deployment have not yet been verified in this
+  work; application tests and builds previously recorded remain unchanged.
