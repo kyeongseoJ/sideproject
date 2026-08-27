@@ -205,6 +205,14 @@ public class UserMissionService {
         return completionRepository.findSummary(userId);
     }
 
+    public List<UserMissionResponse> getCompletedHistory(String userKey, int limit) {
+        if (limit < 1 || limit > 100) {
+            throw new InvalidMissionRequestException("조회 개수는 1개 이상 100개 이하여야 합니다.");
+        }
+        long userId = userService.requireUserId(userKey);
+        return userMissionRepository.findCompletedHistory(userId, limit);
+    }
+
     private LockedContext lockContext(long userId) {
         userMissionRepository.lockUser(userId);
         return new LockedContext(LocalDate.now(clock));

@@ -112,6 +112,22 @@ public class UserMissionRepository {
                 Date.valueOf(serviceDate));
     }
 
+    public List<UserMissionResponse> findCompletedHistory(long userId, int limit) {
+        return jdbcTemplate.query("""
+                SELECT um.USER_MISSION_ID, m.MISSION_ID, m.TITLE, m.DESCRIPTION,
+                       m.CATEGORY, m.DIFFICULTY, m.ESTIMATED_MINUTES,
+                       m.INDOOR_OUTDOOR, m.SOCIAL_LEVEL, m.ACTIVITY_LEVEL,
+                       m.NOVELTY_LEVEL, m.SOURCE_TYPE, um.PERSONALITY_DISTANCE,
+                       um.RECOMMENDATION_SCORE, um.STATUS, um.COMPLETED_AT STATUS_AT
+                  FROM USER_MISSION um
+                  JOIN MISSION m ON m.MISSION_ID = um.MISSION_ID
+                 WHERE um.USER_ID = ?
+                   AND um.STATUS = 'COMPLETED'
+                 ORDER BY um.COMPLETED_AT DESC, um.USER_MISSION_ID DESC
+                 LIMIT ?
+                """, this::mapResponse, userId, limit);
+    }
+
     public Optional<UserMissionState> findOwnedForUpdate(
             long userId,
             long userMissionId) {

@@ -9,6 +9,7 @@ abstract interface class MissionGateway {
   Future<MissionToday> getToday(String userKey);
   Future<MissionToday> recommendToday(String userKey);
   Future<MissionSummary> getSummary(String userKey);
+  Future<List<UserMission>> getHistory(String userKey, {int limit = 50});
   Future<MissionActionResult> select(String userKey, int userMissionId);
   Future<MissionActionResult> cancel(String userKey, int userMissionId);
   Future<MissionActionResult> replace(
@@ -72,6 +73,28 @@ class MissionApi implements MissionGateway {
     {200},
     MissionSummary.fromJson,
   );
+
+  @override
+  Future<List<UserMission>> getHistory(String key, {int limit = 50}) async {
+    final response = await _send(() => _client.get(
+      _uri('/api/user-missions/history?limit=$limit'),
+      headers: _headers(key),
+    ));
+    if (response.statusCode != 200) throw _apiError(response);
+    try {
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      if (decoded is! List<Object?>) throw const FormatException();
+      return decoded.map((item) {
+        if (item is! Map<String, Object?>) throw const FormatException();
+        return UserMission.fromJson(item);
+      }).toList(growable: false);
+    } on FormatException {
+      throw const MissionApiException(
+        kind: MissionApiFailureKind.contract,
+        message: '미션 이력 응답을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+      );
+    }
+  }
 
   @override
   Future<MissionActionResult> select(String key, int id) =>

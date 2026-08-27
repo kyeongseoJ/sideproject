@@ -49,6 +49,7 @@ class UserMission {
     required this.noveltyLevel,
     required this.status,
     required this.personalityDistance,
+    this.statusAt,
   });
 
   final int userMissionId;
@@ -64,6 +65,7 @@ class UserMission {
   final int noveltyLevel;
   final MissionStatus status;
   final double personalityDistance;
+  final DateTime? statusAt;
 
   factory UserMission.fromJson(Map<String, Object?> json) {
     final userMissionId = json['userMissionId'];
@@ -77,6 +79,12 @@ class UserMission {
     final activityLevel = json['activityLevel'];
     final noveltyLevel = json['noveltyLevel'];
     final distance = json['personalityDistance'];
+    final rawStatusAt = json['statusAt'];
+    final statusAt = rawStatusAt == null
+        ? null
+        : rawStatusAt is String
+        ? DateTime.tryParse(rawStatusAt)
+        : null;
     if (userMissionId is! int ||
         userMissionId <= 0 ||
         missionId is! int ||
@@ -121,6 +129,7 @@ class UserMission {
       noveltyLevel: noveltyLevel,
       status: _enumByCode(MissionStatus.values, json['status']),
       personalityDistance: distance.toDouble(),
+      statusAt: statusAt,
     );
   }
 }

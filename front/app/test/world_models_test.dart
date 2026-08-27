@@ -18,7 +18,7 @@ void main() {
     });
     expect(snapshot.objects.single.level, 2);
     expect(snapshot.objects.single.displayName, '운동 코너');
-    expect(snapshot.objects.single.categoryDisplayName, '움직임');
+    expect(snapshot.objects.single.categoryDisplayName, '운동');
   });
 
   test('world snapshot rejects an invalid level', () {

@@ -5,7 +5,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -22,6 +24,19 @@ public class UserMissionController {
 
     public UserMissionController(UserMissionService userMissionService) {
         this.userMissionService = userMissionService;
+    }
+
+    @GetMapping("/history")
+    @Operation(summary = "완료 미션 이력 조회", description = "사용자가 완료한 미션을 최신순으로 조회합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "완료 미션 이력 조회 성공"),
+            @ApiResponse(responseCode = "400", description = "조회 개수 형식 오류"),
+            @ApiResponse(responseCode = "401", description = "사용자 인증 실패")
+    })
+    public List<UserMissionResponse> history(
+            @RequestHeader(value = "X-User-Key", required = false) String userKey,
+            @RequestParam(defaultValue = "50") int limit) {
+        return userMissionService.getCompletedHistory(userKey, limit);
     }
 
     @PostMapping("/{userMissionId}/select")

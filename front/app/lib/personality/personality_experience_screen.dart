@@ -47,6 +47,7 @@ class _PersonalityExperienceScreenState
   bool _reanalysisDialogOpen = false;
   WorldGrowth? _pendingWorldGrowth;
   BehaviorPreferenceChange? _lastPreferenceChange;
+  int _missionHistoryRefreshSignal = 0;
 
   @override
   void initState() {
@@ -99,6 +100,7 @@ class _PersonalityExperienceScreenState
       worldGateway: widget.worldGateway,
       userKey: widget.userKey,
       lastPreferenceChange: _lastPreferenceChange,
+      missionHistoryRefreshSignal: _missionHistoryRefreshSignal,
       pendingWorldGrowth: _pendingWorldGrowth,
       worldInteractionEnabled: !_reanalysisDialogOpen,
       onWorldGrowth: (growth) => setState(() => _pendingWorldGrowth = growth),
@@ -109,6 +111,7 @@ class _PersonalityExperienceScreenState
   void _handleMissionCompleted(MissionActionResult result) {
     final personalityChange = result.personalityChange;
     setState(() {
+      _missionHistoryRefreshSignal++;
       _lastPreferenceChange = personalityChange == null
           ? null
           : BehaviorPreferenceChange.fromCompletion(personalityChange);
@@ -123,7 +126,7 @@ class _PersonalityExperienceScreenState
         );
       }
     });
-    if (personalityChange != null) _refreshUser();
+    _refreshUser();
   }
 
   Future<void> _refreshUser() async {

@@ -9,6 +9,7 @@ import 'package:novelty_app/personality/personality_models.dart';
 import 'package:novelty_app/world/world_models.dart';
 import 'package:novelty_app/world/world_name.dart';
 import 'package:novelty_app/world/world_preview.dart';
+import 'package:novelty_app/profile/mission_history_section.dart';
 
 class PersonalityProfileScreen extends StatelessWidget {
   PersonalityProfileScreen({
@@ -25,6 +26,7 @@ class PersonalityProfileScreen extends StatelessWidget {
     this.onMissionCompleted,
     this.pendingWorldGrowth,
     this.worldInteractionEnabled = true,
+    this.missionHistoryRefreshSignal = 0,
   }) : assert(user.personalityCompleted && user.personality != null);
 
   final UserProfile user;
@@ -39,6 +41,7 @@ class PersonalityProfileScreen extends StatelessWidget {
   final ValueChanged<MissionActionResult>? onMissionCompleted;
   final WorldGrowth? pendingWorldGrowth;
   final bool worldInteractionEnabled;
+  final int missionHistoryRefreshSignal;
 
   @override
   Widget build(BuildContext context) {
@@ -113,6 +116,14 @@ class PersonalityProfileScreen extends StatelessWidget {
                             profile: profile,
                             change: lastPreferenceChange,
                           ),
+                          if (missionGateway != null && userKey != null) ...[
+                            const SizedBox(height: 16),
+                            MissionHistorySection(
+                              gateway: missionGateway!,
+                              userKey: userKey!,
+                              refreshSignal: missionHistoryRefreshSignal,
+                            ),
+                          ],
                           const SizedBox(height: 16),
                           OutlinedButton(
                             key: const Key('personality-reanalyze-button'),

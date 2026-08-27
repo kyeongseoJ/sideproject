@@ -105,6 +105,10 @@ class _FakeMissionGateway implements MissionGateway {
   Future<MissionSummary> getSummary(String userKey) async => _summary(0);
 
   @override
+  Future<List<UserMission>> getHistory(String userKey, {int limit = 50}) async =>
+      const <UserMission>[];
+
+  @override
   Future<MissionActionResult> select(String userKey, int id) async {
     final selected = today.candidates.firstWhere(
       (mission) => mission.userMissionId == id,
