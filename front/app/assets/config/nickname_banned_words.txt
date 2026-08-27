@@ -1,6 +1,6 @@
 # Novelty nickname banned words V1
 # 한 줄에 정규화된 금칙어 하나를 작성합니다.
-# 변경할 때 DB.sql의 NICKNAME_BANNED_WORD 기준 데이터도 함께 갱신합니다.
+# 변경할 때 Supabase migration의 NICKNAME_BANNED_WORD 기준 데이터도 함께 갱신합니다.
 관리자
 운영자
 ADMIN

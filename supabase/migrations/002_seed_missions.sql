@@ -1,4 +1,4 @@
--- Seed the 200 catalog missions plus the 100 additional BASE missions from DB.sql.
+-- Seed the catalog missions defined by the operational PostgreSQL seed set.
 INSERT INTO mission (mission_id, title, title_normalized, description, category, difficulty, estimated_minutes, indoor_outdoor, social_level, activity_level, novelty_level, action_type, creativity_level, unpredictability_level, comfort_zone_distance, cost_level, tags, enabled, source_type, content_fingerprint) VALUES
     (nextval('mission_seq'), '평소 사용하지 않던 스트레칭 동작 세 가지 해보기', upper(replace('평소 사용하지 않던 스트레칭 동작 세 가지 해보기', ' ', '')), '평소 사용하지 않던 스트레칭 동작 세 가지 해보기 완료 후 느낀 점을 짧게 기록해 보세요.', 'MOVEMENT', 1, 15, -1, -1, 2, 0, 'EXERCISE', 0, 0, 0, 0, 'M001,스트레칭,몸,변화', 'Y', 'BASE', encode(digest('평소 사용하지 않던 스트레칭 동작 세 가지 해보기|평소 사용하지 않던 스트레칭 동작 세 가지 해보기 완료 후 느낀 점을 짧게 기록해 보세요.', 'sha256'), 'hex')),
     (nextval('mission_seq'), '목적지를 정하지 않고 10분 동안 걸어보기', upper(replace('목적지를 정하지 않고 10분 동안 걸어보기', ' ', '')), '목적지를 정하지 않고 10분 동안 걸어보기 완료 후 느낀 점을 짧게 기록해 보세요.', 'MOVEMENT', 2, 15, 1, -1, 2, 2, 'EXPLORE', 0, 2, 1, 0, 'M002,걷기,탐색,즉흥', 'Y', 'BASE', encode(digest('목적지를 정하지 않고 10분 동안 걸어보기|목적지를 정하지 않고 10분 동안 걸어보기 완료 후 느낀 점을 짧게 기록해 보세요.', 'sha256'), 'hex')),
@@ -303,4 +303,3 @@ INSERT INTO mission (mission_id, title, title_normalized, description, category,
 ON CONFLICT (content_fingerprint) DO UPDATE SET title = EXCLUDED.title, title_normalized = EXCLUDED.title_normalized, description = EXCLUDED.description, category = EXCLUDED.category, difficulty = EXCLUDED.difficulty, estimated_minutes = EXCLUDED.estimated_minutes, indoor_outdoor = EXCLUDED.indoor_outdoor, social_level = EXCLUDED.social_level, activity_level = EXCLUDED.activity_level, novelty_level = EXCLUDED.novelty_level, action_type = EXCLUDED.action_type, creativity_level = EXCLUDED.creativity_level, unpredictability_level = EXCLUDED.unpredictability_level, comfort_zone_distance = EXCLUDED.comfort_zone_distance, cost_level = EXCLUDED.cost_level, tags = EXCLUDED.tags, enabled = EXCLUDED.enabled, source_type = EXCLUDED.source_type;
 
 SELECT setval('mission_seq', COALESCE((SELECT MAX(mission_id) FROM mission), 1), true);
-

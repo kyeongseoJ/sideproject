@@ -1,11 +1,11 @@
 # 랜덤 미션 Phase 0 검증 기록
 
-> 이 문서는 2026-08-19 당시 계약의 이력이다. 현재 추천 후보 수·재노출 기간·점수 계약은 2026-08-24 개정된 `docs/mission-sdd-v1.md`의 `MISSION_V1.1`을 따른다.
+> 이 문서는 2026-08-19 당시 계약의 이력이다. 현재 추천 후보 수·재노출 기간·점수 계약은 `SDD/v1/mission-sdd.md`를 따른다.
 
 ## 1. 검증 정보
 
 - 검증일: 2026-08-19
-- 대상 SDD: `docs/mission-sdd-v1.md`
+- 대상 SDD: `SDD/v1/mission-sdd.md`
 - 대상 Phase: Phase 0. 정책과 계약 확정
 - 결과: **통과**
 
@@ -13,7 +13,7 @@ Phase 0은 실행 기능을 추가하는 단계가 아니다. 아직 구현되�
 
 ## 2. 산출물
 
-- 활성 SDD: `docs/mission-sdd-v1.md`
+- 활성 SDD: `SDD/v1/mission-sdd.md`
 - 통합 정책: `SPEC.md`
 - 진행 상태: `PROJECT_STATUS.md`
 

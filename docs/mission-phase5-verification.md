@@ -1,7 +1,7 @@
 # Mission V1 Phase 5 검증 기록
 
 - 검증일: 2026-08-24
-- 기준 문서: `docs/mission-sdd-v1.md`
+- 기준 문서: `SDD/v1/mission-sdd.md`
 - 범위: 완료 통계·매 완료 성향 갱신·5회 LLM 생성 격리·요약 API
 - 결과: 검증 완료
 

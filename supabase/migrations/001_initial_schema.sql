@@ -1,5 +1,5 @@
 -- Novelty initial schema for Supabase PostgreSQL.
--- This is a clean PostgreSQL migration; DB.sql remains the Oracle reference.
+-- This is the operational PostgreSQL migration. The Oracle reference is archived at docs/archive/DB-oracle.sql.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 

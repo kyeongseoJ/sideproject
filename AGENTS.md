@@ -138,24 +138,24 @@ back/src/main/resources/application.yml
 
 운영 기준 PostgreSQL migration은 `supabase/migrations`다.
 
-기존 Oracle 기준 스키마 파일은 루트의 `DB.sql`이며, 레거시 호환과 이력 보존을 위해 유지한다.
+기존 Oracle 기준 스키마 파일은 `docs/archive/DB-oracle.sql`이며, 레거시 호환과 이력 보존을 위해 보관한다.
 
 Backend에서 함께 사용하는 SQL 파일:
 
 ```text
-back/src/main/resources/db/survey-schema.sql
+docs/archive/DB-oracle.sql
 ```
 
 Database 관련 작업은 다음 규칙을 지킨다.
 
 - 테이블, Sequence, Index, Constraint 및 필수 기준 데이터 변경은 실행 전에 `supabase/migrations`에 작성한다.
 - 실제 Supabase에 적용한 migration과 검증 결과를 `PROJECT_STATUS.md`에 기록한다.
-- `DB.sql`과 `back/src/main/resources/db/survey-schema.sql`은 Oracle 레거시 기준으로 보존하며, 운영 SQL과 실행 문법이 다를 수 있다.
+- `docs/archive/DB-oracle.sql`은 Oracle 레거시 기준 보관본이며 운영 SQL과 실행 문법이 다르다.
 - 재실행해도 기존 데이터나 객체가 손상되지 않도록 가능한 경우 멱등 SQL로 작성한다.
 - 임시 테스트 데이터의 `INSERT`와 정리용 `DELETE`는 기준 스키마에 포함하지 않는다.
 - 실제 적용 후 PostgreSQL의 테이블, Sequence, Constraint와 필요한 컬럼을 조회하여 검증한다.
 - DB 접속 계정과 비밀번호는 SQL 파일에 작성하지 않고 환경 변수 또는 로컬 실행 환경에서만 사용한다.
-- 앞으로 새로운 기능에 DB 객체가 필요하면 기능 코드와 함께 `DB.sql`도 같은 작업에서 갱신한다.
+- 앞으로 새로운 기능에 DB 객체가 필요하면 기능 코드와 함께 `supabase/migrations`를 갱신한다. Oracle 보관본은 현재 운영 스키마의 기준으로 갱신하지 않는다.
 
 ## Backend 기본 구조
 

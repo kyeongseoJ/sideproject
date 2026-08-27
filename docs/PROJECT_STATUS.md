@@ -34,6 +34,7 @@
 - 완료 5회 단위로 생성된 검증 LLM 미션은 공용 Catalog에 저장되며 모든 사용자에게 추천될 수 있도록 변경했다.
 - 초기 성향의 네 축은 성향 거리 계산에, 관심 분야는 해당 카테고리 제외에, 실행 방식은 Mission `actionType` 적합도에 연결해 추천 점수에 반영하도록 보완했다.
 - 3D 기본 룸은 floor·wall·door·window를 항상 표시하고, 나머지 장식은 레벨 1~5에서 0/25/50/75/100%로 노출한다.
+- 3D World 인라인 화면의 도움말 NavigationRail과 설명 패널을 제거했다. Renderer와 전체 화면 진입 동작은 유지한다.
 - 3D World 상단 `Novelty 3D WORLD` 배지와 전용 CSS를 제거하고 Flutter 번들을 재생성했다.
 - Supabase 활성 미션 시간 분포에 180분 미션을 추가했다.
 - `supabase/migrations/007_add_long_and_deviation_missions.sql`을 운영 Supabase에 적용해 장기 미션 30개와 카테고리별 일탈 미션 36개를 추가했다. 활성 미션은 총 366개이며, 시간 범위는 5~180분이다.
@@ -59,7 +60,14 @@
 - 검증: `flutter analyze`, `flutter test test/world_screen_test.dart test/world_preview_test.dart`, 임시 출력 경로의 `npm.cmd run build`가 통과했다. Three.js 번들 크기 경고는 유지된다.
 - API 계약 점검 결과 Flutter의 계정·성향·미션·World 요청 경로와 DTO 필드는 Backend 응답과 일치한다. 운영 WebApp 연결을 위해 Controller별 localhost 고정 CORS를 전역 `CORS_ALLOWED_ORIGIN_PATTERNS` 설정으로 교체했다.
 
-## 핵심 기능 요약
+## 현재 상태와 알려진 범위
+
+- 성향 분석, 미션 추천·선택·취소·완료, 미션 통계와 완료 미션 이력은 Backend와 Flutter 흐름이 연결되어 있다.
+- 미션 완료와 World EXP 지급은 동일 Transaction에서 처리되며 완료 재요청은 중복 보상 없이 멱등 처리된다.
+- World Backend, Flutter, Three.js, Android WebView 연결과 성향별 룸 GLB 9종이 구현되어 있다.
+- 3D World 자동 회귀와 Android 검증은 완료했으며 Web·Android 전체 사용자 흐름의 최종 수동 확인이 남아 있다.
+- 사용자별 Timezone 설정은 제공하지 않으며 MVP 서비스 날짜는 `Asia/Seoul` 기준이다.
+- 운영 배포 시 Flutter Web 정적 파일, Spring Boot Backend, Supabase PostgreSQL을 각각 배포·연결한다.
 
 | 핵심 기능 | 현재 상태 | SDD 상태 | 실제 구현 판단 |
 |---|---|---|---|
@@ -105,7 +113,7 @@ Phase 5~7 선택폼·통합 검증이며, 이후 상태 변경도 현재 SDD의 
 
 현재 상태: **검증 완료, V2 Phase 0~7 완료**
 
-- 활성 기준 문서: `docs/personality-sdd-v2.md`
+- 활성 기준 문서: `docs/SDD/v2/personality-sdd.md`
 - Phase 0 검증 기록: `docs/personality-phase0-v2-verification.md`
 - Phase 1 검증 기록: `docs/personality-phase1-v2-verification.md`
 - Phase 2 검증 기록: `docs/personality-phase2-v2-verification.md`
@@ -137,7 +145,7 @@ Phase 5~7 선택폼·통합 검증이며, 이후 상태 변경도 현재 SDD의 
 
 현재 상태: **검증 완료, Phase 0~7 검증 완료**
 
-- 활성 기준 문서: `docs/mission-sdd-v1.md`
+- 활성 기준 문서: `docs/SDD/v1/mission-sdd.md`
 - Phase 0 검증 기록: `docs/mission-phase0-verification.md`
 - Phase 1 검증 기록: `docs/mission-phase1-verification.md`
 - Phase 2 검증 기록: `docs/mission-phase2-verification.md`
@@ -183,7 +191,7 @@ Phase 5~7 선택폼·통합 검증이며, 이후 상태 변경도 현재 SDD의 
 
 현재 상태: **Phase 0~8 구현·검증 완료, Phase 9 실제 UI 회귀 대기**
 
-- 활성 기준 문서: `docs/world-sdd-v1.md`
+- 활성 기준 문서: `docs/SDD/v1/world-sdd.md`
 - Phase 0: Category·Object, EXP·Level, PostgreSQL, REST, Asset Manifest와 JSON Bridge 계약 확정 완료
 - Phase 1: Android WebView·Three.js·GLB·Bridge Technical Spike 완료
 - Phase 2~4: World PostgreSQL DDL, Backend Domain, `GET /api/world`, Mission 완료 Transaction 연동과 중복 보상 방지 완료

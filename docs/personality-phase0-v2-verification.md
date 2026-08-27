@@ -3,7 +3,7 @@
 ## 1. 검증 정보
 
 - 검증일: 2026-08-19
-- 대상 SDD: `docs/personality-sdd-v2.md`
+- 대상 SDD: `SDD/v2/personality-sdd.md`
 - 대상 Phase: Phase 0. V2 기준선 확정
 - 결과: **통과**
 
@@ -11,7 +11,7 @@ Phase 0은 기능 코드를 구현하는 단계가 아니라 현재 정책, 실�
 
 ## 2. Phase 0 산출물
 
-- 활성 V2 SDD: `docs/personality-sdd-v2.md`
+- 활성 V2 SDD: `SDD/v2/personality-sdd.md`
 - 대체된 V1 표시: `docs/personality-phase0-spec.md`
 - 통합 정책 갱신: `SPEC.md`
 - 실제 진행 상태 갱신: `PROJECT_STATUS.md`

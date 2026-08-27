@@ -3,7 +3,7 @@
 ## 1. 검증 정보
 
 - 검증일: 2026-08-19
-- 대상 SDD: `docs/mission-sdd-v1.md`
+- 대상 SDD: `SDD/v1/mission-sdd.md`
 - 대상 Phase: Phase 1. Oracle Schema와 비파괴 Migration
 - 결과: **통과**
 

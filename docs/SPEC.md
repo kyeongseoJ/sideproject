@@ -62,6 +62,17 @@ Blender 또는 Asset 제작
 - Three.js는 Flutter가 전달한 성향 룸만 로드하며 초기 placeholder 룸을 먼저 로드하지 않는다.
 - 동일 asset URI의 GLB 요청은 Loader 캐시를 사용하고, Bridge 재시도 요청은 동일한 초기화 작업을 중복 실행하지 않는다.
 
+## 현재 구현 기준
+
+- 운영 Backend 데이터베이스는 Supabase PostgreSQL이며 Schema와 기준 데이터는 `supabase/migrations`에서 관리한다.
+- Flutter Web과 Android는 `front/app/lib`의 동일한 반응형 UI를 사용한다.
+- 앱 시작 스플래시는 사용자 복원 또는 로그인·오류 화면이 준비되면 종료된다.
+- Noto Sans KR은 Flutter asset으로 번들되며 런타임 폰트 네트워크 요청을 사용하지 않는다.
+- Three.js는 Flutter가 전달한 성향 룸만 로드하고 GLB URI 캐시와 Bridge 중복 초기화 방지를 적용한다.
+- 운영 빌드에는 `WORLD_TEST=true` 테스트 진입 경로를 포함하지 않는다.
+- 활성 미션 Catalog는 400개이며 8개 카테고리마다 50개, 예상 시간은 5~180분이다.
+- 프로필에는 3D World, 오늘의 미션, 성향 결과, 미션 수행 기록을 현재 순서대로 표시한다.
+
 ## 4. 전체 사용자 흐름
 
 신규 사용자의 기본 흐름은 다음과 같다.
@@ -132,7 +143,7 @@ Blender 또는 Asset 제작
 
 ### 질문 영역
 
-최초 성향 분석은 성격 전체를 진단하지 않고 사용자의 행동 선호를 수집한다. 상세 계약은 활성 문서인 `docs/personality-sdd-v2.md`를 따른다.
+최초 성향 분석은 성격 전체를 진단하지 않고 사용자의 행동 선호를 수집한다. 상세 계약은 활성 문서인 `docs/SDD/v2/personality-sdd.md`를 따른다.
 
 선택폼 UI는 `Novelty` 워드마크, 현재 문항/전체 문항 표시, 흰색 질문 카드와 선택지를 사용한다. 첫 문항에는 이전 버튼을 렌더링하지 않고 두 번째 문항부터 이전 버튼을 표시한다. 답변하지 않은 문항의 다음 버튼은 비활성화한다.
 
@@ -270,7 +281,7 @@ COMPLETED
 - 최종 후보끼리 유사도 0.75 미만을 우선하여 category·actionType·tags가 겹치지 않는 최대 5개를 구성한다.
 - Mission Catalog는 기존 필드를 재사용하고 `actionType`, `creativityLevel`, `unpredictability`, `comfortZoneDistance`, `costLevel`, `tags`를 추가한다. `durationLevel`은 `estimatedMinutes`에서 파생한다. BASE Seed 태그는 식별자와 한글 태그를 허용하고 LLM 태그는 대문자 영문 규칙을 유지한다.
 - PostgreSQL 운영 환경에서는 pgvector를 추가하지 않으며 현재는 메타데이터+문자 bigram을 사용하고 `MissionSemanticSimilarity` 확장 지점만 유지한다.
-- 상세 공식, 상태 전이, REST와 PostgreSQL 계약은 `docs/mission-sdd-v1.md`를 기준으로 한다.
+- 상세 공식, 상태 전이, REST와 PostgreSQL 계약은 `docs/SDD/v1/mission-sdd.md`를 기준으로 한다.
 
 ## 9. 3D World와 레벨
 
@@ -289,7 +300,7 @@ Current mission recommendation rules:
 - Three.js는 렌더링을 담당하고 Flutter는 사용자 화면과 앱 상태를 담당한다.
 - GLB 로드 실패 시 앱 전체가 중단되지 않도록 오류 또는 대체 UI를 제공한다.
 - 레벨 변경은 Backend의 저장 결과를 기준으로 처리하며 Client만의 값으로 확정하지 않는다.
-- 상세 계약은 `docs/world-sdd-v1.md`를 기준으로 한다.
+- 상세 계약은 `docs/SDD/v1/world-sdd.md`를 기준으로 한다.
 - 성향 프로필 안에 회전·확대 가능한 World 미리보기를 표시하고 장면 또는 사물을 탭하면 전체 화면으로 이동한다.
 - 초기 World에는 기본 룸만 표시하고 오브젝트는 표시하지 않는다. 첫 미션 완료로 EXP가 지급된 Category의 Lv1 Object부터 표시하며, 이후 완료 EXP가 있는 Category Object를 함께 표시한다.
 - `/api/world`의 `objects`가 비어 있으면 Flutter는 빈 방을 정상 상태로 표시하지 않고 `World 오브젝트 정보를 불러오지 못했습니다.`를 표시한다.
@@ -307,9 +318,9 @@ Current mission recommendation rules:
 - 현재 오늘의 미션 후보 UI는 Spotlight 시작 카드, 완료 수 배지, 카테고리 아이콘·메타데이터와 명확한 선택 CTA를 사용해 대표 행동을 우선 강조한다.
 - 관심 분야와 행동 선호는 별도 영역으로 표시한다. 행동 선호의 네 축은 저장된 점수를 수치와 막대그래프로 표시한다.
 - 미션 완료 직후에는 Backend 완료 응답의 저장 전·후 네 축 차이 중 실제 변화가 있는 값만 프로필의 `성향 변동`으로 표시한다. Client가 미션 속성으로 변화량을 추정하지 않는다.
-- 3D World 조작 설명은 화면 가장자리의 NavigationRail 도움말 아이콘으로 제공하며, 선택 시 설명 패널을 열고 닫기 버튼으로 닫는다. World 꾸미기 기능은 제공하지 않는다.
+- 3D World 화면에는 별도 도움말 버튼이나 설명 패널을 제공하지 않는다. World 꾸미기 기능도 제공하지 않는다.
 - `WORLD_TEST=true`를 지정한 개발 실행에서는 실제 성향별 룸 GLB를 선택하고 모든 World Object 레벨을 한 단계씩 올리는 테스트 화면을 제공한다. 이 화면은 기본 운영 빌드의 진입 플로우에 포함하지 않는다.
-- Web 플랫폼 뷰가 클릭을 가로채지 않도록 인라인 World 도움말은 renderer 바깥의 Flutter 영역에 배치한다.
+- Web 플랫폼 뷰가 클릭을 가로채지 않도록 World 조작을 위한 별도 오버레이 컨트롤은 두지 않는다.
 - 미션 완료 성장 응답은 전체 World뿐 아니라 현재 표시 중인 인라인 World에도 즉시 전달해 Level 모델과 Level Up 애니메이션을 갱신한다.
 - 전체 World는 보상 반영 직후 성장 룸을 카메라로 포커싱하고 보라색 파동·입자 효과를 재생한다. 완료 결과 카드는 카테고리·표시명·실제 지급 EXP를 보여주며 5초 후 사라지거나 사용자가 닫을 수 있다.
 

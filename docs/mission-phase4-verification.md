@@ -1,7 +1,7 @@
 # Mission V1 Phase 4 검증 기록
 
 - 검증일: 2026-08-20
-- 기준 문서: `docs/mission-sdd-v1.md`
+- 기준 문서: `SDD/v1/mission-sdd.md`
 - 범위: 사용자 미션 선택·취소·교체·완료 Backend API와 Oracle 상태 이력
 - 결과: 검증 완료
 

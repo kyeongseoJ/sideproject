@@ -1,9 +1,9 @@
 -- Novelty database schema for Oracle Database 21c.
 --
--- This is the authoritative database script for the project.
--- Keep back/src/main/resources/db/survey-schema.sql identical to this file.
--- Run this script while connected as the application schema owner.
--- The script is idempotent: existing objects are preserved.
+-- This is an archived Oracle Database 21c reference for historical compatibility.
+-- It is not the operational database schema and must not be used for deployment.
+-- Operational schema and seed data are managed in supabase/migrations.
+-- The script is retained for historical re-creation only.
 --
 -- Applied history
 -- 2026-08-19: Added and applied the Phase 1 survey schema.
