@@ -22,12 +22,12 @@ enum MissionStatus {
 enum MissionCategory {
   movement('MOVEMENT', '운동'),
   creative('CREATIVE', '창작'),
-  food('FOOD', '음식'),
+  food('FOOD', '요리·미식'),
   learning('LEARNING', '학습'),
-  social('SOCIAL', '사람'),
-  outdoor('OUTDOOR', '야외'),
-  organizing('ORGANIZING', '정리'),
-  culture('CULTURE', '문화');
+  social('SOCIAL', '교류'),
+  outdoor('OUTDOOR', '야외활동'),
+  organizing('ORGANIZING', '정리·정돈'),
+  culture('CULTURE', '문화생활');
 
   const MissionCategory(this.code, this.label);
   final String code;

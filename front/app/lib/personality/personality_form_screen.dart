@@ -317,14 +317,14 @@ class _PersonalityFormScreenState extends State<PersonalityFormScreen> {
 
   Widget _interestQuestion() {
     const options = <_FormOption<PersonalityInterest>>[
-      _FormOption(PersonalityInterest.movement, 'MOVEMENT', '움직이기'),
-      _FormOption(PersonalityInterest.creative, 'CREATIVE', '만들기'),
-      _FormOption(PersonalityInterest.food, 'FOOD', '음식'),
-      _FormOption(PersonalityInterest.learning, 'LEARNING', '배우기'),
-      _FormOption(PersonalityInterest.social, 'SOCIAL', '사람'),
-      _FormOption(PersonalityInterest.outdoor, 'OUTDOOR', '바깥'),
-      _FormOption(PersonalityInterest.organizing, 'ORGANIZING', '정리'),
-      _FormOption(PersonalityInterest.culture, 'CULTURE', '문화'),
+      _FormOption(PersonalityInterest.movement, 'MOVEMENT', '운동'),
+      _FormOption(PersonalityInterest.creative, 'CREATIVE', '창작'),
+      _FormOption(PersonalityInterest.food, 'FOOD', '요리·미식'),
+      _FormOption(PersonalityInterest.learning, 'LEARNING', '학습'),
+      _FormOption(PersonalityInterest.social, 'SOCIAL', '교류'),
+      _FormOption(PersonalityInterest.outdoor, 'OUTDOOR', '야외활동'),
+      _FormOption(PersonalityInterest.organizing, 'ORGANIZING', '정리·정돈'),
+      _FormOption(PersonalityInterest.culture, 'CULTURE', '문화생활'),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

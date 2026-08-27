@@ -239,7 +239,7 @@ void main() {
     expect(find.text('고요한 몰입가'), findsOneWidget);
     expect(find.text('실내 중심'), findsOneWidget);
     expect(find.text('계획 실행형'), findsOneWidget);
-    expect(find.text('만들기'), findsOneWidget);
+    expect(find.text('창작'), findsOneWidget);
   });
 
   testWidgets('clears the cached user key and returns to login on logout', (

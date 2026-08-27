@@ -467,14 +467,14 @@ String _executionLabel(ExecutionStyle value) => switch (value) {
   ExecutionStyle.spontaneous => '즉흥 실행형',
 };
 String _interestLabel(PersonalityInterest value) => switch (value) {
-  PersonalityInterest.movement => '움직이기',
-  PersonalityInterest.creative => '만들기',
-  PersonalityInterest.food => '음식',
-  PersonalityInterest.learning => '배우기',
-  PersonalityInterest.social => '사람',
-  PersonalityInterest.outdoor => '바깥',
-  PersonalityInterest.organizing => '정리',
-  PersonalityInterest.culture => '문화',
+  PersonalityInterest.movement => '운동',
+  PersonalityInterest.creative => '창작',
+  PersonalityInterest.food => '요리·미식',
+  PersonalityInterest.learning => '학습',
+  PersonalityInterest.social => '교류',
+  PersonalityInterest.outdoor => '야외활동',
+  PersonalityInterest.organizing => '정리·정돈',
+  PersonalityInterest.culture => '문화생활',
 };
 
 String _seoulDateTime(DateTime value) {

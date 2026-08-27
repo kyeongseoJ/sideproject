@@ -18,14 +18,14 @@ class WorldObjectProgress {
   final int maxLevel;
 
   String get categoryDisplayName => switch (categoryCode) {
-    'MOVEMENT' => '움직임',
+    'MOVEMENT' => '운동',
     'CREATIVE' => '창작',
-    'FOOD' => '음식',
+    'FOOD' => '요리·미식',
     'LEARNING' => '학습',
     'SOCIAL' => '교류',
-    'OUTDOOR' => '야외 탐색',
-    'ORGANIZING' => '정리',
-    'CULTURE' => '문화',
+    'OUTDOOR' => '야외활동',
+    'ORGANIZING' => '정리·정돈',
+    'CULTURE' => '문화생활',
     _ => categoryCode,
   };
 

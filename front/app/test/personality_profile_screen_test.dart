@@ -20,8 +20,8 @@ void main() {
     expect(find.textContaining('가벼운 움직임'), findsOneWidget);
     expect(find.textContaining('큰 새로움'), findsOneWidget);
     expect(find.text('계획 실행형'), findsOneWidget);
-    expect(find.text('만들기'), findsOneWidget);
-    expect(find.text('배우기'), findsOneWidget);
+    expect(find.text('창작'), findsOneWidget);
+    expect(find.text('학습'), findsOneWidget);
     expect(
       find.text('마지막 분석 2026.08.19 17:15\nPERSONALITY_V2'),
       findsOneWidget,
