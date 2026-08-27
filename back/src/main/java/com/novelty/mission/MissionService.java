@@ -15,6 +15,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.novelty.user.UserService;
 import com.novelty.personality.Interest;
+import com.novelty.personality.ExecutionStyle;
 
 @Service
 public class MissionService {
@@ -88,6 +89,8 @@ public class MissionService {
             UserMissionVector vector = missionRepository.findUserVector(userId)
                     .orElseThrow(PersonalityRequiredException::new);
             Set<Interest> userInterests = missionRepository.findUserInterests(userId);
+            ExecutionStyle executionStyle = missionRepository.findUserExecutionStyle(userId)
+                    .orElseThrow(PersonalityRequiredException::new);
             List<Mission> candidates = missionRepository.findCandidates(
                     MAX_MISSION_MINUTES,
                     true);
@@ -95,6 +98,7 @@ public class MissionService {
                     candidates,
                     vector,
                     userInterests,
+                    executionStyle,
                     userMissionRepository.findCategoryCompletionCounts(userId),
                     statusLogRepository.findAll(userId),
                     random);

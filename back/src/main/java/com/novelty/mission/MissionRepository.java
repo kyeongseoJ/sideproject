@@ -16,6 +16,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import com.novelty.personality.Interest;
+import com.novelty.personality.ExecutionStyle;
 
 @Repository
 public class MissionRepository {
@@ -58,6 +59,17 @@ public class MissionRepository {
                         resultSet.getString("INTEREST_CODE")), userId)
                 .stream()
                 .collect(Collectors.toUnmodifiableSet());
+    }
+
+    public Optional<ExecutionStyle> findUserExecutionStyle(long userId) {
+        return jdbcTemplate.query("""
+                SELECT EXECUTION_STYLE
+                  FROM USER_PERSONALITY_PROFILE
+                 WHERE USER_ID = ?
+                """, (resultSet, rowNumber) -> ExecutionStyle.valueOf(
+                        resultSet.getString("EXECUTION_STYLE")), userId)
+                .stream()
+                .findFirst();
     }
 
     public List<Mission> findCandidates(int maximumMinutes, boolean includeLlm) {

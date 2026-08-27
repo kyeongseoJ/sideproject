@@ -42,6 +42,7 @@ import java.util.random.RandomGenerator;
 import org.springframework.stereotype.Component;
 
 import com.novelty.personality.Interest;
+import com.novelty.personality.ExecutionStyle;
 
 @Component
 public class MissionRecommendationPolicy {
@@ -62,13 +63,26 @@ public class MissionRecommendationPolicy {
             Map<MissionCategory, Integer> categoryCompletionCounts,
             List<MissionStatusEvent> history,
             RandomGenerator random) {
-        return recommend(missions, userVector, Set.of(), categoryCompletionCounts, history, random);
+        return recommend(missions, userVector, Set.of(), null, categoryCompletionCounts, history, random);
     }
 
     public List<MissionRecommendation> recommend(
             List<Mission> missions,
             UserMissionVector userVector,
             Set<Interest> userInterests,
+            Map<MissionCategory, Integer> categoryCompletionCounts,
+            List<MissionStatusEvent> history,
+            RandomGenerator random) {
+        return recommend(
+                missions, userVector, userInterests, null,
+                categoryCompletionCounts, history, random);
+    }
+
+    public List<MissionRecommendation> recommend(
+            List<Mission> missions,
+            UserMissionVector userVector,
+            Set<Interest> userInterests,
+            ExecutionStyle executionStyle,
             Map<MissionCategory, Integer> categoryCompletionCounts,
             List<MissionStatusEvent> history,
             RandomGenerator random) {
@@ -91,6 +105,7 @@ public class MissionRecommendationPolicy {
                 .map(mission -> score(
                         mission,
                         userVector,
+                        executionStyle,
                         categoryCompletionCounts,
                         history,
                         recentCompleted,
@@ -124,6 +139,7 @@ public class MissionRecommendationPolicy {
     private MissionRecommendation score(
             Mission mission,
             UserMissionVector userVector,
+            ExecutionStyle executionStyle,
             Map<MissionCategory, Integer> categoryCompletionCounts,
             List<MissionStatusEvent> history,
             List<WeightedExperience> recentCompleted,
@@ -133,7 +149,8 @@ public class MissionRecommendationPolicy {
         int categoryCompletedCount = categoryCompletionCounts.getOrDefault(mission.category(), 0);
         double categoryExplorationScore = 1.0 / (1.0 + categoryCompletedCount);
         double difficultyFitScore = difficultyFit(mission, userVector);
-        double contextFitScore = difficultyFitScore;
+        double executionStyleFitScore = executionStyleFit(mission, executionStyle);
+        double contextFitScore = (difficultyFitScore + executionStyleFitScore) / 2.0;
 
         double recentSimilarity = maximumRecentSimilarity(mission, recentCompleted);
         double repeatedPattern = maximumRepeatedPattern(mission, recentCompleted);
@@ -375,6 +392,26 @@ public class MissionRecommendationPolicy {
     private double difficultyFit(Mission mission, UserMissionVector userVector) {
         int preferredDifficulty = userVector.completedMissionCount() < 5 ? 1 : 2;
         return 1.0 - Math.abs(mission.difficulty() - preferredDifficulty) / 2.0;
+    }
+
+    private double executionStyleFit(Mission mission, ExecutionStyle executionStyle) {
+        if (executionStyle == null) {
+            return 0.5;
+        }
+        return switch (executionStyle) {
+            case PLANNED -> switch (mission.actionType()) {
+                case ORGANIZE, PRACTICE, CREATE -> 1.0;
+                default -> 0.5;
+            };
+            case FLEXIBLE -> switch (mission.actionType()) {
+                case OBSERVE, TASTE, LISTEN, ASK -> 1.0;
+                default -> 0.5;
+            };
+            case SPONTANEOUS -> switch (mission.actionType()) {
+                case EXPLORE, CONNECT, EXERCISE -> 1.0;
+                default -> 0.5;
+            };
+        };
     }
 
     private double recencyWeight(MissionStatusEvent event, LocalDate serviceDate) {
