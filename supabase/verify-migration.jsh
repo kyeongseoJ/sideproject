@@ -52,4 +52,65 @@ try (var statement = connection.createStatement();
         System.out.println("sequence." + result.getString(1) + "=" + result.getLong(2));
     }
 }
+try (var statement = connection.createStatement();
+        var result = statement.executeQuery("""
+                SELECT COUNT(*)
+                  FROM information_schema.columns
+                 WHERE table_schema = 'public'
+                   AND table_name = 'survey_response'
+                   AND column_name = 'energy_level'
+                """)) {
+    result.next();
+    if (result.getLong(1) != 0) {
+        throw new IllegalStateException("Obsolete survey_response.energy_level column remains.");
+    }
+    System.out.println("survey_response.energy_level=absent");
+}
+try (var statement = connection.createStatement();
+        var result = statement.executeQuery("SELECT MIN(estimated_minutes), MAX(estimated_minutes) FROM mission WHERE enabled = 'Y'")) {
+    result.next();
+    if (result.getInt(1) < 5 || result.getInt(2) < 180) {
+        throw new IllegalStateException("Mission duration pool does not cover 5 to 180 minutes.");
+    }
+    System.out.println("mission.duration_minutes=" + result.getInt(1) + ".." + result.getInt(2));
+}
+try (var statement = connection.createStatement();
+        var result = statement.executeQuery("SELECT count(*) FROM mission WHERE enabled = 'Y'")) {
+    result.next();
+    if (result.getInt(1) < 366) {
+        throw new IllegalStateException("Expected the expanded mission catalog to contain at least 366 active missions.");
+    }
+    System.out.println("mission.active_count=" + result.getInt(1));
+}
+try (var statement = connection.createStatement();
+        var result = statement.executeQuery("SELECT COUNT(*) FROM (SELECT category FROM mission WHERE enabled = 'Y' GROUP BY category HAVING COUNT(*) <> 50) mismatched")) {
+    result.next();
+    if (result.getInt(1) != 0) {
+        throw new IllegalStateException("Every active mission category must contain exactly 50 missions.");
+    }
+    System.out.println("mission.category_counts=all_50");
+}
+try (var statement = connection.createStatement();
+        var result = statement.executeQuery("SELECT COUNT(DISTINCT category) FROM mission WHERE enabled = 'Y'")) {
+    result.next();
+    if (result.getInt(1) != 8) {
+        throw new IllegalStateException("Expected eight active mission categories.");
+    }
+    System.out.println("mission.category_count=8");
+}
+var duplicateChecks = List.of(
+        "title_normalized=" + "SELECT COUNT(*) FROM (SELECT title_normalized FROM mission WHERE enabled = 'Y' GROUP BY title_normalized HAVING COUNT(*) > 1) duplicates",
+        "content_fingerprint=" + "SELECT COUNT(*) FROM (SELECT content_fingerprint FROM mission WHERE enabled = 'Y' GROUP BY content_fingerprint HAVING COUNT(*) > 1) duplicates");
+for (var check : duplicateChecks) {
+    var split = check.indexOf('=');
+    var name = check.substring(0, split);
+    var query = check.substring(split + 1);
+    try (var statement = connection.createStatement(); var result = statement.executeQuery(query)) {
+        result.next();
+        if (result.getInt(1) != 0) {
+            throw new IllegalStateException("Duplicate active mission " + name + " values found.");
+        }
+        System.out.println("mission.duplicate." + name + "=0");
+    }
+}
 connection.close();
