@@ -151,20 +151,9 @@ class _MissionDashboardSectionState extends State<MissionDashboardSection> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "TODAY'S QUEST",
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: NoveltyColors.primary,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text('오늘의 미션', style: Theme.of(context).textTheme.titleLarge),
-              ],
+            child: Text(
+              '오늘의 미션',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
           ),
           if (_today case final today?)

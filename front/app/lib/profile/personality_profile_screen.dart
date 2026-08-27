@@ -74,12 +74,7 @@ class PersonalityProfileScreen extends StatelessWidget {
                           if (worldGateway != null &&
                               userKey != null &&
                               onOpenWorld != null) ...[
-                            const SizedBox(height: 20),
-                            Text(
-                              '나의 세계',
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 16),
                             WorldPreview(
                               gateway: worldGateway!,
                               userKey: userKey!,
@@ -96,7 +91,7 @@ class PersonalityProfileScreen extends StatelessWidget {
                             ),
                           ],
                           if (missionGateway != null && userKey != null) ...[
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 16),
                             MissionDashboardSection(
                               gateway: missionGateway!,
                               userKey: userKey!,
