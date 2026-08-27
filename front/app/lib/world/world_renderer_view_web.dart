@@ -11,10 +11,12 @@ class WorldRendererView extends StatefulWidget {
     super.key,
     required this.controller,
     required this.onMessage,
+    this.interactive = true,
   });
 
   final WorldBridgeController controller;
   final WorldBridgeMessageCallback onMessage;
+  final bool interactive;
 
   @override
   State<WorldRendererView> createState() => _WorldRendererViewState();
@@ -52,6 +54,17 @@ class _WorldRendererViewState extends State<WorldRendererView> {
       }).toJS,
       <String, Object?>{'once': true}.jsify()!,
     );
+    _updatePointerEvents();
+  }
+
+  @override
+  void didUpdateWidget(covariant WorldRendererView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.interactive != widget.interactive) _updatePointerEvents();
+  }
+
+  void _updatePointerEvents() {
+    _frame.style.pointerEvents = widget.interactive ? 'auto' : 'none';
   }
 
   Future<void> _sendToRenderer(String message) async {

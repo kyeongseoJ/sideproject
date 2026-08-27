@@ -24,6 +24,7 @@ class PersonalityProfileScreen extends StatelessWidget {
     this.onWorldGrowth,
     this.onMissionCompleted,
     this.pendingWorldGrowth,
+    this.worldInteractionEnabled = true,
   }) : assert(user.personalityCompleted && user.personality != null);
 
   final UserProfile user;
@@ -37,6 +38,7 @@ class PersonalityProfileScreen extends StatelessWidget {
   final ValueChanged<WorldGrowth>? onWorldGrowth;
   final ValueChanged<MissionActionResult>? onMissionCompleted;
   final WorldGrowth? pendingWorldGrowth;
+  final bool worldInteractionEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -120,6 +122,7 @@ class PersonalityProfileScreen extends StatelessWidget {
                                 profile,
                               ),
                               pendingGrowth: pendingWorldGrowth,
+                              interactive: worldInteractionEnabled,
                               onOpen: onOpenWorld!,
                             ),
                           ],

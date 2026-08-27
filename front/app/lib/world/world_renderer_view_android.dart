@@ -10,10 +10,12 @@ class WorldRendererView extends StatefulWidget {
     super.key,
     required this.controller,
     required this.onMessage,
+    this.interactive = true,
   });
 
   final WorldBridgeController controller;
   final WorldBridgeMessageCallback onMessage;
+  final bool interactive;
 
   @override
   State<WorldRendererView> createState() => _WorldRendererViewState();
@@ -84,6 +86,8 @@ class _WorldRendererViewState extends State<WorldRendererView> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      WebViewWidget(controller: _webViewController);
+  Widget build(BuildContext context) => IgnorePointer(
+    ignoring: !widget.interactive,
+    child: WebViewWidget(controller: _webViewController),
+  );
 }

@@ -44,6 +44,7 @@ class _PersonalityExperienceScreenState
   late bool _showingForm;
   AnalysisMode _analysisMode = AnalysisMode.initial;
   bool _showingWorld = false;
+  bool _reanalysisDialogOpen = false;
   WorldGrowth? _pendingWorldGrowth;
   BehaviorPreferenceChange? _lastPreferenceChange;
 
@@ -99,6 +100,7 @@ class _PersonalityExperienceScreenState
       userKey: widget.userKey,
       lastPreferenceChange: _lastPreferenceChange,
       pendingWorldGrowth: _pendingWorldGrowth,
+      worldInteractionEnabled: !_reanalysisDialogOpen,
       onWorldGrowth: (growth) => setState(() => _pendingWorldGrowth = growth),
       onMissionCompleted: _handleMissionCompleted,
     );
@@ -134,6 +136,7 @@ class _PersonalityExperienceScreenState
   }
 
   Future<void> _confirmReanalysis() async {
+    setState(() => _reanalysisDialogOpen = true);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -154,6 +157,7 @@ class _PersonalityExperienceScreenState
         ],
       ),
     );
+    if (mounted) setState(() => _reanalysisDialogOpen = false);
     if (confirmed != true || !mounted) return;
     setState(() {
       _analysisMode = AnalysisMode.reanalysis;

@@ -23,6 +23,7 @@ class WorldPreview extends StatefulWidget {
     required this.baseCategoryCodes,
     required this.onOpen,
     this.pendingGrowth,
+    this.interactive = true,
     this.rendererBuilder,
   });
 
@@ -33,6 +34,7 @@ class WorldPreview extends StatefulWidget {
   final Set<String> baseCategoryCodes;
   final VoidCallback onOpen;
   final WorldGrowth? pendingGrowth;
+  final bool interactive;
   final WorldPreviewRendererBuilder? rendererBuilder;
 
   @override
@@ -225,6 +227,7 @@ class _WorldPreviewState extends State<WorldPreview> {
                       WorldRendererView(
                         controller: _controller,
                         onMessage: _onMessage,
+                        interactive: widget.interactive,
                       ),
                 ),
                 if (_snapshot == null && _error == null)
