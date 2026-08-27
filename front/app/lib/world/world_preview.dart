@@ -47,7 +47,6 @@ class _WorldPreviewState extends State<WorldPreview> {
   String? _error;
   bool _rendererReady = false;
   bool _worldInitialized = false;
-  bool _helpExpanded = false;
   Timer? _initializeRetryTimer;
 
   @override
@@ -68,10 +67,6 @@ class _WorldPreviewState extends State<WorldPreview> {
   void dispose() {
     _initializeRetryTimer?.cancel();
     super.dispose();
-  }
-
-  void _showHelp() {
-    setState(() => _helpExpanded = !_helpExpanded);
   }
 
   List<WorldObjectProgress> _visibleObjects(WorldSnapshot snapshot) {
@@ -240,70 +235,6 @@ class _WorldPreviewState extends State<WorldPreview> {
                             child: const Text('다시 시도'),
                           ),
                         ],
-                      ),
-                    ),
-                  ),
-                Positioned(
-                  top: 8,
-                  bottom: 8,
-                  left: 8,
-                  child: NavigationRail(
-                    key: const Key('world-help-rail'),
-                    backgroundColor: NoveltyColors.canvas,
-                    minWidth: 52,
-                    groupAlignment: -0.85,
-                    selectedIndex: _helpExpanded ? 0 : null,
-                    onDestinationSelected: (_) => _showHelp(),
-                    labelType: NavigationRailLabelType.none,
-                    destinations: const [
-                      NavigationRailDestination(
-                        icon: Icon(
-                          Icons.help_outline_rounded,
-                          key: Key('world-help-toggle'),
-                        ),
-                        selectedIcon: Icon(Icons.help_rounded),
-                        label: Text('도움말'),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_helpExpanded)
-                  Positioned(
-                    top: 8,
-                    left: 68,
-                    right: 8,
-                    child: Material(
-                      color: NoveltyColors.canvas,
-                      child: Container(
-                        key: const Key('world-help-text'),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: NoveltyColors.line),
-                          borderRadius: BorderRadius.circular(
-                            NoveltyRadii.medium,
-                          ),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Expanded(
-                              child: Text(
-                                '드래그 회전 · 휠 또는 터치 확대 · 공간 클릭 시 전체 보기',
-                              ),
-                            ),
-                            IconButton(
-                              key: const Key('world-help-close'),
-                              tooltip: '도움말 닫기',
-                              onPressed: _showHelp,
-                              icon: const Icon(Icons.close_rounded, size: 18),
-                              constraints: const BoxConstraints.tightFor(
-                                width: 28,
-                                height: 28,
-                              ),
-                              padding: EdgeInsets.zero,
-                            ),
-                          ],
-                        ),
                       ),
                     ),
                   ),
