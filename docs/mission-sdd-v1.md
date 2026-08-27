@@ -26,14 +26,14 @@ Flutter
 1. 저장된 사용자 성향과 거리가 먼 미션을 우선 추천한다.
 2. 같은 날의 추천 후보를 Supabase PostgreSQL에 고정하여 재접속해도 같은 목록을 복원한다.
 3. 사용자가 후보를 선택·취소·변경·완료할 수 있게 한다.
-4. 하루 수행 한도를 설정으로 관리한다.
+4. 하루 수행 한도는 Backend 정책으로 1개를 적용한다.
 5. 완료 결과를 카테고리 통계와 성향 갱신의 근거로 저장한다.
 
 ## 3. 범위
 
 ### 포함
 
-- 기존 단계의 `availableTime`·`dailyMissionLimit` 설정 계약은 폐기되었으며 현재 Backend는 하루 1개 미션 정책을 적용한다.
+- Backend는 서비스 날짜마다 선택 가능한 미션을 1개로 제한한다.
 - 검수된 기본 미션과 사용 가능한 공유 LLM 미션 조회
 - 성향 거리, 최근 행동 다양성, 탐색 보너스와 현재 조건 적합도를 반영한 후보 생성
 - 서로 다른 경험 패턴의 하루 후보 최대 5개 저장 및 복원
@@ -65,7 +65,7 @@ World 기능은 `category`와 완료 통계를 후속 입력으로 사용하지�
 - 동일 사용자·동일 Local Date에서는 최초 생성한 추천 목록과 `OFFER_BATCH_ID`를 재사용하며 새 후보와 상태 로그를 중복 생성하지 않는다.
 - 설정 Timezone에서 Local Date가 변경되면 이전 날짜의 목록을 이어 쓰지 않고 새로운 일일 추천 주기를 시작한다.
 
-### 4.2 시간과 하루 수행 한도
+### 4.2 미션 시간 메타데이터와 하루 수행 한도
 
 | 코드 | 최대 예상 시간 |
 |---|---:|
@@ -74,10 +74,9 @@ World 기능은 `category`와 완료 통계를 후속 입력으로 사용하지�
 | `MEDIUM` | 30분 |
 | `LONG` | 60분 |
 
-- 하루 수행 한도 기본값은 1개다.
-- V1 Backend/DB 계약의 설정 가능 범위는 1~3개로 유지한다. 2026-08-24 UI 개정부터 Flutter는 미션 수 선택을 노출하지 않고 항상 1개를 저장한다.
-- 오늘의 `SELECTED + COMPLETED` 슬롯 수보다 낮게 한도를 줄일 수 없다.
-- 한도 증가는 저장 성공 후 즉시 적용한다.
+- `estimatedMinutes`와 시간 코드는 Catalog 메타데이터이며 사용자 설정이 아니다.
+- Flutter는 시간 선택과 하루 미션 수 선택을 노출하지 않는다.
+- Backend는 서비스 날짜마다 선택 가능한 미션을 1개로 제한한다.
 
 ### 4.3 후보 목록
 
@@ -160,7 +159,7 @@ recommendationScore = clamp(positiveScore
 - 카테고리 완료 이력이 없으면 해당 카테고리를 1로 계산한다.
 - `recentDiversityScore`와 `explorationBonus`는 최근 완료 이력과의 메타데이터 유사도·패턴 중복의 역수다.
 - 최근성 가중치는 당일 `1.0`에서 하루마다 `0.75`를 곱한다.
-- `contextFitScore`는 난이도 적합도와 저장된 할애 가능 시간 설정 적합도의 평균이다. 현재 Flutter는 시간 선택 UI를 제공하지 않고 `LONG`을 내부 저장한다.
+- `contextFitScore`는 난이도 적합도와 미션 메타데이터의 적합도를 사용한다. 사용자 할애 가능 시간은 입력받거나 저장하지 않는다.
 - 최근 `category`, `actionType`, 환경, 태그, 사회·신체·창의 특성의 반복은 감점한다.
 - 동일 Mission 완료 이력은 의미 유사도와 별도로 경과 4~7일 `0.35`, 8~14일 `0.20`, 15~30일 `0.08`, 30일 초과 `0`의 장기 반복 감점을 적용한다. 동일 ID는 최근 유사도·패턴 감점에서 제외하여 이중 계산하지 않는다.
 - `SHOWN` 뒤 선택되지 않은 후보와 `CANCELLED` 후보는 skipped/rejected로 해석한다. 반복될수록 같은 패턴의 빈도를 낮추되 하드 제외하지 않고 `comfortZoneDistance`가 큰 후보를 더 감점한다.
@@ -219,7 +218,7 @@ CANCELLED → SELECTED
 - 같은 완료 요청은 `200 OK`로 기존 완료 결과를 반환하며 완료 횟수와 통계를 다시 증가시키지 않는다.
 - UI에서는 `SELECTED`를 `수행중`, `COMPLETED`를 `완료`로 표시한다.
 
-## 9. Oracle 논리 계약
+## 9. PostgreSQL 논리 계약
 
 ### 기존 `MISSION`
 
@@ -232,7 +231,6 @@ CANCELLED → SELECTED
 - `MISSION_ID`
 - `SERVICE_DATE`
 - `STATUS`
-- `AVAILABLE_TIME`
 - `OFFER_BATCH_ID`
 - `PERSONALITY_DISTANCE`
 - `RECOMMENDATION_SCORE`
@@ -242,13 +240,7 @@ CANCELLED → SELECTED
 
 사용자·미션·서비스 날짜는 중복 저장하지 않는다. 상태 변경 API는 Catalog의 `missionId`가 아니라 소유권이 있는 `userMissionId`를 사용한다.
 
-### 신규 `USER_MISSION_SETTING`
-
-- `USER_ID` PK/FK
-- `AVAILABLE_TIME`
-- `DAILY_MISSION_LIMIT` 1~3
-
-### 2026-08-24 Flutter 화면 계약 개정
+### Flutter 화면 계약
 
 - 성향 완료 홈 상단에 오늘의 미션을 인라인으로 표시한다.
 - 미션 시작 버튼을 누르면 시간 선택 없이 추천 후보를 최대 5개 조회하며 미션 수 옵션도 표시하지 않는다.
@@ -273,7 +265,7 @@ CANCELLED → SELECTED
 
 Phase 1에서 nullable `USER_MISSION_ID`, `PREVIOUS_STATUS`, `CHANGE_REASON`을 추가했다. 기존 로그는 보존하고 신규 로그부터 사용자 미션 집계 레코드와 연결한다.
 
-일일 슬롯 중복은 일반 복합 Unique Constraint가 아니라 `SELECTED`, `COMPLETED`에만 값이 생성되는 Oracle 함수 기반 Unique Index로 차단한다. 따라서 `SHOWN`, `CANCELLED` 후보는 슬롯 없이 여러 건 저장할 수 있다.
+일일 슬롯 중복은 `SELECTED`, `COMPLETED` 상태에만 적용되는 PostgreSQL partial Unique Index로 차단한다. 따라서 `SHOWN`, `CANCELLED` 후보는 슬롯 없이 여러 건 저장할 수 있다.
 
 ### `USER_PERSONALITY_PROFILE`
 
@@ -287,7 +279,7 @@ Phase 1에서 nullable `USER_MISSION_ID`, `PREVIOUS_STATUS`, `CHANGE_REASON`을 
 |---|---|---|
 | GET | `/api/missions/today` | 오늘의 미션 상태 조회 |
 | POST | `/api/missions/today/recommendations` | 최대 5개 후보 생성 |
-| GET | `/api/missions/today` | 설정, 수행 중, 완료 수, 기존 후보 조회 |
+| GET | `/api/missions/today` | 수행 중, 완료 수, 기존 후보 조회 |
 | POST | `/api/missions/today/recommendations` | 오늘 후보를 최초 생성하거나 기존 후보 반환 |
 | POST | `/api/user-missions/{userMissionId}/select` | 후보 선택 |
 | POST | `/api/user-missions/{userMissionId}/cancel` | 선택 취소 |
@@ -302,9 +294,7 @@ Phase 1에서 nullable `USER_MISSION_ID`, `PREVIOUS_STATUS`, `CHANGE_REASON`을 
 오늘 조회 응답은 최소한 다음을 포함한다.
 
 - `serviceDate`
-- `settings`
 - `completedToday`
-- `remainingSlots`
 - `activeMissions`
 - `candidates`
 - 후보별 `userMissionId`, Catalog 속성, 거리, 점수, 상태와 상태 시각
@@ -317,7 +307,6 @@ Phase 1에서 nullable `USER_MISSION_ID`, `PREVIOUS_STATUS`, `CHANGE_REASON`을 
 | 401 | `INVALID_USER_KEY` | 사용자 키 누락·불일치 |
 | 404 | `USER_MISSION_NOT_FOUND` | 없거나 소유하지 않은 사용자 미션 |
 | 409 | `PERSONALITY_REQUIRED` | 성향 분석 미완료 |
-| 409 | `MISSION_SETTINGS_REQUIRED` | 미션 설정 없음 |
 | 409 | `DAILY_LIMIT_REACHED` | 오늘 수행 한도 초과 |
 | 409 | `INVALID_MISSION_TRANSITION` | 허용하지 않는 상태 전이 |
 | 409 | `REPLACEMENT_NOT_AVAILABLE` | 오늘 교체 가능한 후보가 아님 |
@@ -329,17 +318,17 @@ Phase 1에서 nullable `USER_MISSION_ID`, `PREVIOUS_STATUS`, `CHANGE_REASON`을 
 ## 12. Transaction과 동시성
 
 - 후보 생성은 사용자와 서비스 날짜 단위로 직렬화한다.
-- 선택·취소·변경·완료는 대상 `USER_MISSION`과 사용자 설정을 잠근다.
+- 선택·취소·변경·완료는 대상 `USER_MISSION`을 잠근다.
 - 선택 시 슬롯의 유일성을 DB Constraint와 Service 검증으로 함께 보장한다.
 - 완료 상태, 로그, 카테고리 통계와 성향 완료 횟수는 한 Transaction으로 처리한다.
-- LLM 네트워크 호출은 완료 Transaction 성공 이후 수행하여 Oracle Lock을 오래 유지하지 않는다.
+- LLM 네트워크 호출은 완료 Transaction 성공 이후 수행하여 DB Lock을 오래 유지하지 않는다.
 - 실패 시 일부 상태·로그·통계가 남지 않도록 전체 Rollback한다.
 
 ## 13. Flutter 계약
 
-- 설정이 없으면 성향 결과 다음에 시간과 하루 수행 한도를 묻는다.
+- 성향 결과 다음에는 미션 후보를 조회하며 시간과 하루 수행 한도를 묻지 않는다.
 - 오늘 화면 상단에 `activeMissions`, 하단에 `candidates`를 표시한다.
-- 하루 한도가 2개 이상이면 상단에 수행 중 미션을 여러 개 표시한다.
+- 하루 수행 미션은 1개이며 상단에는 단일 수행 미션을 표시한다.
 - Flutter Web UI에는 변경 버튼이나 교체 Bottom sheet를 노출하지 않는다. Backend 교체 API는 기존 호환 계약으로 유지한다.
 - 추천 `PageView`는 마우스·터치·스타일러스·트랙패드 드래그 입력을 허용한다.
 - 완료 후 서버 응답으로 화면과 프로필 통계를 갱신한다.
@@ -351,22 +340,22 @@ Phase 1에서 nullable `USER_MISSION_ID`, `PREVIOUS_STATUS`, `CHANGE_REASON`을 
 | Phase | 범위 | 완료 근거 |
 |---:|---|---|
 | 0 | 정책·REST·DB·상태·오류 계약 확정 | SDD와 정적 정상·실패 검증 |
-| 1 | Oracle Schema와 Migration | 실제 Oracle 객체·제약조건 검증 |
+| 1 | PostgreSQL Schema와 Migration | 실제 Supabase 객체·제약조건 검증 |
 | 2 | 추천 Domain | 고정 Clock·난수 기반 단위 테스트 |
-| 3 | 설정·오늘 후보 Backend API | Service·Controller·Oracle·OpenAPI 테스트 |
+| 3 | 오늘 후보 Backend API | Service·Controller·PostgreSQL·OpenAPI 테스트 |
 | 4 | 선택·취소·변경·완료 Backend API | 상태·동시성·멱등·Rollback 테스트 |
 | 5 | 통계·성향 갱신·LLM 연결 | 5회 경계·중복·장애 격리 테스트 |
 | 6 | Flutter 미션 흐름 | Model·API·Widget 정상·실패 테스트 |
-| 7 | 전체 통합 | Flutter→Oracle E2E와 전체 Build |
+| 7 | 전체 통합 | Flutter→PostgreSQL E2E와 전체 Build |
 
 ## 15. 인수 조건
 
-- `AC-01`: 후보 수, 하루 한도, 시간 코드와 서울 날짜 경계가 유일하게 정의된다.
+- `AC-01`: 후보 수, 하루 1개 정책, 시간 메타데이터와 서울 날짜 경계가 유일하게 정의된다.
 - `AC-02`: 네 개 성향 축의 이름·범위와 거리 공식이 정의된다.
 - `AC-03`: 추천 필터, 점수, 랜덤성과 카테고리 다양성 순서가 정의된다.
 - `AC-04`: 상태 값과 모든 허용 전이가 정의된다.
 - `AC-05`: 취소와 변경의 원자성 및 완료 멱등성이 정의된다.
-- `AC-06`: Oracle 집계, 로그, 설정과 통계의 역할이 분리된다.
+- `AC-06`: PostgreSQL 집계, 로그와 통계의 역할이 분리된다.
 - `AC-07`: REST 경로, 사용자 식별, 성공 상태와 오류 코드가 정의된다.
 - `AC-08`: 동시 후보 생성·선택·완료의 직렬화 기준이 정의된다.
 - `AC-09`: LLM 장애가 기본 추천과 완료를 막지 않는다.

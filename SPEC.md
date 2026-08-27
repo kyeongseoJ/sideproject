@@ -243,7 +243,6 @@ COMPLETED
 - 같은 사용자가 같은 미션 완료 요청을 중복 전송해도 완료 횟수와 보상이 중복 반영되지 않아야 한다.
 - 사용자는 서로 다른 경험으로 구성된 하루 최대 5개의 추천 후보 중 수행할 미션을 선택한다. 필터를 통과한 후보가 부족하면 가능한 개수만 반환한다.
 - 현재 Flutter UI의 하루 수행 미션 수는 1개로 고정한다. 사용자는 매일 미션을 시작할 때 추천 후보 중 하나를 선택한다.
-- `USER_MISSION_SETTING`과 `USER_MISSION.AVAILABLE_TIME`은 `003_remove_mission_settings.sql`에서 제거한다. 기존 미션 수행 이력은 보존한다.
 - 수행 중인 미션은 목록 상단에 표시한다.
 - Flutter Web UI는 수행 중인 미션에 `완료`와 `취소`만 제공하고 직접 `변경` 버튼은 표시하지 않는다.
 - 다른 미션을 수행하려면 현재 미션을 취소한 뒤 같은 날의 기존 추천 캐러셀에서 다시 선택한다.
@@ -418,13 +417,6 @@ COMPLETED
 | 2026-08-19 | Mission V1 Phase 0 확정: 후보 5개, 하루 1~3개, 서울 달력 날짜 경계, 추천 점수, 취소·변경·상태·REST·Oracle 계약 정의 |
 | 2026-08-19 | 성향 분석을 `PERSONALITY_V2`로 재정의: 실내·실외와 신체 활동 분리, 여섯 문항, Mission 범위 분리 |
 | 2026-08-19 | 최초 작성. 현재까지 정의된 사용자, 성향, 미션, World, REST, DB, 디자인, 보안 정책 통합 |
-## Mission API update (2026-08-26)
-
-User mission settings for available time and daily mission count are removed
-from the current contract. The Backend always limits a user to one selected
-mission per service date and returns up to five recommendations. Mission
-`estimatedMinutes` remains catalog metadata, not a user preference.
-
 ## Deployment contract (2026-08-27)
 
 - The repository root is the Docker build context. `front/Dockerfile` builds

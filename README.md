@@ -308,14 +308,6 @@ Oracle 연동 테스트는 레거시 검증용으로만 유지하며, 운영 기
 - [성향 분석 SDD](docs/personality-sdd-v2.md)
 - [미션 SDD](docs/mission-sdd-v1.md)
 - [3D World SDD](docs/world-sdd-v1.md)
-### Mission API current contract
-
-The mission API no longer accepts or returns user-selected available time or
-daily mission count. `GET /api/missions/today` and
-`POST /api/missions/today/recommendations` use the fixed policy of one daily
-mission and return up to five candidates. `estimatedMinutes` remains mission
-catalog metadata and is displayed as information only.
-
 ## Docker deployment
 
 Dockerfiles use the repository root as their build context.
