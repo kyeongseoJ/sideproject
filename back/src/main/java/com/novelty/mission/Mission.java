@@ -92,10 +92,19 @@ public record Mission(
         if (estimatedMinutes <= 10) {
             return 0;
         }
-        if (estimatedMinutes <= 30) {
+        if (estimatedMinutes <= 20) {
             return 1;
         }
-        return 2;
+        if (estimatedMinutes <= 45) {
+            return 2;
+        }
+        if (estimatedMinutes <= 75) {
+            return 3;
+        }
+        if (estimatedMinutes <= 120) {
+            return 4;
+        }
+        return 5;
     }
 
     private static void requireText(String name, String value, int maximumLength) {

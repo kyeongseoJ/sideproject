@@ -5,6 +5,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.random.RandomGenerator;
 
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.novelty.user.UserService;
+import com.novelty.personality.Interest;
 
 @Service
 public class MissionService {
@@ -85,12 +87,14 @@ public class MissionService {
 
             UserMissionVector vector = missionRepository.findUserVector(userId)
                     .orElseThrow(PersonalityRequiredException::new);
+            Set<Interest> userInterests = missionRepository.findUserInterests(userId);
             List<Mission> candidates = missionRepository.findCandidates(
                     MAX_MISSION_MINUTES,
-                    vector.completedMissionCount() >= 5);
+                    true);
             List<MissionRecommendation> recommendations = recommendationPolicy.recommend(
                     candidates,
                     vector,
+                    userInterests,
                     userMissionRepository.findCategoryCompletionCounts(userId),
                     statusLogRepository.findAll(userId),
                     random);

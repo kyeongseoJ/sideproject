@@ -41,6 +41,8 @@ import java.util.random.RandomGenerator;
 
 import org.springframework.stereotype.Component;
 
+import com.novelty.personality.Interest;
+
 @Component
 public class MissionRecommendationPolicy {
 
@@ -60,7 +62,18 @@ public class MissionRecommendationPolicy {
             Map<MissionCategory, Integer> categoryCompletionCounts,
             List<MissionStatusEvent> history,
             RandomGenerator random) {
+        return recommend(missions, userVector, Set.of(), categoryCompletionCounts, history, random);
+    }
+
+    public List<MissionRecommendation> recommend(
+            List<Mission> missions,
+            UserMissionVector userVector,
+            Set<Interest> userInterests,
+            Map<MissionCategory, Integer> categoryCompletionCounts,
+            List<MissionStatusEvent> history,
+            RandomGenerator random) {
         validateInputs(missions, userVector, categoryCompletionCounts, history, random);
+        Objects.requireNonNull(userInterests, "userInterests are required.");
 
         Set<Long> recentlyCompletedIds = missionIdsWithinMaximumAge(
                 history, MissionStatus.COMPLETED, COMPLETED_HARD_BLOCK_MAX_AGE_DAYS);
@@ -71,8 +84,7 @@ public class MissionRecommendationPolicy {
 
         List<MissionRecommendation> rankedPool = missions.stream()
                 .filter(Mission::enabled)
-                .filter(mission -> userVector.completedMissionCount() >= 5
-                        || mission.sourceType() == MissionSourceType.BASE)
+                .filter(mission -> !userInterests.contains(Interest.valueOf(mission.category().name())))
                 .filter(mission -> !recentlyCompletedIds.contains(mission.id()))
                 .filter(mission -> !recentlyShownIds.contains(mission.id()))
                 .filter(mission -> !isNearDuplicateOfRecentExperience(mission, recentCompleted))
@@ -182,6 +194,16 @@ public class MissionRecommendationPolicy {
             List<MissionRecommendation> pool = sufficientlyDifferent.isEmpty()
                     ? remaining
                     : sufficientlyDifferent;
+            Set<Integer> selectedDurationLevels = selected.stream()
+                    .map(recommendation -> recommendation.mission().durationLevel())
+                    .collect(java.util.stream.Collectors.toSet());
+            List<MissionRecommendation> unusedDurationPool = pool.stream()
+                    .filter(candidate -> !selectedDurationLevels.contains(
+                            candidate.mission().durationLevel()))
+                    .toList();
+            if (!unusedDurationPool.isEmpty()) {
+                pool = unusedDurationPool;
+            }
             MissionRecommendation chosen = pool.stream()
                     .max(Comparator.<MissionRecommendation>comparingDouble(
                                     candidate -> diversityAdjustedScore(candidate, selected))

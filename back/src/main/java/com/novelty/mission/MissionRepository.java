@@ -15,6 +15,8 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import com.novelty.personality.Interest;
+
 @Repository
 public class MissionRepository {
 
@@ -45,6 +47,17 @@ public class MissionRepository {
                         resultSet.getInt("NOVELTY_SCORE"),
                         resultSet.getInt("COMPLETED_MISSION_COUNT")), userId);
         return profiles.stream().findFirst();
+    }
+
+    public Set<Interest> findUserInterests(long userId) {
+        return jdbcTemplate.query("""
+                SELECT INTEREST_CODE
+                  FROM USER_PROFILE_INTEREST
+                 WHERE USER_ID = ?
+                """, (resultSet, rowNumber) -> Interest.valueOf(
+                        resultSet.getString("INTEREST_CODE")), userId)
+                .stream()
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     public List<Mission> findCandidates(int maximumMinutes, boolean includeLlm) {

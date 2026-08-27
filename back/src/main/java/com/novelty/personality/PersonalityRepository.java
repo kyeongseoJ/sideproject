@@ -64,9 +64,8 @@ public class PersonalityRepository {
                 EXECUTION_STYLE,
                 ANALYSIS_MODE,
                 ANALYSIS_VERSION,
-                ENERGY_LEVEL,
                 CREATED_AT
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
 
     private static final String INSERT_SUBMISSION_INTEREST_SQL = """
