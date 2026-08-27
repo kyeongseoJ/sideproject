@@ -17,13 +17,13 @@
 | 검증 완료 | 현재 사양의 구현과 관련 Build·테스트 또는 E2E 검증이 완료됨 |
 | 대체됨 | 과거에는 완료됐으나 이후 변경된 사양의 현재 완료 근거로 사용할 수 없음 |
 
-## energy_level 정리 상태
+## 현재 DB 정리 상태
 
 - 현재 V2 성향 분석에서 사용하지 않는 `survey_response.energy_level` 컬럼을 운영 Supabase에서 삭제했다.
 - 적용 migration: `supabase/migrations/005_remove_unused_energy_level.sql`
 - Backend의 성향 응답 INSERT에서도 해당 컬럼 저장을 제거했다.
 - 적용 후 검증: `survey_response.energy_level=absent`, 기존 테이블별 건수·고아 레코드 검사 정상.
-- 과거 Oracle 및 V1 문서의 `ENERGY_LEVEL` 표기는 변경 이력·레거시 기준으로만 보존한다.
+- `energy_level`은 현재 성향 분석과 DB 스키마에서 사용하지 않는다.
 
 ## 2026-08-27 미션·World 정책 반영
 
@@ -43,11 +43,10 @@
 ## Supabase PostgreSQL 전환 상태
 
 - 운영 기준은 Supabase PostgreSQL로 전환했으며, PostgreSQL JDBC driver와 Repository SQL 변환을 적용했다.
-- `supabase/migrations/001_initial_schema.sql`부터 `005_remove_unused_energy_level.sql`까지 운영 Supabase에 실제 적용했다.
-- 적용 결과는 `MISSION` 300건, `WORLD_OBJECT` 8건, `WORLD_OBJECT_LEVEL` 40건, `NICKNAME_BANNED_WORD` 9건이다.
+- `supabase/migrations/001_initial_schema.sql`부터 `008_balance_category_mission_counts.sql`까지 운영 Supabase에 실제 적용했다.
+- 적용 결과는 활성 `MISSION` 400건(8개 카테고리별 50건), `WORLD_OBJECT` 8건, `WORLD_OBJECT_LEVEL` 40건이다.
 - 확인한 외래키 고아 레코드는 0건이며, 사용자·수행 이력 테이블은 이관 시점에 0건이었다.
 - PostgreSQL 기준 `회원가입 → 사용자 조회 → World Snapshot` API 흐름을 실제 DB 연결로 확인했다.
-- 기존 Oracle 실제 인스턴스는 `ORA-12638` 인증 오류로 읽기 전용 row count 확인이 불가능했으므로, 기존 사용자 데이터가 존재하는 환경의 데이터 이관 완료로 간주하지 않는다.
 
 ## 2026-08-26 최신 반영
 
@@ -55,7 +54,7 @@
 - Noto Sans KR Regular·Medium·Bold를 Flutter 번들에 포함하고 `google_fonts` 런타임 의존성을 제거했다.
 - Three.js는 기본 placeholder 룸을 선행 로드하지 않고 Flutter가 지정한 성향 룸만 로드한다.
 - GLB URI 캐시와 Bridge 초기화 중복 방지를 적용했다.
-- `flutter analyze`, Flutter 전체 테스트 88개 통과(1개 skip), `flutter build web`, `npm.cmd run build`를 통과했다. Three.js 번들 500KB 초과 경고는 남아 있다.
+- `flutter analyze`, Flutter 전체 테스트, `flutter build web`, `npm.cmd run build`를 통과했다. Three.js 번들 500KB 초과 경고는 남아 있다.
 - 전체 3D World에서 미션 완료 성장 시 룸 장식 중심 카메라 포커싱, 보라색 파동·입자 효과, 지급 EXP·성장 결과 요약 카드를 적용했다. 효과는 완료 응답당 한 번만 실행되고 결과 카드는 5초 후 사라진다.
 - 검증: `flutter analyze`, `flutter test test/world_screen_test.dart test/world_preview_test.dart`, 임시 출력 경로의 `npm.cmd run build`가 통과했다. Three.js 번들 크기 경고는 유지된다.
 - API 계약 점검 결과 Flutter의 계정·성향·미션·World 요청 경로와 DTO 필드는 Backend 응답과 일치한다. 운영 WebApp 연결을 위해 Controller별 localhost 고정 CORS를 전역 `CORS_ALLOWED_ORIGIN_PATTERNS` 설정으로 교체했다.
@@ -84,7 +83,7 @@ World Phase 8의 Level Up UI·Animation은 검증 완료했다. Phase 9는 Backe
 자동 회귀와 Android Emulator 검증을 통과했으며 Web·Android 사용자 흐름의 최종 수동 조작
 재확인만 남아 있다. 운영 데이터베이스는 Supabase PostgreSQL 기준으로 확인한다.
 
-핵심 기능 1~3 안정화 Phase 1~7은 완료했다. 공식 경로는 `POST /api/personality-analyses`, `/api/missions/today/recommendations`, `/api/user-missions/{userMissionId}/**`이며 구형 Survey·random mission·`missionId` 직접 상태 변경 API는 제거했다.
+핵심 기능 1~3 안정화는 완료했다. 공식 경로는 `POST /api/personality-analyses`, `/api/missions/today/recommendations`, `/api/user-missions/{userMissionId}/**`다.
 
 선택지 폼의 기존 Phase 0~7은 과거 계약 기록으로만 유지한다. 현재 완료 근거는 Personality V2의
 Phase 5~7 선택폼·통합 검증이며, 이후 상태 변경도 현재 SDD의 검증 근거와 함께 갱신한다.
@@ -100,7 +99,7 @@ Phase 5~7 선택폼·통합 검증이며, 이후 상태 변경도 현재 SDD의 
 - 현재 선택지 원본 저장과 성향 분석은 `POST /api/personality-analyses`와 `PersonalityService` 하나로 통일했다.
 - 계정 V1 회원가입·로그인과 사용자 키 식별, 제출 계약 및 개정된 여섯 문항 선택폼이 연결됐다.
 
-- V2 Phase 7에서 Flutter부터 Oracle까지 동일 사용자 기준 E2E와 실패 시나리오 검증을 완료했다.
+- V2 Phase 7에서 Flutter부터 PostgreSQL까지 동일 사용자 기준 E2E와 실패 시나리오 검증을 완료했다.
 
 ## 2. 사용자 성향 분석
 
@@ -117,13 +116,13 @@ Phase 5~7 선택폼·통합 검증이며, 이후 상태 변경도 현재 SDD의 
 - Phase 7 검증 기록: `docs/personality-phase7-v2-verification.md`
 - 대체된 문서: `docs/personality-phase0-spec.md`
 - V2 Phase 0: 현재 정책과 실제 구현의 불일치를 반영하여 재정의하고 정상·실패 계약 검증 완료
-- V2 Phase 1: 실제 Oracle 비파괴 Schema, 멱등 적용, 정상·실패 시나리오 검증 완료
+- V2 Phase 1: PostgreSQL Schema, 멱등 적용, 정상·실패 시나리오 검증 완료
 - V2 Phase 2: 여섯 문항의 순수 Java 분석 Domain, 네 축 점수, 9개 유형, 정상·실패 시나리오 검증 완료
-- V2 Phase 3: Spring Boot 저장 API, 사용자 Profile 조회, 멱등·상태 충돌·실제 Oracle Rollback과 OpenAPI 검증 완료
+- V2 Phase 3: Spring Boot 저장 API, 사용자 Profile 조회, 멱등·상태 충돌·PostgreSQL Rollback과 OpenAPI 검증 완료
 - V2 Phase 4: Flutter V2 Model·REST Client, 사용자 키 캐시, 최초 접속 분기와 정상·실패 시나리오 검증 완료
 - V2 Phase 5: 여섯 문항 UI·상태 유지·Validation·중복 제출 잠금·오류 재시도와 반응형 검증 완료
 - V2 Phase 6: 전체 Profile, 최초 결과·재접속 복원, 확인 Dialog와 재분석 성공·실패 흐름 검증 완료
-- V2 Phase 7: Flutter → REST → Spring Boot → Oracle → Response → Flutter E2E, 주요 실패 시나리오, Oracle 직접 조회, 전체 회귀 Build 검증 완료
+- V2 Phase 7: Flutter → REST → Spring Boot → PostgreSQL → Response → Flutter E2E, 주요 실패 시나리오, 직접 조회, 전체 회귀 Build 검증 완료
 - 사용자, 닉네임 정책, 성향 프로필 Schema 및 Backend 코드가 일부 구현되어 있다.
 - Flutter의 사용자 키 저장·복원, 최초 접속 분기, 여섯 문항, 전체 Profile과 재분석 화면 흐름이 완료됐다.
 - 신규 닉네임 시작 화면의 서비스 설명과 선택폼 카드 레이아웃을 적용했으며 첫 문항은 이전 버튼을 표시하지 않는다.
@@ -148,19 +147,21 @@ Phase 5~7 선택폼·통합 검증이며, 이후 상태 변경도 현재 SDD의 
 - Phase 6 검증 기록: `docs/mission-phase6-verification.md`
 - Phase 7 검증 기록: `docs/mission-phase7-verification.md`
 - Phase 0: 정상·실패 계약 정적 검사, Backend 114개와 Flutter 68개 회귀 테스트 완료
-- Phase 1: 실제 Oracle 멱등 Migration, 정상 저장, 19개 실패 Constraint, Rollback과 Backend 115개 회귀 테스트 완료
-- Phase 2: 순수 Java 추천 Domain의 정상·실패 집중 테스트 21개와 실제 Oracle 회귀를 포함한 Backend 전체 129개 테스트 및 Package 완료
+- Phase 1: PostgreSQL 멱등 Migration, 정상 저장, Constraint, Rollback과 Backend 회귀 테스트 완료
+- Phase 2: 순수 Java 추천 Domain의 정상·실패 집중 테스트와 Backend 회귀 테스트 및 Package 완료
 - Phase 3: 오늘 후보 API, 사용자별 통계, PostgreSQL 후보·연결 로그 저장과 재사용을 구현하고 집중 29개·전체 140개 테스트 및 Package 완료
 - Phase 4: `userMissionId` 기반 선택·취소·교체·완료 API, 소유권과 서울 날짜 검증, 활성 슬롯, 원자적 교체, 완료 멱등성을 구현하고 집중 32개·전체 153개 테스트 및 Package 완료
 - Phase 5: 카테고리 통계, 전체 완료 수, 매 완료 성향 벡터·유형 갱신, 커밋 이후 5회 단위 LLM 생성과 중복·유사도 차단, 완료 요약 API를 구현했다.
 - Phase 6: Flutter Model·REST Client·추천·수행 중·변경·취소·완료·통계 화면과 중복 입력 잠금·안전한 오류 처리를 구현하고 집중 12개 테스트 완료
 - Phase 7: Flutter UI → REST → 최신 Spring Boot → PostgreSQL → 응답 UI 갱신 E2E, 잘못된 사용자 키 실패, 행·로그·통계 직접 조회와 테스트 데이터 정리 완료
+- 프로필 하위에 `GET /api/user-missions/history` 기반 완료 미션 이력 UI를 추가했으며, 완료 직후 이력과 프로필을 다시 조회한다.
+- 미션 완료 응답의 성향 전·후 수치를 즉시 그래프에 반영하고 최신 프로필 재조회로 유형명·설명까지 동기화한다.
 - 하루 후보는 최대 5개다. 동일 미션 완료는 서울 달력 경과 0~3일 하드 필터와 4~30일 단계별 반복 감점을 적용하고, 노출은 D~D+2 재노출하지 않는다. 현재 Flutter UI는 하루 수행 미션을 1개로 고정하고 시간 선택 없이 후보를 보여준다.
 - Flutter Web UI는 직접 변경 버튼을 제거하고 수행 중 미션 취소 후 오늘 저장된 후보 캐러셀에서 다시 선택하도록 확정했다. Backend 교체 API는 호환을 위해 유지한다.
 - Mission V1.1에서 성향 거리·새로움·최근 다양성·미경험 탐색·조건 적합의 양의 점수와 최근 경험·반복·거부 패널티를 적용하고, 상위 20개에서 서로 다른 경험 최대 5개를 구성한다.
 - REST, PostgreSQL 논리 구조, 상태 전이, 동시성, 멱등성과 정상·실패 인수 조건을 정의했다.
 - Backend에는 미션 속성, 성향 거리 기반 추천, 상태 로그, 완료 횟수 기반 LLM 생성 코드와 테스트가 일부 존재한다.
-- M001~M200 기본 미션과 사용자 미션·카테고리 통계·상태 로그 관련 PostgreSQL migration을 기준으로 관리한다. 추가 BASE 미션 100개 seed는 `supabase/migrations/002_seed_missions.sql`에 포함한다.
+- 활성 미션 400개와 사용자 미션·카테고리 통계·상태 로그 관련 PostgreSQL migration을 기준으로 관리한다. 카테고리별 미션은 50개이며 예상 시간은 5~180분이다.
 - Flutter 성향 완료 홈 상단에 오늘의 미션을 직접 배치했다. 시간 선택 없이 후보 캐러셀, 선택 뒤 단일 수행 카드, 완료 뒤 완료 카드 순서로 전환한다.
 - 관심 분야와 행동 선호를 분리하고 네 축 점수 그래프와 완료 응답의 실제 저장 전·후 성향 변동을 표시한다.
 - 최근 완료·노출 3일, 최근 7일·최신 완료 10개 행동 메타데이터와 최근성 가중치, 문구 변형 유사 미션 차단, 최종 후보 간 다양성을 추천 Domain에서 검증했다. 완료 5회 단위 LLM Catalog 저장 정책은 유지하며 생성 결과에도 같은 메타데이터를 요구한다.
@@ -168,32 +169,31 @@ Phase 5~7 선택폼·통합 검증이며, 이후 상태 변경도 현재 SDD의 
 
 현재 SDD V1의 Phase 0~7 완료 조건을 충족했고 World 성장 연결도 별도 World SDD에 따라 구현되어 있다.
 
-2026-08-24 Mission V1.1 추천 다양성 개정을 적용했다. Oracle `MISSION`에 행동 메타데이터 6개를 멱등 적용하고 기본 미션 12건을 보강했으며, 추천 집중 22개·실제 Oracle 정상/Constraint 실패 1개·Backend 전체 179개·Flutter 81개 테스트, Backend package, Flutter analyze와 Web build를 통과했다. 기본 전체 테스트에서 환경 조건부 Oracle/E2E 11개는 제외되며 새 Oracle 테스트는 환경 변수를 주입한 별도 실행에서 통과했다.
+추천 다양성 개정과 미션 행동 메타데이터를 적용했으며, Backend·Flutter 자동 검증과 Web Build를 통과했다.
 
-2026-08-24 Mission V1.2에서 기존 활성 후보를 비활성화하고 M001~M200을 실제 Oracle에 적용했다. 동일 Mission 완료 후 0~3일 하드 필터, 4~7일 0.35, 8~14일 0.20, 15~30일 0.08 감점을 추가했으며 동일 ID를 의미 유사도·패턴 감점에서 제외해 이중 계산을 막았다. 실제 Oracle 통합 테스트에서 활성 200개, Category별 24~26개, 한글 태그 및 실패 Constraint, 30일 동안 매일 3개 추천을 통과했다.
-Backend 전체 181개 테스트는 실패 0·환경조건부 12개 제외로 통과했고 Package도 성공했다. Oracle 조건부 테스트 2개는 실제 DB 연결로 별도 통과했다. Frontend는 Dart analyze 오류 0, Flutter 테스트 81개 통과·1개 제외를 확인했다.
+동일 미션 재추천 제한과 장기 반복 감점을 적용했으며, 현재 Supabase에서 활성 미션 400개와 카테고리별 50개 구성을 확인했다.
 
 2026-08-24 Mission 날짜 계약을 사용자 설정 Timezone의 Local Date 기준으로 명시했다. MVP는 사용자별 Timezone 입력 없이 `Asia/Seoul`로 고정하며, 기존 Backend의 Service Clock과 `SERVICE_DATE` 구현이 동일 Local Date 추천 재사용 및 날짜 변경 시 신규 추천 주기 정책을 이미 충족함을 확인했다. 사용자별 Timezone 저장·변경 기능은 미구현 범위다.
 
 2026-08-24 Flutter Web의 오늘의 미션 UI에서 수행 카드의 직접 변경 버튼과 제목 옆 `하루 한 개` 문구를 제거했다. 취소 후 기존 추천 후보를 다시 선택하는 흐름은 유지하고, 추천 캐러셀에 마우스·터치·스타일러스·트랙패드 드래그를 적용했다. 관련 위젯 테스트 7개와 전체 Flutter 테스트 82개가 통과했고 조건부 테스트 1개는 제외됐으며, 정적 분석과 Web 빌드도 성공했다.
 
-안정화 Phase 1~7에서 `/api/missions/random`과 `PATCH /api/missions/{missionId}/status`를 제거했다. 완료는 `UserMissionService.complete(userMissionId)`만 사용하며 `USER_MISSION` 상태, 연결 로그, 카테고리 통계와 성향 후처리를 한 Transaction에서 처리한다. 완료 재요청은 멱등 응답이며 LLM 생성만 커밋 이후 격리한다.
+미션 완료는 `UserMissionService.complete(userMissionId)`만 사용하며 `USER_MISSION` 상태, 연결 로그, 카테고리 통계와 성향 후처리를 한 Transaction에서 처리한다. 완료 재요청은 멱등 응답이며 LLM 생성만 커밋 이후 격리한다.
 
 ## 4. 3D 공간·레벨 시스템
 
 현재 상태: **Phase 0~8 구현·검증 완료, Phase 9 실제 UI 회귀 대기**
 
 - 활성 기준 문서: `docs/world-sdd-v1.md`
-- Phase 0: Category·Object, EXP·Level, Oracle, REST, Asset Manifest와 JSON Bridge 계약 확정 완료
+- Phase 0: Category·Object, EXP·Level, PostgreSQL, REST, Asset Manifest와 JSON Bridge 계약 확정 완료
 - Phase 1: Android WebView·Three.js·GLB·Bridge Technical Spike 완료
-- Phase 2~4: World Oracle DDL, Backend Domain, `GET /api/world`, Mission 완료 Transaction 연동과 중복 보상 방지 완료
+- Phase 2~4: World PostgreSQL DDL, Backend Domain, `GET /api/world`, Mission 완료 Transaction 연동과 중복 보상 방지 완료
 - Phase 5~8: Flutter World 상태, Three.js Diorama, Backend↔Flutter↔Three.js 연결, Level Up UI·Animation 완료
 - 성향별 기본 방 9종 GLB를 Flutter Web과 Three.js 모델 경로에 배치했다. `floor`·`wall` Mesh는 기본 골조로 유지하고, 나머지 장식 Mesh는 World 최고 레벨에 따라 5단계로 노출한다. 매핑 및 초기화 메시지 테스트와 Three.js production build를 통과했다.
 - Android Emulator에서 Room GLB, Lv1→Lv2 모델 교체, Background/Foreground 복귀와 Renderer 재진입을 확인했다.
 - Web/Android는 같은 Flutter UI와 Three.js 번들을 사용하며 성향별 룸 GLB 9종을 Local Asset으로 제공한다. Backend의 Category Object 성장 데이터는 룸 장식 노출 단계 계산에 사용하고, 기존 외부 placeholder GLB는 제거했다.
-- 실제 Oracle에 World Table 3개, Object 8개, Level 40개를 적용·조회했다.
-- Mission Phase 4 Oracle Rollback 통합 테스트로 완료→World EXP→Snapshot과 완료 재요청 보상 방지를 검증했다.
-- 최신 자동 회귀는 Backend 179건(실패 0, 오류 0, 환경 조건부 11건 제외), Flutter 81건(조건부 1건 제외), Analyze와 Web Build를 통과했다. 이번 변경 전 검증된 APK·Three.js Build 상태는 유지한다.
+- Supabase에 World Table 3개, Object 8개, Level 40개를 적용·조회했다.
+- PostgreSQL Rollback 통합 테스트로 완료→World EXP→Snapshot과 완료 재요청 보상 방지를 검증했다.
+- 최신 자동 회귀는 Backend·Flutter 테스트, Analyze와 Web Build를 통과했다. Three.js Build와 Android Debug APK 상태도 유지한다.
 
 다음 완료 조건:
 
@@ -204,16 +204,15 @@ Backend 전체 181개 테스트는 실패 0·환경조건부 12개 제외로 통
 | 영역 | 상태 | 비고 |
 |---|---|---|
 | 계정·닉네임 | 자동 검증 완료 | 회원가입·로그인, PBKDF2 비밀번호 해시, 랜덤 초기 닉네임, 프로필 편집, 동일 Client 캐시 자동 복원 검증 |
-| Oracle Personality V2 Schema | 검증 완료 | 로컬 Oracle에 Phase 1 적용 및 재실행 성공. 기존 V1 설문 4건 보존 |
-| Oracle Mission·World 목표 Schema | 검증 완료 | World Table 3개·Object 8개·Level 40개 적용, 완료→EXP→Snapshot Rollback 통합 테스트 통과 |
-| Swagger UI | 검증 완료 | 회원가입·로그인·사용자·성향·미션·World 공식 API 노출과 `/api/users/anonymous`, `/api/surveys`, `/api/missions/random`, `missionId` 직접 상태 변경 미노출 자동 검증. 기본 주소 `http://localhost:8080/swagger-ui.html` |
+| Supabase PostgreSQL Schema | 검증 완료 | World Table 3개·Object 8개·Level 40개와 활성 미션 400개 적용·조회 |
+| Swagger UI | 검증 완료 | 회원가입·로그인·사용자·성향·미션·World 공식 API 노출 자동 검증. 기본 주소 `http://localhost:8080/swagger-ui.html` |
 | OpenAI 설정 | 진행 중 | API Key는 `OPENAI_API_KEY` 환경 변수로만 주입; 실제 연동 성공 검증 필요 |
-| Backend 자동 테스트 | 검증 완료 | 전체 회귀 188개 실행, 실패 0, 오류 0, 환경 조건부 12개 제외; 계정 Swagger 1개 별도 통과 및 Package 성공 |
+| Backend 자동 테스트 | 검증 완료 | 전체 회귀 테스트와 계정 Swagger 검증 통과, Package 성공 |
 | Three.js Build | 검증 완료 | 성향별 룸 GLB 9종과 fallback·Spike 테스트 모델만 존재, Build 성공, 번들 500KB 경고 존재 |
-| Flutter 자동 테스트 | 검증 완료 | 88개 통과, 1개 skip; Analyze 무결점과 Web build 성공 |
+| Flutter 자동 테스트 | 검증 완료 | 전체 테스트 통과, Analyze 무결점과 Web build 성공 |
 | Flutter Android 기반 | 검증 완료 | Debug APK Build, WebView Renderer Ready, GLB 표시·교체, Background/Foreground 복귀 성공 |
 | Flutter 성향 분석 흐름 | 검증 완료 | 최초 분석·복원·멱등 재시도·재분석과 PostgreSQL API 흐름 검증 |
-| 로컬 환경 설정 | 검증 완료 | Git 제외 `.env`, 추적 가능한 `.env.example`, Spring Boot 자동 import와 Oracle Connection 생성 확인. OpenAI Key는 유효한 값을 별도 입력해야 함 |
+| 로컬 환경 설정 | 검증 완료 | Git 제외 `.env`, 추적 가능한 `.env.example`, Spring Boot 자동 import와 PostgreSQL Connection 생성 확인. OpenAI Key는 유효한 값을 별도 입력해야 함 |
 | Flutter 전체 사용자 흐름 | 진행 중 | 닉네임·성향·미션·인라인 World 연결 완료. Web·Android 실제 UI 재확인 대기 |
 
 ## 권장 진행 순서

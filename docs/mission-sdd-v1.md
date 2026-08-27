@@ -1,6 +1,6 @@
 # 랜덤 미션 생성·선택·완료 SDD V1
 
-Current policy override: selected interest categories are excluded from recommendations; the shared BASE/LLM catalog covers 5–180 minute duration bands; and validated LLM missions created every five completions are eligible for all users.
+현재 정책: 사용자가 선택한 관심 카테고리는 추천에서 제외하며, 공용 Catalog는 5~180분 미션을 포함한다. 5회 완료마다 검증된 LLM 미션을 생성해 공용 Catalog에 저장하고 모든 사용자 추천 대상에 포함할 수 있다.
 
 ## 1. 문서 정보
 
@@ -12,7 +12,7 @@ Current policy override: selected interest categories are excluded from recommen
 
 이 문서는 세 번째 핵심 기능의 활성 기준 사양이다. 의료 진단이나 치료를 제공하지 않으며, 안전한 일상 활동을 통해 새로운 행동을 시도하도록 돕는 범위로 한정한다.
 
-현재 운영 Database는 Supabase PostgreSQL이다. 아래 Phase 완료 이력에 남은 Oracle 표현은 과거 검증 환경을 가리키며, 신규 실행·Migration·검증은 `supabase/migrations`와 PostgreSQL 계약을 따른다.
+현재 운영 Database는 Supabase PostgreSQL이며, 실행·Migration·검증은 `supabase/migrations`와 PostgreSQL 계약을 따른다.
 
 ## 2. 목표
 
@@ -69,12 +69,14 @@ World 기능은 `category`와 완료 통계를 후속 입력으로 사용하지�
 
 ### 4.2 미션 시간 메타데이터와 하루 수행 한도
 
-| 코드 | 최대 예상 시간 |
+| 구간 | 예상 시간 |
 |---|---:|
-| `QUICK` | 5분 |
-| `SHORT` | 15분 |
-| `MEDIUM` | 30분 |
-| `LONG` | 60분 |
+| 매우 짧음 | 5~10분 |
+| 짧음 | 11~20분 |
+| 보통 | 21~45분 |
+| 김 | 46~75분 |
+| 매우 김 | 76~120분 |
+| 장시간 | 121~180분 |
 
 - `estimatedMinutes`와 시간 코드는 Catalog 메타데이터이며 사용자 설정이 아니다.
 - Flutter는 시간 선택과 하루 미션 수 선택을 노출하지 않는다.
@@ -126,7 +128,6 @@ personalityDistance = sqrt((d1² + d2² + d3² + d4²) / 4)
 
 - `enabled = N`
 - `estimatedMinutes`가 사용자 시간 설정을 초과함
-- 완료 횟수 5회 미만인데 `sourceType = LLM`
 - 서울 달력 날짜 기준 최근 완료 제한에 해당함
 - 서울 달력 날짜 기준 최근 노출 제한에 해당함
 - 안전 정책 또는 중복·유사도 정책을 통과하지 못함
@@ -178,10 +179,9 @@ recommendationScore = clamp(positiveScore
 
 ## 7. 미션 Catalog와 LLM
 
-- 검수된 `BASE` Catalog는 기존 200개와 추가 100개를 포함하는 seed 기준으로 관리한다. 추가 seed는 30~150분 미션을 포함하며, 기존 Catalog 행은 이력 참조 보존을 위해 삭제하지 않고 비활성화한다. 신규 seed는 `CONTENT_FINGERPRINT` 또는 `TITLE_NORMALIZED` 기준으로 재실행 중복을 방지한다.
+- 운영 Catalog는 Supabase migration으로 관리하며 활성 미션 400개, 8개 카테고리별 50개로 구성한다. 미션 시간은 5~180분 범위로 분산한다. 기준 데이터는 `CONTENT_FINGERPRINT` 또는 `TITLE_NORMALIZED` 기준으로 재실행 중복을 방지한다.
 - 제공 Seed의 0~4 원본 수준은 기존 Domain 범위로 정규화한다. `INDOOR/BOTH/OUTDOOR`는 -1/0/1, 사회 수준은 -1~1, 신체·창의·새로움·예측불가·편안함 거리는 0~2, 난이도는 1~3으로 저장한다.
-- 최초 추천과 완료 5회 미만 사용자는 `BASE` 미션만 사용한다.
-- 완료 5회 이상 사용자는 `BASE`와 검증을 통과한 공유 `LLM` 미션을 사용한다.
+- 기본 미션과 검증을 통과한 공유 `LLM` 미션은 동일한 공용 Catalog에서 추천 대상이 된다.
 - 완료 횟수 5, 10, 15처럼 5의 배수에 도달했을 때 사용자별 한 번만 LLM 생성을 시도한다.
 - 제목 정규화와 Content fingerprint의 완전 중복을 차단한다.
 - 의미 유사도 기준은 현재 구현의 문자 bigram Jaccard 0.65 이상을 유지한다.
@@ -189,7 +189,7 @@ recommendationScore = clamp(positiveScore
 - OpenAI 장애, 잘못된 응답 또는 중복 결과는 기본 추천·완료 Transaction을 실패시키지 않는다.
 - 같은 사용자·완료 마일스톤은 최초 Claim 결과를 보존하며 실패한 마일스톤을 완료 재요청으로 다시 생성하지 않는다.
 - API Key는 `OPENAI_API_KEY`, 모델은 `OPENAI_MODEL` 환경 변수로만 주입한다.
-- 현재 DB는 Oracle 21c이므로 PostgreSQL `pgvector`를 추가하지 않는다. `MissionSemanticSimilarity` 확장 지점은 유지하되 기본 구현은 비활성이고, 현재 추천은 메타데이터와 제목·설명 bigram 유사도를 사용한다.
+- PostgreSQL `pgvector`는 사용하지 않는다. `MissionSemanticSimilarity` 확장 지점은 유지하되 현재 추천은 메타데이터와 제목·설명 bigram 유사도를 사용한다.
 
 ## 8. 상태와 불변식
 
@@ -289,7 +289,7 @@ Phase 1에서 nullable `USER_MISSION_ID`, `PREVIOUS_STATUS`, `CHANGE_REASON`을 
 | POST | `/api/user-missions/{userMissionId}/complete` | 수행 완료 |
 | GET | `/api/missions/summary` | 전체·카테고리별 완료 통계 조회 |
 
-`POST /api/missions/today/recommendations`는 최초 생성 시 `201`, 기존 후보 재사용 시 `200`을 반환한다. 안정화 Phase 1~7에서 `/api/missions/random`과 범용 `PATCH /api/missions/{missionId}/status`를 제거했다. 추천 후보의 상태 변경과 완료는 소유권·슬롯·상태 전이를 검증하는 `/api/user-missions/**`와 `UserMissionService`만 사용한다.
+`POST /api/missions/today/recommendations`는 최초 생성 시 `201`, 기존 후보 재사용 시 `200`을 반환한다. 추천 후보의 상태 변경과 완료는 소유권·슬롯·상태 전이를 검증하는 `/api/user-missions/**`와 `UserMissionService`만 사용한다.
 
 완료 응답의 `completion`은 전체 완료 수, 마지막 성향 반영 횟수, 현재 성향 코드, 카테고리별 통계, 성향 갱신 여부, 저장 전·후 네 축과 유형을 담은 `personalityChange`, LLM 마일스톤과 처리 상태를 포함한다. 선택·취소·교체 응답에서는 `completion`이 `null`이다. 완료 재요청에서는 중복 반영 없이 `personalityChange`가 `null`일 수 있다. `GET /api/missions/summary`는 같은 누적 통계를 별도로 조회한다.
 
@@ -361,15 +361,14 @@ Phase 1에서 nullable `USER_MISSION_ID`, `PREVIOUS_STATUS`, `CHANGE_REASON`을 
 - `AC-07`: REST 경로, 사용자 식별, 성공 상태와 오류 코드가 정의된다.
 - `AC-08`: 동시 후보 생성·선택·완료의 직렬화 기준이 정의된다.
 - `AC-09`: LLM 장애가 기본 추천과 완료를 막지 않는다.
-- `AC-10`: World 구현이 이번 범위에서 제외되고 category 통계만 제공된다.
-- `AC-11`: 현재 프로토타입과 목표 계약의 차이를 완료로 오인하지 않는다.
-- `AC-12`: Phase 1~7의 구현·검증 경계가 정의된다.
+- `AC-10`: World 성장 데이터는 미션 완료 Transaction에서 갱신되며 World SDD의 계약을 따른다.
+- `AC-11`: LLM 미션은 검증 후 공용 Catalog에 저장되고 기본 미션과 함께 추천될 수 있다.
+- `AC-12`: 현재 구현의 REST·PostgreSQL·Flutter 계약과 검증 기준이 일치한다.
 
 ## 16. 예상 변경 파일
 
 ```text
-DB.sql
-back/src/main/resources/db/survey-schema.sql
+supabase/migrations/*
 
 back/src/main/java/com/novelty/mission/*
 back/src/test/java/com/novelty/mission/*
@@ -392,19 +391,17 @@ docs/mission-phase*-verification.md
 ## 17. 구현 진행 상태
 
 1. Phase 0: 계약과 수용 기준을 확정하고 정적 검증을 완료했다.
-2. Phase 1: Oracle Schema를 멱등 적용하고 정상·실패 Constraint 및 Rollback을 검증했다.
+2. Phase 1: PostgreSQL Schema를 멱등 적용하고 정상·실패 Constraint 및 Rollback을 검증했다.
 3. Phase 2: 순수 Java 추천 정책을 구현한 뒤 V1.1에서 최근 7일 행동 메타데이터, 최근성 가중치, 반복·거부 패널티와 최종 3개 상호 다양성으로 개정하고 검증했다.
-4. Phase 3: 설정과 오늘 후보 REST·Service·Oracle 통합, 사용자 잠금, 후보 재사용과 OpenAPI를 구현하고 검증했다.
+4. Phase 3: 설정과 오늘 후보 REST·Service·PostgreSQL 통합, 사용자 잠금, 후보 재사용과 OpenAPI를 구현하고 검증했다.
 5. Phase 4: `userMissionId` 기반 선택·취소·변경·완료 API, 소유권 검증, 활성 슬롯, 원자적 교체, 완료 멱등성과 연결 로그를 구현하고 검증했다.
 6. Phase 5: 완료 상태·로그·카테고리 통계·완료 횟수·성향 변동을 원자적으로 저장하고, 매 완료 시 성향과 유형을 갱신하며 커밋 이후 5회 단위 LLM 생성·중복/유사도 차단을 연결했다.
 7. Phase 6: Flutter 미션 호환 설정·후보·수행·통계 흐름과 안전한 오류·중복 요청 방지를 구현하고 정상·실패 시나리오를 검증했다.
-8. Phase 7: Flutter → REST → Spring Boot → Oracle → Response → Flutter E2E, 잘못된 사용자 키 실패와 Oracle 직접 조회·정리를 검증했다.
-9. 2026-08-24 V1.1: 추천 다양성 개정과 Oracle 메타데이터를 적용하고 집중 22개, 실제 Oracle 1개, Backend 전체 179개와 Flutter 81개 회귀 테스트를 통과했다.
-10. 2026-08-24 V1.2: 기본 Catalog를 M001~M200으로 교체하고 동일 완료 Mission의 4~30일 장기 재노출 감점을 추가했다. 실제 Oracle에서 활성 200개·Category별 24~26개와 30일 매일 3개 추천을 검증했다.
-11. 2026-08-26: 시간 선택 UI를 제거하고 `LONG` 호환값을 내부 저장하도록 Flutter 흐름을 개정했으며, 기준 seed에 30~150분 중심 BASE 미션 100개를 멱등 방식으로 추가했다.
+8. Phase 7: Flutter → REST → Spring Boot → PostgreSQL → Response → Flutter E2E, 잘못된 사용자 키 실패와 직접 조회·정리를 검증했다.
+9. 최신 기준: 활성 Catalog 400개와 카테고리별 50개 구성을 Supabase에서 확인했다.
+10. 최신 기준: 시간 선택 UI를 제거하고 미션 메타데이터를 5~180분 범위로 확장했다.
 ## Current contract update (2026-08-26)
 
-The legacy `GET/PUT /api/missions/settings` contract is no longer active.
 Available time and daily mission count are not user inputs or response fields.
 The current flow stores one daily mission policy in Backend code, returns up
 to five candidates, and keeps `estimatedMinutes` as mission metadata only.

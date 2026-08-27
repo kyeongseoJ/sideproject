@@ -7,7 +7,7 @@ Novelty는 사용자의 성향을 바탕으로 평소와 다른 행동을 제안
 
 ## 현재 구현 기준
 
-이 저장소의 운영 기준 Backend 데이터베이스는 **Supabase PostgreSQL**입니다. `supabase/migrations`의 초기 스키마와 미션 seed를 사용하며, 루트 `DB.sql`과 `back/src/main/resources/db/survey-schema.sql`은 Oracle 레거시 호환과 과거 검증 이력을 위한 보관본입니다.
+이 저장소의 운영 기준 Backend 데이터베이스는 **Supabase PostgreSQL**입니다. 스키마와 기준 데이터는 `supabase/migrations`에서 관리합니다.
 
 - Flutter Web과 Android는 `front/app/lib`의 동일한 반응형 UI를 사용합니다.
 - 앱 시작 시 스플래시는 고정 시간으로 끝나지 않고 사용자 복원 또는 로그인·오류 화면이 준비된 시점에 종료됩니다.
@@ -15,7 +15,7 @@ Novelty는 사용자의 성향을 바탕으로 평소와 다른 행동을 제안
 - Three.js는 Flutter가 전달한 성향 룸만 로드하며, GLB URI 캐시와 중복 초기화 방지를 적용합니다.
 - 운영 빌드에는 `WORLD_TEST=true` 테스트 진입 경로가 포함되지 않습니다.
 
-최근 검증 기준은 `flutter analyze`, `flutter test` 88개 통과(1개 skip), `flutter build web`, `npm.cmd run build` 성공입니다. Three.js 번들은 500KB 초과 청크 경고가 있으나 빌드는 성공합니다.
+최근 검증 기준은 `flutter analyze`, 전체 Flutter 테스트, `flutter build web`, `npm.cmd run build` 성공입니다. Three.js 번들은 500KB 초과 청크 경고가 있으나 빌드는 성공합니다.
 
 ## 한눈에 보기
 
@@ -25,7 +25,6 @@ Novelty는 사용자의 성향을 바탕으로 평소와 다른 행동을 제안
 | `front/world3d` | GLB 오브젝트를 배치하고 렌더링하는 3D 엔진 | Three.js / Vite |
 | `back` | 사용자, 성향, 미션, 완료 보상, World 상태 API | Java 21 / Spring Boot |
 | `supabase/migrations` | Supabase PostgreSQL 스키마와 기본 데이터 | PostgreSQL SQL |
-| `DB.sql` | 기존 Oracle 21c 기준 스키마 보관본 | Oracle SQL (레거시) |
 
 ## 사용자 흐름
 
@@ -60,7 +59,7 @@ EXP 지급 → 카테고리 오브젝트와 World 성장
 - Flutter는 서로 다른 경험의 후보를 최대 5개까지 보여주며 사용자가 그중 1개를 선택합니다.
 - 선택 후에는 수행 중 미션 하나만 표시하고 `완료` 또는 `취소`를 제공합니다.
 - 완료 처리는 `userMissionId`를 기준으로 수행하며 상태, 통계, 성향 반영, World EXP 지급은 하나의 Transaction으로 처리합니다.
-- 기준 seed에는 기존 200개와 추가 100개의 BASE 미션이 포함되어 있어 30~150분 미션도 구성할 수 있습니다.
+- 운영 Catalog에는 활성 미션 400개가 있으며 8개 카테고리마다 50개씩 구성됩니다. 미션 시간은 5~180분 범위를 사용합니다.
 
 ### 3D World
 
@@ -97,8 +96,7 @@ sideproject/
 │  │  ├─ mission/            # 추천·선택·완료·통계
 │  │  └─ world/              # EXP·레벨·Snapshot
 │  └─ src/main/resources/
-│     └─ db/survey-schema.sql # Backend 실행용 Schema mirror
-├─ DB.sql                    # Oracle 기준 Schema와 seed
+│     └─ db/                 # Backend 참고 SQL
 ├─ supabase/
 │  ├─ migrations/             # Supabase PostgreSQL 운영 Schema와 seed
 │  ├─ apply-migrations.jsh    # 환경변수 기반 migration 실행기
@@ -144,7 +142,7 @@ OPENAI_BASE_URL=https://api.openai.com/v1
 
 ### 2. Database 적용
 
-운영 기준 SQL은 `supabase/migrations`이며, `DB.sql`과 `back/src/main/resources/db/survey-schema.sql`은 기존 Oracle 환경을 위한 레거시 기준 파일입니다.
+운영 기준 SQL은 `supabase/migrations`입니다.
 
 ```powershell
 # 저장소 루트에서 실행. DB_URL, DB_USERNAME, DB_PASSWORD가 필요합니다.
@@ -220,6 +218,7 @@ npm.cmd run dev
 | 회원가입·로그인·사용자 복원 | `/api/users/**` |
 | 성향 분석 제출 | `POST /api/personality-analyses` |
 | 오늘 조회·추천 | `/api/missions/today`, `/api/missions/today/recommendations` |
+| 완료 미션 이력 | `GET /api/user-missions/history?limit=50` |
 | 미션 선택·취소·교체·완료 | `/api/user-missions/{userMissionId}/select|cancel|replace|complete` |
 | 미션 통계 | `GET /api/missions/summary` |
 | World 전체 Snapshot | `GET /api/world` |
@@ -241,7 +240,6 @@ http://localhost:8080/swagger-ui.html
 Swagger UI에서 사용자별 API를 호출할 때는 회원가입 또는 로그인 응답의
 `userKey`를 `X-User-Key` Header에 입력합니다.
 
-폐기된 `/api/surveys`, `/api/missions/random`, `PATCH /api/missions/{missionId}/status` 경로는 사용하지 않습니다.
 
 ## 검증 명령
 
@@ -264,14 +262,12 @@ cd front/world3d
 npm.cmd run build
 ```
 
-Oracle 연동 테스트는 레거시 검증용으로만 유지하며, 운영 기준 통합 검증은 Supabase PostgreSQL 환경에서 실행합니다.
-
 ## 현재 상태와 알려진 범위
 
 - 성향 분석, 미션 추천·선택·취소·완료, 미션 통계는 Backend와 Flutter 흐름이 연결되어 있습니다.
 - 미션 완료와 World EXP 지급은 동일 Transaction에서 처리되며 완료 재요청은 중복 보상 없이 멱등 처리됩니다.
 - World Backend, Flutter, Three.js, Android WebView 연결과 성향별 룸 GLB 9종은 구현되어 있습니다. 기존 개별 placeholder GLB는 제거했습니다.
-- 3D World는 자동 회귀와 Android·Oracle 검증이 진행됐지만 Web·Android 전체 사용자 흐름의 최종 수동 확인은 남아 있습니다.
+- 3D World는 자동 회귀와 Android 검증이 진행됐지만 Web·Android 전체 사용자 흐름의 최종 수동 확인은 남아 있습니다.
 - 사용자별 Timezone 설정은 아직 제공하지 않으며 MVP 서비스 날짜는 `Asia/Seoul` 기준입니다.
   - 운영 배포 시 Flutter Web 정적 파일과 Spring Boot Backend, Supabase PostgreSQL을 각각 배포·연결해야 합니다.
 

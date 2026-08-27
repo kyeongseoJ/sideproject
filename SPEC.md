@@ -47,8 +47,7 @@ Novelty는 사용자가 평소 잘 하지 않던 작은 행동을 제안하여 �
 
 - Supabase PostgreSQL
 - 논리 테이블: `USER`, `PERSONALITY`, `MISSION`, `USER_MISSION`, `WORLD_OBJECT`, `WORLD_OBJECT_LEVEL`, `USER_WORLD_OBJECT`
-- Oracle 예약어 충돌과 현재 물리 Schema를 고려한 실제 이름 대응은 `ARCHITECTURE.md`를 따른다.
-- 운영 기준 DDL은 `supabase/migrations`이며, `DB.sql`과 `back/src/main/resources/db/survey-schema.sql`은 Oracle 레거시 보관본이다.
+- 운영 기준 DDL과 기준 데이터는 `supabase/migrations`에서 관리한다.
 
 ### 3D Asset 흐름
 
@@ -125,7 +124,7 @@ Blender 또는 Asset 제작
 - 중복 닉네임을 허용하지 않는다.
 - 금칙어와 비속어를 허용하지 않는다.
 - 금칙어의 파일 기준은 `front/app/assets/config/nickname_banned_words.txt` 하나로 관리하고 Backend Build에서도 이 Resource를 사용한다.
-- `DB.sql`의 `NICKNAME_BANNED_WORD` 기준 데이터는 금칙어 파일과 함께 갱신한다.
+- Supabase의 `NICKNAME_BANNED_WORD` 기준 데이터는 금칙어 파일과 함께 갱신한다.
 - Frontend validation, Backend validation, DB constraint 또는 trigger의 3단계로 방어한다.
 - Client 검증은 사용자 경험을 위한 것이며 최종 신뢰 경계는 Backend와 Database다.
 
@@ -323,14 +322,12 @@ Current mission recommendation rules:
 - Validation 오류, 중복, 찾을 수 없음, 상태 충돌과 Server 오류를 구분된 HTTP 상태와 오류 Body로 반환한다.
 - API는 springdoc-openapi에 노출하고 Swagger UI의 `Try it out`으로 정상·오류 사례를 시험할 수 있어야 한다.
 - 로컬 Swagger UI 주소는 `http://localhost:8080/swagger-ui.html`이다.
-- 공식 API는 회원가입·로그인·사용자 복원·닉네임 변경, `POST /api/personality-analyses`, `/api/missions/today`, `/api/missions/today/recommendations`, `/api/user-missions/{userMissionId}/select|cancel|replace|complete`, `/api/missions/summary`, `GET /api/world`다.
-- 폐기된 `/api/users/anonymous`, `/api/surveys`, `/api/missions/random`, `PATCH /api/missions/{missionId}/status`는 Runtime과 Swagger에 노출하지 않는다.
+- 공식 API는 회원가입·로그인·사용자 복원·닉네임 변경, `POST /api/personality-analyses`, `/api/missions/today`, `/api/missions/today/recommendations`, `GET /api/user-missions/history`, `/api/user-missions/{userMissionId}/select|cancel|replace|complete`, `/api/missions/summary`, `GET /api/world`다.
 - `userId`는 내부 사용자 식별자, `userKey`는 `X-User-Key` 인증·복원 값, `missionId`는 Catalog 식별자, `userMissionId`는 사용자 상태 변경 대상이다.
 
 ## 11. Database 규칙
 
 - 운영 기준 파일은 `supabase/migrations`다.
-- `DB.sql`과 `back/src/main/resources/db/survey-schema.sql`은 Oracle 레거시 기준으로 보존한다.
 - 테이블, Sequence, Index, Constraint, Trigger 및 필수 기준 데이터 변경은 코드 적용과 같은 작업에서 SQL에도 반영한다.
 - 가능한 DDL과 기준 데이터는 재실행 가능한 형태로 작성한다.
 - 실제 Supabase 적용 후 테이블, Sequence, Constraint와 기준 데이터 건수를 조회하여 검증하기 전에는 적용 완료로 기록하지 않는다.
@@ -371,7 +368,7 @@ Current mission recommendation rules:
 8. `PROJECT_STATUS.md`와 변경된 사양 문서 갱신
 
 - Frontend와 Backend API 계약은 어느 한쪽만 변경하지 않는다.
-- Database 변경은 `supabase/migrations` 기준 파일과 실제 Supabase 적용 결과를 함께 확인한다. Oracle 레거시 파일은 별도 보관 이력으로 확인한다.
+- Database 변경은 `supabase/migrations` 기준 파일과 실제 Supabase 적용 결과를 함께 확인한다.
 - 새 Library는 현재 기능에 반드시 필요한 경우에만 추가한다.
 - 검증 실패, 경고와 외부 환경 차단을 숨기지 않는다.
 - 작업 마지막에는 변경 파일, Library 변경, 실행 명령, 결과와 남은 문제를 설명한다.

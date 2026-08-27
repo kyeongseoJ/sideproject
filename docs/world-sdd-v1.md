@@ -1,6 +1,6 @@
 # 3D World / Object Growth SDD V1
 
-현재 운영 Database는 Supabase PostgreSQL이다. 이 문서의 과거 Oracle Phase 기록은 레거시 검증 이력이며, 현재 Schema와 실행 기준은 `supabase/migrations`다.
+현재 운영 Database는 Supabase PostgreSQL이며, Schema와 실행 기준은 `supabase/migrations`다.
 
 ## 1. 범위와 기준 흐름
 
@@ -95,25 +95,9 @@ Android는 WebView JavaScript Channel `NoveltyWorldBridge`, Web은 same-origin i
 - GLB 실패 시 `rendererError`와 Flutter 대체 UI
 - GLB 실패 메시지는 실패한 상대 asset 경로를 포함한다. Snapshot이 비어 있거나 성향 필터 결과가 비면 Flutter가 오류를 표시하거나 전체 Object Snapshot으로 fallback한다.
 
-## 10. Phase 0~9
+## 10. 구현 및 검증 상태
 
-0. 본 SDD와 Schema·Bridge 계약 확정
-1. Android WebView + Three.js Technical Spike
-2. World DB 및 Backend Domain
-3. Snapshot API
-4. Mission Completion 연결
-5. Flutter World State
-6. Three.js Diorama Renderer
-7. Backend·Flutter·Three.js 연결
-8. Level Up UI·Animation
-9. Oracle·Android·Web 회귀 검증
-
-## 11. 구현 상태 (2026-08-20)
-
-- Phase 0~8: 구현 및 자동 검증 완료
-- Phase 9 Backend: 전체 171건, 실패 0, 오류 0, Oracle 환경 조건부 10건 제외; Package 성공
-- Phase 9 Flutter: 전체 81건, 환경 조건부 1건 제외; Analyze, Web Build, Android Debug APK 성공
-- Phase 9 Three.js: Vite Build 성공. Android Emulator에서 Room GLB, Renderer Ready, Lv1→Lv2 교체와 Background/Foreground 복귀 확인
-- Phase 9 Oracle: `DB.sql` 적용으로 World Table 3개, Object 8개, Level 40개를 확인했고 실제 Oracle Rollback 통합 테스트에서 Mission 완료·World EXP·Snapshot·중복 보상 방지를 검증함
-
-Web·Android의 실제 사용자 전체 흐름 재확인 전까지 Phase 9 전체를 완료로 표기하지 않는다.
+- Backend·Flutter·Three.js 연결과 레벨별 장식 표시를 구현했다.
+- Android Emulator에서 룸 GLB, 레벨 상승에 따른 모델 변경, Background/Foreground 복귀를 확인했다.
+- Web과 Android는 동일한 Flutter UI와 Three.js 번들을 사용한다.
+- 자동 분석·테스트·Web Build·Three.js Build를 통과했으며, Web·Android 전체 사용자 흐름은 실제 배포 환경에서 수동 재확인한다.

@@ -20,7 +20,6 @@
 - `password`: 영문과 숫자를 포함한 8~64자
 - 비밀번호: PBKDF2-HMAC-SHA256, 210,000회, 사용자별 16-byte Salt
 - DB에는 원문 비밀번호와 원문 `userKey`를 저장하지 않는다.
-- 기존 익명 행은 계정 컬럼을 nullable로 유지하여 기존 캐시 복원을 깨뜨리지 않는다.
 - 로그인 성공 시 새 `userKey`를 발급하고 해시값을 갱신한다.
 
 ## UI 계약
@@ -34,9 +33,9 @@
 
 ## DB
 
-`NOVELTY_USER`에 다음 nullable 컬럼을 추가한다.
+Supabase PostgreSQL의 `NOVELTY_USER`에 다음 nullable 컬럼을 사용한다.
 
-- `LOGIN_ID_NORMALIZED VARCHAR2(20)`
-- `PASSWORD_HASH VARCHAR2(255)`
+- `LOGIN_ID_NORMALIZED varchar(20)`
+- `PASSWORD_HASH varchar(255)`
 
 Unique 로그인 아이디, 계정 컬럼 쌍의 NULL 일관성, 아이디 길이·허용 문자 Check를 적용한다.
