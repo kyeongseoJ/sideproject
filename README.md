@@ -22,6 +22,8 @@ Novelty는 사용자의 성향을 바탕으로 평소와 다른 행동을 제안
 EXP 지급 및 World 성장
 ```
 
+<img width="1672" height="941" alt="image" src="https://github.com/user-attachments/assets/4e29a459-cfc9-476d-bf1c-f02dcff45aca" />
+
 ## 바로가기
 
 <table>
