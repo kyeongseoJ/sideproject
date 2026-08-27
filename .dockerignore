@@ -1,0 +1,15 @@
+.git
+
+.env
+.env.local
+
+**/.idea
+**/.vscode
+
+back/target
+
+front/app/.dart_tool
+front/app/build
+
+front/world3d/node_modules
+front/world3d/dist
