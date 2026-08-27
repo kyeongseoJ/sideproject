@@ -1,6 +1,5 @@
 package com.novelty.mission;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,7 +13,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/missions")
-@CrossOrigin(originPatterns = {"http://localhost:*", "http://127.0.0.1:*"})
 @Tag(name = "미션", description = "성향 기반 미션 추천과 수행 상태 API")
 public class MissionSummaryController {
 

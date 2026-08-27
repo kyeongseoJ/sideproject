@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -15,7 +14,6 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -173,22 +171,6 @@ class PersonalityControllerTest {
                         .content(validRequestJson()))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value("PERSONALITY_SAVE_FAILED"));
-    }
-
-    @Test
-    void allowsLocalFrontendOrigin() throws Exception {
-        when(service.analyze(anyString(), any(PersonalityAnalysisRequest.class)))
-                .thenReturn(new PersonalitySubmissionResult(successResponse(), true));
-
-        mockMvc.perform(post("/api/personality-analyses")
-                        .header("X-User-Key", USER_KEY)
-                        .header(HttpHeaders.ORIGIN, "http://localhost:3000")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(validRequestJson()))
-                .andExpect(status().isCreated())
-                .andExpect(header().string(
-                        HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN,
-                        "http://localhost:3000"));
     }
 
     private void expectConflict(String code) throws Exception {

@@ -210,6 +210,7 @@ OpenAI 설정:
 - 로컬 Secret은 Git 제외 `.env`에 저장하고 Spring Boot가 자동으로 읽는다.
 - 추적 가능한 `.env.example`에는 변수 이름과 placeholder만 유지한다.
 - Flutter 로컬 API 주소는 플랫폼 기본값을 사용하고, 배포 주소만 `API_BASE_URL` dart-define으로 주입한다.
+- Backend는 `/api/**`에 대해 `CORS_ALLOWED_ORIGIN_PATTERNS`의 쉼표 구분 Origin Pattern만 허용한다. 운영에서는 Flutter Web 배포 도메인을 명시하고 전체 허용 Origin을 사용하지 않는다.
 
 ### 이력과 재추천 제한
 
@@ -306,6 +307,7 @@ COMPLETED
 - `WORLD_TEST=true`를 지정한 개발 실행에서는 실제 성향별 룸 GLB를 선택하고 모든 World Object 레벨을 한 단계씩 올리는 테스트 화면을 제공한다. 이 화면은 기본 운영 빌드의 진입 플로우에 포함하지 않는다.
 - Web 플랫폼 뷰가 클릭을 가로채지 않도록 인라인 World 도움말은 renderer 바깥의 Flutter 영역에 배치한다.
 - 미션 완료 성장 응답은 전체 World뿐 아니라 현재 표시 중인 인라인 World에도 즉시 전달해 Level 모델과 Level Up 애니메이션을 갱신한다.
+- 전체 World는 보상 반영 직후 성장 룸을 카메라로 포커싱하고 보라색 파동·입자 효과를 재생한다. 완료 결과 카드는 카테고리·표시명·실제 지급 EXP를 보여주며 5초 후 사라지거나 사용자가 닫을 수 있다.
 
 ## 10. REST API 공통 규칙
 

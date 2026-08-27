@@ -28,11 +28,11 @@ class WorldApi implements WorldGateway {
 
   @override
   Future<WorldSnapshot> getSnapshot(String userKey) async {
-    if (_baseUrl.isEmpty) throw const WorldApiException('API 주소가 설정되지 않았습니다.');
+    final uri = _uri();
     try {
       final response = await _client
           .get(
-            Uri.parse('$_baseUrl/api/world'),
+            uri,
             headers: {'Accept': 'application/json', 'X-User-Key': userKey},
           )
           .timeout(timeout);
@@ -55,6 +55,20 @@ class WorldApi implements WorldGateway {
     } catch (_) {
       throw const WorldApiException('World 서버에 연결할 수 없습니다.');
     }
+  }
+
+  Uri _uri() {
+    final normalized = _baseUrl.endsWith('/')
+        ? _baseUrl.substring(0, _baseUrl.length - 1)
+        : _baseUrl;
+    final uri = Uri.tryParse('$normalized/api/world');
+    if (_baseUrl.isEmpty ||
+        uri == null ||
+        !uri.hasAuthority ||
+        (uri.scheme != 'http' && uri.scheme != 'https')) {
+      throw const WorldApiException('API 주소가 설정되지 않았습니다.');
+    }
+    return uri;
   }
 
   void close() => _client.close();

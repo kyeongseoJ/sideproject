@@ -92,6 +92,8 @@ installWorldBridge(async ({ type, payload }) => {
     await updateObjectLevel(payload.objectCode, payload.level);
   } else if (type === 'playLevelUp') {
     worldRenderer.playLevelUp(payload.objectCode);
+  } else if (type === 'focusGrowthObject') {
+    worldRenderer.focusGrowthObject(payload.objectCode, payload.levelUp === true);
   } else if (type === 'dispose') {
     worldRenderer.destroy();
   }

@@ -2,7 +2,6 @@ package com.novelty.user;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,7 +20,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(originPatterns = {"http://localhost:*", "http://127.0.0.1:*"})
 @Tag(name = "사용자", description = "회원가입, 로그인, 사용자 정보와 닉네임 API")
 public class UserController {
 

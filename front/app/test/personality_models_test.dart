@@ -109,6 +109,28 @@ void main() {
     expect(result.analysisId, 42);
     expect(result.personality.typeName, '고요한 몰입가');
   });
+
+  test(
+    'applies completed mission scores to the visible personality profile',
+    () {
+      final original = PersonalityProfile.fromJson(validPersonalityJson());
+      final updated = original.withPreferenceScores(
+        indoorOutdoorScore: 0,
+        socialScore: 1,
+        physicalActivityScore: 2,
+        noveltyScore: 0,
+      );
+
+      expect(updated.indoorOutdoor, IndoorOutdoor.mixed);
+      expect(updated.indoorOutdoorScore, 0);
+      expect(updated.socialLevel, SocialLevel.high);
+      expect(updated.socialScore, 1);
+      expect(updated.physicalActivityLevel, PhysicalActivityLevel.high);
+      expect(updated.physicalActivityScore, 2);
+      expect(updated.noveltyLevel, NoveltyLevel.low);
+      expect(updated.noveltyScore, 0);
+    },
+  );
 }
 
 PersonalityAnswers _answers(List<PersonalityInterest> interests) {

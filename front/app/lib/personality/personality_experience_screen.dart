@@ -110,8 +110,18 @@ class _PersonalityExperienceScreenState
       _lastPreferenceChange = personalityChange == null
           ? null
           : BehaviorPreferenceChange.fromCompletion(personalityChange);
+      if (personalityChange != null && _user.personality != null) {
+        _user = _user.withPersonality(
+          _user.personality!.withPreferenceScores(
+            indoorOutdoorScore: personalityChange.currentIndoorOutdoor,
+            socialScore: personalityChange.currentSocialLevel,
+            physicalActivityScore: personalityChange.currentActivityLevel,
+            noveltyScore: personalityChange.currentNoveltyLevel,
+          ),
+        );
+      }
     });
-    if (result.personalityUpdated) _refreshUser();
+    if (personalityChange != null) _refreshUser();
   }
 
   Future<void> _refreshUser() async {

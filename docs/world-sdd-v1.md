@@ -68,6 +68,7 @@ Flutter → Three.js:
   - `payload.objects`는 1개 이상이어야 하며 `payload.objectCount`와 배열 길이가 일치해야 한다.
 - `updateObjectLevel`: 한 Object 변경
 - `playLevelUp`: Level Up Animation
+- `focusGrowthObject`: 미션 완료로 변화한 룸 장식을 카메라로 포커싱하고 파동·입자 효과를 재생한다. 룸 GLB의 장식 Mesh가 실제 성장 대상이므로 Category Object Code는 `ROOM` 그룹으로 해석한다.
 - `dispose`: Renderer 정리
 
 Three.js → Flutter:
@@ -85,6 +86,7 @@ Android는 WebView JavaScript Channel `NoveltyWorldBridge`, Web은 same-origin i
 - Orthographic Camera와 고정 아이소메트릭 초기 시점
 - 제한된 회전·Zoom·Object Tap
 - 전체 화면에서는 Object 호버 또는 클릭 시 한글 Object명, 연결된 성향 Category와 현재·최대 단계를 Flutter 툴팁으로 표시한다.
+- 전체 화면은 `completion.worldGrowth.rewardApplied=true`일 때에만 성장 포커싱 효과를 한 번 실행한다. Flutter 결과 카드는 표시명·카테고리·실제 지급 EXP와 레벨업 여부를 5초 동안 표시하며 사용자가 닫을 수 있다.
 - 성향 프로필 안의 인라인 Renderer와 전체 화면 Renderer는 동일한 Snapshot·Manifest를 사용한다.
 - 인라인 초기 표시는 성향 관심 Category와 완료 EXP가 있는 Category Object로 제한한다.
 - 전체 화면 제목은 Personality type별 공간명을 사용한다.

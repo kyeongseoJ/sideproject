@@ -1,6 +1,5 @@
 package com.novelty.mission;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,7 +15,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/user-missions")
-@CrossOrigin(originPatterns = {"http://localhost:*", "http://127.0.0.1:*"})
 @Tag(name = "사용자 미션", description = "오늘 추천 후보의 선택·취소·교체·완료 API")
 public class UserMissionController {
 

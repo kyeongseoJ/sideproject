@@ -230,7 +230,7 @@ class _AccountEntryScreenState extends State<AccountEntryScreen> {
                                 ),
                                 SizedBox(height: NoveltySpacing.xs),
                                 Text(
-                                  '새로운 자극을 접했을 때 호기심과 참여 동기가 높아지는 현상입니다.\n노벨티는 이 효과를 활용해 매일 작은 새로운 행동을 시작하도록 돕습니다.',
+                                  '새로운 자극을 접했을 때 호기심과 참여 동기가 높아지는 현상입니다.\n노벨티는 매일 작은 새로운 행동을 시작하도록 돕습니다.',
                                   style: TextStyle(
                                     color: NoveltyColors.gray040,
                                     height: 1.55,

@@ -155,48 +155,57 @@ class _BrandHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final compact = constraints.maxWidth < 340;
+      final compact = constraints.maxWidth < 400;
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Image.asset(
-            'assets/ui/Novelty_logo_letter.png',
-            key: const Key('novelty-wordmark'),
-            width: 148,
-            height: 25,
-            fit: BoxFit.contain,
-            alignment: Alignment.centerLeft,
-          ),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Image.asset(
                 'assets/ui/Novelty_logo_dark.png',
                 key: const Key('novelty-symbol'),
-                width: 34,
-                height: 34,
+                width: compact ? 26 : 30,
+                height: compact ? 26 : 30,
                 fit: BoxFit.contain,
               ),
-              if (onLogout != null) ...[
-                const SizedBox(width: 4),
-                if (compact)
-                  IconButton(
-                    key: const Key('personality-logout-button'),
-                    tooltip: '로그아웃',
-                    onPressed: () => onLogout!(),
-                    icon: const Icon(Icons.logout_rounded),
-                  )
-                else
-                  TextButton.icon(
-                    key: const Key('personality-logout-button'),
-                    onPressed: () => onLogout!(),
-                    icon: const Icon(Icons.logout_rounded, size: 18),
-                    label: const Text('로그아웃'),
-                  ),
-              ],
+              const SizedBox(width: 8),
+              Image.asset(
+                'assets/ui/Novelty_logo_letter.png',
+                key: const Key('novelty-wordmark'),
+                width: compact ? 112 : 132,
+                height: compact ? 20 : 23,
+                fit: BoxFit.contain,
+                alignment: Alignment.centerLeft,
+              ),
             ],
           ),
+          if (onLogout != null)
+            if (compact)
+              IconButton(
+                key: const Key('personality-logout-button'),
+                tooltip: '로그아웃',
+                onPressed: () => onLogout!(),
+                icon: const Icon(Icons.logout_rounded, size: 18),
+                constraints: const BoxConstraints.tightFor(
+                  width: 32,
+                  height: 32,
+                ),
+                padding: const EdgeInsets.all(6),
+              )
+            else
+              TextButton.icon(
+                key: const Key('personality-logout-button'),
+                onPressed: () => onLogout!(),
+                icon: const Icon(Icons.logout_rounded, size: 16),
+                label: const Text('로그아웃'),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(0, 32),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  textStyle: Theme.of(context).textTheme.labelMedium,
+                ),
+              ),
         ],
       );
     },
@@ -286,21 +295,25 @@ class _BehaviorPreferenceSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final rows = [
       (
+        'indoor-outdoor',
         '실외 활동',
         _normalizedSigned(profile.indoorOutdoorScore),
         _indoorOutdoorLabel(profile.indoorOutdoor),
       ),
       (
+        'social',
         '함께하기',
         _normalizedSigned(profile.socialScore),
         _socialLabel(profile.socialLevel),
       ),
       (
+        'activity',
         '활동성',
         _normalizedLevel(profile.physicalActivityScore),
         _physicalLabel(profile.physicalActivityLevel),
       ),
       (
+        'novelty',
         '새로움',
         _normalizedLevel(profile.noveltyScore),
         _noveltyLabel(profile.noveltyLevel),
@@ -317,37 +330,11 @@ class _BehaviorPreferenceSection extends StatelessWidget {
           Text('행동 선호', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 14),
           for (final row in rows) ...[
-            Row(
-              children: [
-                SizedBox(width: 76, child: Text(row.$1)),
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      minHeight: 10,
-                      value: row.$2,
-                      backgroundColor: NoveltyColors.line,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 100,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '${(row.$2 * 100).round()}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      Text(
-                        row.$3,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            _PreferenceMeter(
+              id: row.$1,
+              label: row.$2,
+              value: row.$3,
+              description: row.$4,
             ),
             const SizedBox(height: 10),
           ],
@@ -388,6 +375,61 @@ class _BehaviorPreferenceSection extends StatelessWidget {
       ),
     );
   }
+}
+
+class _PreferenceMeter extends StatelessWidget {
+  const _PreferenceMeter({
+    required this.id,
+    required this.label,
+    required this.value,
+    required this.description,
+  });
+
+  final String id;
+  final String label;
+  final double value;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    key: Key('behavior-preference-$id'),
+    children: [
+      SizedBox(width: 76, child: Text(label)),
+      Expanded(
+        child: TweenAnimationBuilder<double>(
+          duration: const Duration(milliseconds: 360),
+          curve: Curves.easeOutCubic,
+          tween: Tween<double>(begin: 0, end: value),
+          builder: (context, animatedValue, _) => ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 10,
+              value: animatedValue,
+              backgroundColor: NoveltyColors.line,
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(width: 10),
+      SizedBox(
+        width: 100,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child: Text(
+                '${(value * 100).round()} / 100',
+                key: ValueKey<double>(value),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            Text(description, style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ),
+      ),
+    ],
+  );
 }
 
 double _normalizedSigned(int score) => (score + 1) / 2;

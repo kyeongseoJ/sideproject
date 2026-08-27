@@ -1,6 +1,5 @@
 package com.novelty.world;
 
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,7 +12,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/world")
-@CrossOrigin(originPatterns = {"http://localhost:*", "http://127.0.0.1:*"})
 @Tag(name = "월드", description = "사용자별 3D 공간 오브젝트 성장 상태 API")
 public class WorldController {
 

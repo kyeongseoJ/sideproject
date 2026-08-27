@@ -132,12 +132,15 @@ Copy-Item .env.example .env
 DB_URL=jdbc:postgresql://your-project.pooler.supabase.com:5432/postgres?sslmode=require
 DB_USERNAME=your_supabase_database_user
 DB_PASSWORD=your_supabase_database_password
+CORS_ALLOWED_ORIGIN_PATTERNS=https://app.example.com
 OPENAI_API_KEY=
 OPENAI_MODEL=
 OPENAI_BASE_URL=https://api.openai.com/v1
 ```
 
 `.env`는 Git에 추가하지 않습니다. OpenAI 설정은 완료 5회 단위의 LLM 미션 생성이 필요할 때만 사용하며, 기본 미션 추천에는 필수가 아닙니다.
+
+운영 WebApp은 `CORS_ALLOWED_ORIGIN_PATTERNS`에 실제 Flutter Web 주소를 쉼표로 구분해 지정해야 합니다. 예: `https://app.example.com,https://www.example.com`. 로컬 기본값은 `http://localhost:*`, `http://127.0.0.1:*`입니다.
 
 ### 2. Database 적용
 

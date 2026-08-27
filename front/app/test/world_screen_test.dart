@@ -182,13 +182,16 @@ void main() {
         'initializeWorld',
         'updateObjectLevel',
         'playLevelUp',
+        'focusGrowthObject',
       ]),
     );
     final levelMessage = messages.firstWhere(
       (message) => message['type'] == 'updateObjectLevel',
     );
     expect((levelMessage['payload'] as Map<String, Object?>)['level'], 2);
-    expect(find.text('BOOKSHELF Lv.2 달성!'), findsOneWidget);
+    expect(find.byKey(const Key('world-growth-summary')), findsOneWidget);
+    expect(find.text('책장 Lv.2 달성!'), findsOneWidget);
+    expect(find.text('미션 완료로 공간이 변화했어요'), findsOneWidget);
   });
 
   testWidgets('shows novelty experience instead of an internal object code', (
@@ -219,7 +222,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('노벨티 경험치 + 10 EXP'), findsOneWidget);
+    expect(find.textContaining('노벨티 경험치 + 10 EXP'), findsOneWidget);
     expect(find.textContaining('RECORD_PLAYER +10 EXP'), findsNothing);
   });
 

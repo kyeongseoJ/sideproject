@@ -160,6 +160,31 @@ class PersonalityProfile {
   final String analysisVersion;
   final DateTime analyzedAt;
 
+  PersonalityProfile withPreferenceScores({
+    required int indoorOutdoorScore,
+    required int socialScore,
+    required int physicalActivityScore,
+    required int noveltyScore,
+  }) => PersonalityProfile(
+    typeCode: typeCode,
+    typeName: typeName,
+    summary: summary,
+    indoorOutdoor: _indoorOutdoorFromScore(indoorOutdoorScore),
+    indoorOutdoorScore: indoorOutdoorScore,
+    socialLevel: _socialLevelFromScore(socialScore),
+    socialScore: socialScore,
+    physicalActivityLevel: _physicalActivityLevelFromScore(
+      physicalActivityScore,
+    ),
+    physicalActivityScore: physicalActivityScore,
+    noveltyLevel: _noveltyLevelFromScore(noveltyScore),
+    noveltyScore: noveltyScore,
+    executionStyle: executionStyle,
+    interests: interests,
+    analysisVersion: analysisVersion,
+    analyzedAt: analyzedAt,
+  );
+
   factory PersonalityProfile.fromJson(Map<String, Object?> json) {
     final typeCode = _requiredString(json, 'typeCode');
     final typeName = _requiredString(json, 'typeName');
@@ -243,6 +268,13 @@ class UserProfile {
   final bool personalityCompleted;
   final PersonalityProfile? personality;
 
+  UserProfile withPersonality(PersonalityProfile personality) => UserProfile(
+    userId: userId,
+    nickname: nickname,
+    personalityCompleted: true,
+    personality: personality,
+  );
+
   factory UserProfile.fromJson(Map<String, Object?> json) {
     final userId = json['userId'];
     final nickname = json['nickname'];
@@ -278,6 +310,35 @@ class UserProfile {
     );
   }
 }
+
+IndoorOutdoor _indoorOutdoorFromScore(int score) => switch (score) {
+  -1 => IndoorOutdoor.indoor,
+  0 => IndoorOutdoor.mixed,
+  1 => IndoorOutdoor.outdoor,
+  _ => throw ArgumentError.value(score, 'indoorOutdoorScore'),
+};
+
+SocialLevel _socialLevelFromScore(int score) => switch (score) {
+  -1 => SocialLevel.low,
+  0 => SocialLevel.medium,
+  1 => SocialLevel.high,
+  _ => throw ArgumentError.value(score, 'socialScore'),
+};
+
+PhysicalActivityLevel _physicalActivityLevelFromScore(int score) =>
+    switch (score) {
+      0 => PhysicalActivityLevel.low,
+      1 => PhysicalActivityLevel.medium,
+      2 => PhysicalActivityLevel.high,
+      _ => throw ArgumentError.value(score, 'physicalActivityScore'),
+    };
+
+NoveltyLevel _noveltyLevelFromScore(int score) => switch (score) {
+  0 => NoveltyLevel.low,
+  1 => NoveltyLevel.medium,
+  2 => NoveltyLevel.high,
+  _ => throw ArgumentError.value(score, 'noveltyScore'),
+};
 
 class AnonymousUser {
   const AnonymousUser({

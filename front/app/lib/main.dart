@@ -13,6 +13,7 @@ import 'package:novelty_app/world/world_level_test_screen.dart';
 
 const bool _worldTestMode = bool.fromEnvironment('WORLD_TEST');
 const bool _worldSpikeMode = bool.fromEnvironment('WORLD_SPIKE');
+
 void main() {
   runApp(const NoveltyApp());
 }

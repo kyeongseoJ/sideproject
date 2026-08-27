@@ -27,6 +27,9 @@ void main() {
       findsOneWidget,
     );
     expect(find.byType(LinearProgressIndicator), findsNWidgets(4));
+    expect(find.text('0 / 100'), findsNWidgets(2));
+    expect(find.text('50 / 100'), findsOneWidget);
+    expect(find.text('100 / 100'), findsOneWidget);
 
     await tester.ensureVisible(
       find.byKey(const Key('personality-reanalyze-button')),

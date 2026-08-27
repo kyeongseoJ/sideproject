@@ -33,6 +33,9 @@
 - Three.js는 기본 placeholder 룸을 선행 로드하지 않고 Flutter가 지정한 성향 룸만 로드한다.
 - GLB URI 캐시와 Bridge 초기화 중복 방지를 적용했다.
 - `flutter analyze`, Flutter 전체 테스트 88개 통과(1개 skip), `flutter build web`, `npm.cmd run build`를 통과했다. Three.js 번들 500KB 초과 경고는 남아 있다.
+- 전체 3D World에서 미션 완료 성장 시 룸 장식 중심 카메라 포커싱, 보라색 파동·입자 효과, 지급 EXP·성장 결과 요약 카드를 적용했다. 효과는 완료 응답당 한 번만 실행되고 결과 카드는 5초 후 사라진다.
+- 검증: `flutter analyze`, `flutter test test/world_screen_test.dart test/world_preview_test.dart`, 임시 출력 경로의 `npm.cmd run build`가 통과했다. Three.js 번들 크기 경고는 유지된다.
+- API 계약 점검 결과 Flutter의 계정·성향·미션·World 요청 경로와 DTO 필드는 Backend 응답과 일치한다. 운영 WebApp 연결을 위해 Controller별 localhost 고정 CORS를 전역 `CORS_ALLOWED_ORIGIN_PATTERNS` 설정으로 교체했다.
 
 ## 핵심 기능 요약
 

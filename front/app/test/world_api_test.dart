@@ -33,4 +33,16 @@ void main() {
       throwsA(isA<WorldApiException>()),
     );
   });
+
+  test('normalizes a trailing API base URL slash', () async {
+    final api = WorldApi(
+      baseUrl: 'https://api.example.com/',
+      client: MockClient((request) async {
+        expect(request.url.toString(), 'https://api.example.com/api/world');
+        return http.Response('{"objects":[]}', 200);
+      }),
+    );
+
+    expect((await api.getSnapshot('user-key')).objects, isEmpty);
+  });
 }
