@@ -38,7 +38,8 @@ public class ApiCorsConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(patterns);
         configuration.setAllowedMethods(List.of("GET", "POST", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Accept", "Content-Type", "X-User-Key"));
+        configuration.setAllowedHeaders(List.of(
+                "Accept", "Content-Type", "X-User-Key", "Cache-Control", "Pragma"));
         configuration.setMaxAge(3600L);
         return configuration;
     }

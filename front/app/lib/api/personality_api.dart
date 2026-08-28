@@ -118,7 +118,11 @@ class PersonalityApi implements PersonalityGateway {
     final response = await _send(
       () => _client.get(
         _uri('/api/users/me'),
-        headers: <String, String>{'X-User-Key': userKey},
+        headers: <String, String>{
+          'X-User-Key': userKey,
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        },
       ),
     );
     if (response.statusCode != 200) {

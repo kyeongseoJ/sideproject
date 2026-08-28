@@ -33,7 +33,12 @@ class WorldApi implements WorldGateway {
       final response = await _client
           .get(
             uri,
-            headers: {'Accept': 'application/json', 'X-User-Key': userKey},
+            headers: {
+              'Accept': 'application/json',
+              'X-User-Key': userKey,
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache',
+            },
           )
           .timeout(timeout);
       final decoded = jsonDecode(utf8.decode(response.bodyBytes));

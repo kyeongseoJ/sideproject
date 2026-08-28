@@ -192,6 +192,8 @@ class MissionApi implements MissionGateway {
 
   Map<String, String> _headers(String key, {bool json = false}) => {
     'X-User-Key': key,
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
     if (json) 'Content-Type': 'application/json',
   };
 
