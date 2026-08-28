@@ -20,6 +20,8 @@ Novelty는 사용자의 성향을 바탕으로 평소와 다른 행동을 제안
 ## 아키텍쳐
 ![alt text](image-3.png)
 
+## 9개의 성향과 공간
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/d9720d8d-05e9-4f40-8a43-851c77730760" />
 
 ## 바로가기
 
