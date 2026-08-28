@@ -14,6 +14,11 @@ import org.springframework.web.filter.CorsFilter;
 public class ApiCorsConfig {
 
     @Bean
+    ApiCacheControlFilter apiCacheControlFilter() {
+        return new ApiCacheControlFilter();
+    }
+
+    @Bean
     CorsFilter apiCorsFilter(
             @Value("${novelty.cors.allowed-origin-patterns}") String allowedOriginPatterns) {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
