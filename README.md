@@ -15,10 +15,10 @@
 Novelty는 사용자의 성향을 바탕으로 평소와 다른 행동을 제안하고, 미션을 완료할수록 개인의 3D World가 성장하는 서비스입니다.
 
 ## 핵심 사용자 흐름
-![alt text](image-2.png)
+![alt text](docs/images/image-2.png)
 
 ## 아키텍쳐
-![alt text](image-3.png)
+![alt text](docs/images/image-3.png)
 
 ## 9개의 성향과 공간
 <img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/d9720d8d-05e9-4f40-8a43-851c77730760" />
